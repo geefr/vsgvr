@@ -11,9 +11,9 @@ endif()
 set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
 
-if( NOT MSVC )
-  set( CMAKE_CXX_FLAGS "-Werror=all -Wno-error=unused-variable" )
-endif()
+#if( NOT MSVC )
+#  set( CMAKE_CXX_FLAGS "-Werror=all -Wno-error=unused-variable" )
+#endif()
 
 # Package/System requirements
 find_package(vsg)

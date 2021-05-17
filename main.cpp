@@ -43,244 +43,245 @@ vsg::dmat4 openVRMatToVSG( glm::dmat4 mat ) {
 
 class RawProjectionMatrix : public vsg::ProjectionMatrix
 {
-public:
-  RawProjectionMatrix( vsg::dmat4 mat ) : mMat(mat) {}
-  void get(vsg::mat4& matrix) const override { matrix = mMat; }
-  void get(vsg::dmat4& matrix) const override { matrix = mMat; }
-private:
-  vsg::dmat4 mMat;
+  public:
+    RawProjectionMatrix( vsg::dmat4 mat ) : mMat(mat) {}
+    void get(vsg::mat4& matrix) const override { matrix = mMat; }
+    void get(vsg::dmat4& matrix) const override { matrix = mMat; }
+  private:
+    vsg::dmat4 mMat;
 };
 
 class RawViewMatrix : public vsg::ViewMatrix
 {
-public:
-  RawViewMatrix( vsg::dmat4 mat ) : mMat(mat) {}
-  void get(vsg::mat4& matrix) const override { matrix = mMat; }
-  void get(vsg::dmat4& matrix) const override { matrix = mMat; }
-private:
-  vsg::dmat4 mMat;
+  public:
+    RawViewMatrix( vsg::dmat4 mat ) : mMat(mat) {}
+    void get(vsg::mat4& matrix) const override { matrix = mMat; }
+    void get(vsg::dmat4& matrix) const override { matrix = mMat; }
+  private:
+    vsg::dmat4 mMat;
 };
 
 class UpdateVRVisitor : public vsg::Visitor
 {
-public:
-  UpdateVRVisitor() = delete;
-  UpdateVRVisitor(vrhelp::Env* vr, vrhelp::Controller* left, vrhelp::Controller* right, vrhelp::Device* hmd)
-    : mVr(vr), mLeft(left), mRight(right), mHmd(hmd) {}
+  public:
+    UpdateVRVisitor() = delete;
+    UpdateVRVisitor(vrhelp::Env* vr, vrhelp::Controller* left, vrhelp::Controller* right, vrhelp::Device* hmd)
+      : mVr(vr), mLeft(left), mRight(right), mHmd(hmd) {}
 
-  virtual void apply(vsg::Group& o) override {
-    std::string v;
-    if( mLeft ) {
-      if( o.getValue(OpenVRIDTag, v) && v == LeftControllerID ) {
-	if( auto txf = o.cast<vsg::MatrixTransform>() ) {
-  	  auto mat = mLeft->deviceToAbsoluteMatrix();
-          vsg::dmat4 vmat(glm::value_ptr(mat));
-          txf->setMatrix(vmat);
-	}
+    virtual void apply(vsg::Group& o) override {
+      std::string v;
+      if( mLeft ) {
+        if( o.getValue(OpenVRIDTag, v) && v == LeftControllerID ) {
+          if( auto txf = o.cast<vsg::MatrixTransform>() ) {
+            auto mat = mLeft->deviceToAbsoluteMatrix();
+            vsg::dmat4 vmat(glm::value_ptr(mat));
+            txf->setMatrix(vmat);
+          }
+        }
+      }
+      if( mRight ) {
+        if( o.getValue(OpenVRIDTag, v) && v == RightControllerID ) {
+          if( auto txf = o.cast<vsg::MatrixTransform>() ) {
+            auto mat = mRight->deviceToAbsoluteMatrix();
+            vsg::dmat4 vmat(glm::value_ptr(mat));
+            txf->setMatrix(vmat);
+          }
+        }
       }
     }
-    if( mRight ) {
-      if( o.getValue(OpenVRIDTag, v) && v == RightControllerID ) {
-	if( auto txf = o.cast<vsg::MatrixTransform>() ) {
-  	  auto mat = mRight->deviceToAbsoluteMatrix();
-          vsg::dmat4 vmat(glm::value_ptr(mat));
-          txf->setMatrix(vmat);
-	}
-      }
-    }
-  }
 
-  
-private:
-  vrhelp::Env* mVr = nullptr;
-  vrhelp::Controller* mLeft = nullptr;
-  vrhelp::Controller* mRight = nullptr;
-  vrhelp::Device* mHmd = nullptr;
+
+  private:
+    vrhelp::Env* mVr = nullptr;
+    vrhelp::Controller* mLeft = nullptr;
+    vrhelp::Controller* mRight = nullptr;
+    vrhelp::Device* mHmd = nullptr;
 };
 
 class SubmitOpenVRCommand : public vsg::Command
 {
-public:
-	SubmitOpenVRCommand(vrhelp::Env* vr)
-	  : mVr(vr)
-	{}
+  public:
+    SubmitOpenVRCommand(vrhelp::Env* vr)
+      : mVr(vr)
+    {}
 
-	void read(vsg::Input& input) override {}
-	void write(vsg::Output& output) const override {}
+    void read(vsg::Input& input) override {}
+    void write(vsg::Output& output) const override {}
 
-	void compile(vsg::Context& context) override {}
+    void compile(vsg::Context& context) override {}
 
-	void record(vsg::CommandBuffer& commandBuffer) const override {
-	  // Submit to SteamVR
-		vr::VRTextureBounds_t bounds;
-		bounds.uMin = 0.0f;
-		bounds.uMax = 1.0f;
-		bounds.vMin = 0.0f;
-		bounds.vMax = 1.0f;
-		
-		vr::VRVulkanTextureData_t vulkanData;
-		vulkanData.m_nImage = ( uint64_t ) colourImage.imageView->vk(window->getOrCreateDevice()->deviceID);
-		vulkanData.m_pDevice = ( VkDevice_T * ) window->getOrCreateDevice()->getDevice();
-		vulkanData.m_pPhysicalDevice = ( VkPhysicalDevice_T * ) window->getOrCreateDevice()->getPhysicalDevice()->getPhysicalDevice();
-		vulkanData.m_pInstance = ( VkInstance_T *) window->getOrCreateDevice()->getInstance()->getInstance(); 
-		vulkanData.m_pQueue = ( VkQueue_T * ) window->getOrCreateDevice()->getQueue(0)->queue(); // TODO: use the correct queue ID
-		vulkanData.m_nQueueFamilyIndex = 0; // TODO: use the correct queue ID
+    void record(vsg::CommandBuffer& commandBuffer) const override {
+      // Submit to SteamVR
+      vr::VRTextureBounds_t bounds;
+      bounds.uMin = 0.0f;
+      bounds.uMax = 1.0f;
+      bounds.vMin = 0.0f;
+      bounds.vMax = 1.0f;
+/*
+      vr::VRVulkanTextureData_t vulkanData;
+      vulkanData.m_nImage = ( uint64_t ) hmdImageLeft.colourImage.imageView->vk(window->getOrCreateDevice()->deviceID);
+      vulkanData.m_pDevice = ( VkDevice_T * ) window->getOrCreateDevice()->getDevice();
+      vulkanData.m_pPhysicalDevice = ( VkPhysicalDevice_T * ) window->getOrCreateDevice()->getPhysicalDevice()->getPhysicalDevice();
+      vulkanData.m_pInstance = ( VkInstance_T *) window->getOrCreateDevice()->getInstance()->getInstance(); 
+      vulkanData.m_pQueue = ( VkQueue_T * ) window->getOrCreateDevice()->getQueue(0)->queue(); // TODO: use the correct queue ID
+      vulkanData.m_nQueueFamilyIndex = 0; // TODO: use the correct queue ID
 
-    uint32_t hmdWidth=0, hmdHeight=0;
-    mVr->getRecommendedTargetSize(hmdWidth, hmdHeight);
-  
-		vulkanData.m_nWidth = hmdWidth;
-		vulkanData.m_nHeight = hmdHeight;
-		vulkanData.m_nFormat = imageFormat;
-		vulkanData.m_nSampleCount = 1;
-		
-		vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
-		vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds ); 
-		
-		// vulkanData.m_nImage = ( uint64_t ) m_rightEyeDesc.m_pImage;
-		vulkanData.m_nImage = ( uint64_t ) colourImage.imageView->vk(window->getOrCreateDevice()->deviceID);
-		vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
-	}
-	
-protected:
-	virtual ~SubmitOpenVRCommand() {}
-	vrhelp::Env* mVr = nullptr;
+      uint32_t hmdWidth=0, hmdHeight=0;
+      mVr->getRecommendedTargetSize(hmdWidth, hmdHeight);
+
+      vulkanData.m_nWidth = hmdWidth;
+      vulkanData.m_nHeight = hmdHeight;
+      vulkanData.m_nFormat = imageFormat;
+      vulkanData.m_nSampleCount = 1;
+
+      vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
+      vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds ); 
+
+      // vulkanData.m_nImage = ( uint64_t ) m_rightEyeDesc.m_pImage;
+      vulkanData.m_nImage = ( uint64_t ) hmdImageLeft.colourImage.imageView->vk(window->getOrCreateDevice()->deviceID);
+      vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
+*/
+    }
+
+  protected:
+    virtual ~SubmitOpenVRCommand() {}
+    vrhelp::Env* mVr = nullptr;
 };
 
 /// Create the render graph for the headset - Rendering into an image, which will be handed off to openvr
 vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device* device, vsg::Context& context, const VkExtent2D& extent, HMDImage& img)
 {
-    VkExtent3D attachmentExtent{extent.width, extent.height, 1};
-    // Attachments
-    // create image for color attachment
-    img.colourImage = vsg::Image::create();
-    img.colourImage->imageType = VK_IMAGE_TYPE_2D;
-    img.colourImage->extent = attachmentExtent;
-    img.colourImage->mipLevels = 1;
-    img.colourImage->arrayLayers = 1;
-    img.colourImage->format = imageFormat;
-    img.colourImage->samples = VK_SAMPLE_COUNT_1_BIT;
-    img.colourImage->tiling = VK_IMAGE_TILING_OPTIMAL;
-    img.colourImage->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    img.colourImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    img.colourImage->flags = 0;
-    img.colourImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    
-    img.colourImageInfo.sampler = nullptr;
-    img.colourImageInfo.imageView = vsg::createImageView(context, img.colourImage, VK_IMAGE_ASPECT_COLOR_BIT);
-    img.colourImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  VkExtent3D attachmentExtent{extent.width, extent.height, 1};
+  // Attachments
+  // create image for color attachment
+  img.colourImage = vsg::Image::create();
+  img.colourImage->imageType = VK_IMAGE_TYPE_2D;
+  img.colourImage->extent = attachmentExtent;
+  img.colourImage->mipLevels = 1;
+  img.colourImage->arrayLayers = 1;
+  img.colourImage->format = imageFormat;
+  img.colourImage->samples = VK_SAMPLE_COUNT_1_BIT;
+  img.colourImage->tiling = VK_IMAGE_TILING_OPTIMAL;
+  img.colourImage->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  img.colourImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  img.colourImage->flags = 0;
+  img.colourImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    // create depth buffer
-    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
-    img.depthImage = vsg::Image::create();
-    img.depthImage->imageType = VK_IMAGE_TYPE_2D;
-    img.depthImage->extent = attachmentExtent;
-    img.depthImage->mipLevels = 1;
-    img.depthImage->arrayLayers = 1;
-    img.depthImage->samples = VK_SAMPLE_COUNT_1_BIT;
-    img.depthImage->format = depthFormat;
-    img.depthImage->tiling = VK_IMAGE_TILING_OPTIMAL;
-    img.depthImage->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    img.depthImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    img.depthImage->flags = 0;
-    img.depthImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  img.colourImageInfo.sampler = nullptr;
+  img.colourImageInfo.imageView = vsg::createImageView(context, img.colourImage, VK_IMAGE_ASPECT_COLOR_BIT);
+  img.colourImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-    // XXX Does layout matter?
-    img.depthImageInfo.sampler = nullptr;
-    img.depthImageInfo.imageView = vsg::createImageView(context, depthImage, VK_IMAGE_ASPECT_DEPTH_BIT);
-    img.depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  // create depth buffer
+  VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+  img.depthImage = vsg::Image::create();
+  img.depthImage->imageType = VK_IMAGE_TYPE_2D;
+  img.depthImage->extent = attachmentExtent;
+  img.depthImage->mipLevels = 1;
+  img.depthImage->arrayLayers = 1;
+  img.depthImage->samples = VK_SAMPLE_COUNT_1_BIT;
+  img.depthImage->format = depthFormat;
+  img.depthImage->tiling = VK_IMAGE_TILING_OPTIMAL;
+  img.depthImage->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  img.depthImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  img.depthImage->flags = 0;
+  img.depthImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    // attachment descriptions
-    vsg::RenderPass::Attachments attachments(2);
-    // Color attachment
-    attachments[0].format = imageFormat;
-    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    // Depth attachment
-    attachments[1].format = depthFormat;
-    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  // XXX Does layout matter?
+  img.depthImageInfo.sampler = nullptr;
+  img.depthImageInfo.imageView = vsg::createImageView(context, hmdImageLeft.depthImage, VK_IMAGE_ASPECT_DEPTH_BIT);
+  img.depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-    VkAttachmentReference colorReference = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-    VkAttachmentReference depthReference = {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
-    vsg::RenderPass::Subpasses subpassDescription(1);
-    subpassDescription[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpassDescription[0].colorAttachments.emplace_back(colorReference);
-    subpassDescription[0].depthStencilAttachments.emplace_back(depthReference);
+  // attachment descriptions
+  vsg::RenderPass::Attachments attachments(2);
+  // Color attachment
+  attachments[0].format = imageFormat;
+  attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  // Depth attachment
+  attachments[1].format = depthFormat;
+  attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    vsg::RenderPass::Dependencies dependencies(2);
+  VkAttachmentReference colorReference = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+  VkAttachmentReference depthReference = {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+  vsg::RenderPass::Subpasses subpassDescription(1);
+  subpassDescription[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpassDescription[0].colorAttachments.emplace_back(colorReference);
+  subpassDescription[0].depthStencilAttachments.emplace_back(depthReference);
 
-    // XXX This dependency is copied from the offscreenrender.cpp
-    // example. I don't completely understand it, but I think it's
-    // purpose is to create a barrier if some earlier render pass was
-    // using this framebuffer's attachment as a texture.
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+  vsg::RenderPass::Dependencies dependencies(2);
 
-    // This is the heart of what makes Vulkan offscreen rendering
-    // work: render passes that follow are blocked from using this
-    // passes' color attachment in their fragment shaders until all
-    // this pass' color writes are finished.
-    dependencies[1].srcSubpass = 0;
-    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+  // XXX This dependency is copied from the offscreenrender.cpp
+  // example. I don't completely understand it, but I think it's
+  // purpose is to create a barrier if some earlier render pass was
+  // using this framebuffer's attachment as a texture.
+  dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependencies[0].dstSubpass = 0;
+  dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-    auto renderPass = vsg::RenderPass::create(device, attachments, subpassDescription, dependencies);
+  // This is the heart of what makes Vulkan offscreen rendering
+  // work: render passes that follow are blocked from using this
+  // passes' color attachment in their fragment shaders until all
+  // this pass' color writes are finished.
+  dependencies[1].srcSubpass = 0;
+  dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+  dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-    // Framebuffer
-    auto fbuf = vsg::Framebuffer::create(renderPass, vsg::ImageViews{colorImageInfo.imageView, depthImageInfo.imageView}, extent.width, extent.height, 1);
+  auto renderPass = vsg::RenderPass::create(device, attachments, subpassDescription, dependencies);
 
-    auto rendergraph = vsg::RenderGraph::create();
-    rendergraph->renderArea.offset = VkOffset2D{0, 0};
-    rendergraph->renderArea.extent = extent;
-    rendergraph->framebuffer = fbuf;
+  // Framebuffer
+  auto fbuf = vsg::Framebuffer::create(renderPass, vsg::ImageViews{hmdImageLeft.colourImageInfo.imageView, hmdImageLeft.depthImageInfo.imageView}, extent.width, extent.height, 1);
 
-    rendergraph->clearValues.resize(2);
-    rendergraph->clearValues[0].color = { {0.4f, 0.2f, 0.4f, 1.0f} };
-    rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
+  auto rendergraph = vsg::RenderGraph::create();
+  rendergraph->renderArea.offset = VkOffset2D{0, 0};
+  rendergraph->renderArea.extent = extent;
+  rendergraph->framebuffer = fbuf;
 
-    return rendergraph;
+  rendergraph->clearValues.resize(2);
+  rendergraph->clearValues[0].color = { {0.4f, 0.2f, 0.4f, 1.0f} };
+  rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
+
+  return rendergraph;
 }
 
 vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node* scenegraph, const VkExtent2D& extent)
 {
-	// TODO: camera parameters will be replaced quickly with the hmd's parameters,
-	// so most of this is redundant
-	
-    // compute the bounds of the scene graph to help position camera
-    vsg::ComputeBounds computeBounds;
-    scenegraph->accept(computeBounds);
-    vsg::dvec3 centre = (computeBounds.bounds.min+computeBounds.bounds.max)*0.5;
-    double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
-    double nearFarRatio = 0.001;
+  // TODO: camera parameters will be replaced quickly with the hmd's parameters,
+  // so most of this is redundant
 
-    // set up the camera
-    auto lookAt = vsg::LookAt::create(centre+vsg::dvec3(0.0, 0.0, radius * 3.5),
-                                      centre, vsg::dvec3(0.0, 1.0, 0.0));
+  // compute the bounds of the scene graph to help position camera
+  vsg::ComputeBounds computeBounds;
+  scenegraph->accept(computeBounds);
+  vsg::dvec3 centre = (computeBounds.bounds.min+computeBounds.bounds.max)*0.5;
+  double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
+  double nearFarRatio = 0.001;
 
-    auto perspective = vsg::Perspective::create(30.0, static_cast<double>(extent.width) / static_cast<double>(extent.height),
-                                                nearFarRatio*radius, radius * 4.5);
+  // set up the camera
+  auto lookAt = vsg::LookAt::create(centre+vsg::dvec3(0.0, 0.0, radius * 3.5),
+      centre, vsg::dvec3(0.0, 1.0, 0.0));
 
-    return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
+  auto perspective = vsg::Perspective::create(30.0, static_cast<double>(extent.width) / static_cast<double>(extent.height),
+      nearFarRatio*radius, radius * 4.5);
+
+  return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
 }
 
 vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group> sceneRoot, vrhelp::Env* vr) {
@@ -341,12 +342,12 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   sceneRoot->addChild(model_floorpad());
 
   /*
-  if( sceneRoot->getNumChildren() == 0 )
-  {
-    std::cout << "No model specified on command line" << std::endl;
-    return {};
-  }
-  */
+     if( sceneRoot->getNumChildren() == 0 )
+     {
+     std::cout << "No model specified on command line" << std::endl;
+     return {};
+     }
+   */
 
   // Create the viewer + window
   auto viewer = vsg::Viewer::create();
@@ -369,11 +370,11 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   vr->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
   hmdCamera = createCameraForScene(sceneRoot, hmdExtent);
-  
-  auto hmdRenderGraph = createOffscreenRendergraph(window, compile.context, hmdExtent, colourImage, depthImage);
+
+  auto hmdRenderGraph = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageLeft);
   auto hmdView = vsg::View::create(hmdCamera, sceneRoot);
   hmdRenderGraph->addChild(hmdView);
-  
+
 
   // Create render graph for desktop window
   desktopCamera = createCameraForScene(sceneRoot, window->extent2D());
@@ -449,11 +450,11 @@ void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
   float farPlane = 10.0f;
   auto rightProj = vr->getProjectionMatrix(vr::EVREye::Eye_Right, nearPlane, farPlane);
   vsg::ref_ptr<vsg::ProjectionMatrix> vsgProj(new RawProjectionMatrix(openVRMatToVSG(rightProj)));
-  
+
   // TODO: Obviously want to use the right parameters here
   desktopCamera->setProjectionMatrix(vsgProj);
   hmdCamera->setProjectionMatrix(vsgProj);
-  
+
   //auto radius = 2.0;
   //vsg::ref_ptr<vsg::ProjectionMatrix> perspective = vsg::Perspective::create(30.0, 800.0 / 600.0, nearPlane / farPlane * radius, radius * 4.5);
 
@@ -472,29 +473,29 @@ void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
 
 int main(int argc, char** argv) {
   // The VSG scene, plus desktop window
-  
+
   vsg::dmat4 axesMatNone(
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1);
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1);
   vsg::dmat4 axesMatZY(
-    1, 0, 0, 0,
-    0, 0, 1, 0,
-    0, -1, 0, 0,
-    0, 0, 0, 1);
+      1, 0, 0, 0,
+      0, 0, 1, 0,
+      0, -1, 0, 0,
+      0, 0, 0, 1);
   vsg::dmat4 axesMatTest(
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1);
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1);
   vsg::ref_ptr<vsg::Group> scene(new vsg::MatrixTransform(axesMatTest));
-  
+
   // vsg::ref_ptr<vsg::Group> scene(new vsg::Group());
-  
+
   // OpenVR context - TODO: Will terminate if vr isn't active
   auto vr = initVR(scene);
-  
+
   auto viewer = initVSG(argc, argv, scene, vr.get());
   if( !viewer ) return EXIT_FAILURE;
 
@@ -502,7 +503,7 @@ int main(int argc, char** argv) {
   updateSceneWithVRState( vr.get(), scene );
 
   viewer->compile();
-  
+
   // viewer->setupThreading();
 
   // Render loop
@@ -534,7 +535,7 @@ int main(int argc, char** argv) {
     // when photons will be shot into the users face.
     // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
     vr->waitGetPoses();
-    
+
     // viewer->deviceWaitIdle();
   }
 
