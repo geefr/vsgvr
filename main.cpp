@@ -20,7 +20,6 @@ const std::string LeftControllerID = "Left Controller";
 const std::string RightControllerID = "Right Controller";
 
 vsg::ref_ptr<vsg::Window> window;
-vsg::ref_ptr<vsg::Options> options;
 vsg::ref_ptr<vsg::Camera> hmdCamera;
 vsg::ref_ptr<vsg::Camera> desktopCamera;
 
@@ -285,32 +284,13 @@ vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node* scenegraph, const VkEx
 }
 
 vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group> sceneRoot, vrhelp::Env* vr) {
-  // vsg default args + out custom ones
-  options = vsg::Options::create();
-
   auto windowTraits = vsg::WindowTraits::create();
   windowTraits->windowTitle = "VSG_VR_Test";
 
   vsg::CommandLine arguments(&argc, argv);
-  arguments.read(options);
   windowTraits->debugLayer = arguments.read({"--debug","-d"});
   windowTraits->apiDumpLayer = arguments.read({"--api","-a"});
-  if (arguments.read("--double-buffer")) windowTraits->swapchainPreferences.imageCount = 2;
-  if (arguments.read("--triple-buffer")) windowTraits->swapchainPreferences.imageCount = 3; // default
-  if (arguments.read("--IMMEDIATE")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-  if (arguments.read("--FIFO")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-  if (arguments.read("--FIFO_RELAXED")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
-  if (arguments.read("--MAILBOX")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-  if (arguments.read({"-t", "--test"})) { windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; windowTraits->fullscreen = true; }
-  if (arguments.read({"--st", "--small-test"})) { windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; windowTraits->width = 192, windowTraits->height = 108; windowTraits->decoration = false; }
-  if (arguments.read({"--fullscreen", "--fs"})) windowTraits->fullscreen = true;
   if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
-  if (arguments.read({"--no-frame", "--nf"})) windowTraits->decoration = false;
-  if (arguments.read("--or")) windowTraits->overrideRedirect = true;
-  if (arguments.read("--d32")) windowTraits->depthFormat = VK_FORMAT_D32_SFLOAT;
-  arguments.read("--screen", windowTraits->screenNum);
-  arguments.read("--display", windowTraits->display);
-  arguments.read("--samples", windowTraits->samples);
   if( arguments.errors() ) {
     arguments.writeErrorMessages((std::cerr));
     return {};
@@ -323,33 +303,15 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
     vsg::Path filename = arguments[i];
     path = vsg::filePath(filename);
 
-    auto obj = vsg::read(filename, options);
-    if( auto node = obj.cast<vsg::Node>() )
-    {
-      // It's a vsgt/other supported format
-      sceneRoot->addChild(node);
-    }
-    else if( obj )
-    {
-      std::cout << "Unable to load object of type " << obj->className() << std::endl;
-    }
-    else
-    {
-      std::cout << "Unable to load model from file " << filename << std::endl;
+    auto obj = vsg::read_cast<vsg::Node>(filename);
+    if( obj ) {
+      sceneRoot->addChild(obj);
     }
   }
 
   sceneRoot->addChild(model_floorpad());
 
-  /*
-     if( sceneRoot->getNumChildren() == 0 )
-     {
-     std::cout << "No model specified on command line" << std::endl;
-     return {};
-     }
-   */
-
-  // Create the viewer + window
+  // Create the viewer + desktop window
   auto viewer = vsg::Viewer::create();
   window = vsg::Window::create(windowTraits);
   if( !window )
@@ -365,6 +327,8 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
 
   // Create the framebuffers and render graph for HMD view
   // TODO: Will need one of these for each eye
+  // TODO: This crashes
+/*
   vsg::CompileTraversal compile(window);
   uint32_t hmdWidth=0, hmdHeight=0;
   vr->getRecommendedTargetSize(hmdWidth, hmdHeight);
@@ -374,22 +338,23 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   auto hmdRenderGraph = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageLeft);
   auto hmdView = vsg::View::create(hmdCamera, sceneRoot);
   hmdRenderGraph->addChild(hmdView);
-
+*/
 
   // Create render graph for desktop window
   desktopCamera = createCameraForScene(sceneRoot, window->extent2D());
   auto desktopRenderGraph = vsg::createRenderGraphForView(window, desktopCamera, sceneRoot);
 
   // separateCommandGraph == true in vsgrendertotexture example
-  // TODO: is the window required here? Would we just want the 2 eye renders tied together, and render the desktop window entirely separately?
-  auto hmdCommandGraph = vsg::CommandGraph::create(window);
-  hmdCommandGraph->addChild(hmdRenderGraph);
-  vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
-  hmdCommandGraph->addChild(hmdSubmitCommand);
+  //auto hmdCommandGraph = vsg::CommandGraph::create(window);
+  //hmdCommandGraph->addChild(hmdRenderGraph);
+  //vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
+  //hmdCommandGraph->addChild(hmdSubmitCommand);
+  
   auto desktopCommandGraph = vsg::CommandGraph::create(window);
   desktopCommandGraph->addChild(desktopRenderGraph);
 
-  viewer->assignRecordAndSubmitTaskAndPresentation({hmdCommandGraph, desktopCommandGraph});
+  //viewer->assignRecordAndSubmitTaskAndPresentation({hmdCommandGraph, desktopCommandGraph});
+  viewer->assignRecordAndSubmitTaskAndPresentation({desktopCommandGraph});
 
   return viewer;
 }
@@ -416,6 +381,8 @@ auto initVR( vsg::ref_ptr<vsg::Group> scene ) {
   return env;
 }
 
+
+// Take parameters from openvr, update the vsg scene elements
 void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
   auto left = vr->leftHand();
   auto right = vr->rightHand();
@@ -445,13 +412,11 @@ void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
   hmdPoseMatInv = glm::inverse(hmdPoseMat);
 
   // TODO: View/Projection matrices are a little tricky here due to the
-  // coordinate space adjustment...
+  // coordinate space adjustment...I've probably got it wrong somehow
   float nearPlane = 0.001f;
   float farPlane = 10.0f;
   auto rightProj = vr->getProjectionMatrix(vr::EVREye::Eye_Right, nearPlane, farPlane);
   vsg::ref_ptr<vsg::ProjectionMatrix> vsgProj(new RawProjectionMatrix(openVRMatToVSG(rightProj)));
-
-  // TODO: Obviously want to use the right parameters here
   desktopCamera->setProjectionMatrix(vsgProj);
   hmdCamera->setProjectionMatrix(vsgProj);
 
@@ -472,8 +437,11 @@ void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
 }
 
 int main(int argc, char** argv) {
+  try {
   // The VSG scene, plus desktop window
 
+  // TODO: This was a hack to get vsg into the same orientation as the headset
+  // Should do this the other way - map openvr matrices through to vsg
   vsg::dmat4 axesMatNone(
       1, 0, 0, 0,
       0, 1, 0, 0,
@@ -491,8 +459,6 @@ int main(int argc, char** argv) {
       0, 0, 0, 1);
   vsg::ref_ptr<vsg::Group> scene(new vsg::MatrixTransform(axesMatTest));
 
-  // vsg::ref_ptr<vsg::Group> scene(new vsg::Group());
-
   // OpenVR context - TODO: Will terminate if vr isn't active
   auto vr = initVR(scene);
 
@@ -503,8 +469,6 @@ int main(int argc, char** argv) {
   updateSceneWithVRState( vr.get(), scene );
 
   viewer->compile();
-
-  // viewer->setupThreading();
 
   // Render loop
   while(viewer->advanceToNextFrame())
@@ -537,6 +501,9 @@ int main(int argc, char** argv) {
     vr->waitGetPoses();
 
     // viewer->deviceWaitIdle();
+  }
+  } catch( vsg::Exception& e) {
+    std::cerr << "Exception: " << e.message << std::endl;
   }
 
   return EXIT_SUCCESS;
