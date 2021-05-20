@@ -33,9 +33,14 @@ endif()
 
 add_subdirectory( vr )
 
-add_executable( ${PROJECT_NAME} 
-	main.cpp
-)
-target_link_libraries( ${PROJECT_NAME} vsg::vsg vrhelp )
-target_link_directories( ${PROJECT_NAME} PRIVATE ${OPENVR_ROOT}/lib/linux64 )
-target_include_directories( ${PROJECT_NAME} PRIVATE ${OPENVR_ROOT}/headers )
+
+add_executable( example_vr example_vr.cpp )
+target_link_libraries( example_vr vsg::vsg vrhelp )
+target_link_directories( example_vr PRIVATE ${OPENVR_ROOT}/lib/linux64 )
+target_include_directories( example_vr PRIVATE ${OPENVR_ROOT}/headers )
+
+
+add_executable( example_novr example_novr.cpp )
+target_link_libraries( example_novr vsg::vsg vrhelp )
+target_link_directories( example_novr PRIVATE ${OPENVR_ROOT}/lib/linux64 )
+target_include_directories( example_novr PRIVATE ${OPENVR_ROOT}/headers )
