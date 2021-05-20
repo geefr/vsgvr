@@ -285,7 +285,7 @@ vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node* scenegraph, const VkEx
 
 vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group> sceneRoot, vrhelp::Env* vr) {
   auto windowTraits = vsg::WindowTraits::create();
-  windowTraits->windowTitle = "VSG_VR_Test";
+  windowTraits->windowTitle = "VSG Test (With VR)";
 
   vsg::CommandLine arguments(&argc, argv);
   windowTraits->debugLayer = arguments.read({"--debug","-d"});
