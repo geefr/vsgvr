@@ -11,7 +11,7 @@
 #include "device.h"
 #include "controller.h"
 
-#include "openvr/openvr.h"
+#include "openvr.h"
 
 #include <string>
 #include <map>

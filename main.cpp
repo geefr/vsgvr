@@ -1,7 +1,7 @@
 
 #include <vsg/all.h>
 
-#include <openvr/openvr.h>
+#include <openvr.h>
 #include "vr/env.h"
 #include "vr/device.h"
 #include "vr/controller.h"

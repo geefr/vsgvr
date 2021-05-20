@@ -1,7 +1,7 @@
 #ifndef VRHELL_DEVICE_H
 #define VRHELL_DEVICE_H
 
-#include "openvr/openvr.h"
+#include "openvr.h"
 #include "glm/glm.hpp"
 
 #include <cstdint>

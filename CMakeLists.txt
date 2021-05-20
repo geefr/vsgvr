@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.12)
 
 project(VSG_VR_Test)
 
@@ -21,7 +21,7 @@ find_package(vsg)
 # TODO: Paths hardcoded for now
 if( NOT OPENVR_ROOT )
   set( OPENVR_ROOT "" CACHE PATH "Root directory of OpenVR SDK" FORCE )
-  message( FATAL_ERROR "VR Support enabled but OPENVR_ROOT not set")
+  message( WARNING "VR Support enabled but OPENVR_ROOT not set")
 endif()
 
 if( MSVC )
@@ -35,6 +35,7 @@ add_subdirectory( vr )
 
 add_executable( ${PROJECT_NAME} 
 	main.cpp
-       	)
+)
 target_link_libraries( ${PROJECT_NAME} vsg::vsg vrhelp )
-
+target_link_directories( ${PROJECT_NAME} PRIVATE ${OPENVR_ROOT}/lib/linux64 )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${OPENVR_ROOT}/headers )

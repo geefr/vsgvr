@@ -5,7 +5,7 @@
 
 #include <map>
 
-#include "openvr/openvr.h"
+#include "openvr.h"
 
 namespace vrhelp {
 	class Controller : public Device
