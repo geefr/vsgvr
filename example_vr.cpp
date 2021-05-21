@@ -6,6 +6,8 @@
 #include "vr/device.h"
 #include "vr/controller.h"
 
+#include "updatevrvisitor.h"
+
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
@@ -14,10 +16,6 @@
 
 #include "models/controller/model_controller.cpp"
 #include "models/floorpad/model_floorpad.cpp"
-
-const std::string OpenVRIDTag = "OpenVR ID";
-const std::string LeftControllerID = "Left Controller";
-const std::string RightControllerID = "Right Controller";
 
 vsg::ref_ptr<vsg::Window> window;
 vsg::ref_ptr<vsg::Camera> hmdCamera;
@@ -58,43 +56,6 @@ class RawViewMatrix : public vsg::ViewMatrix
     void get(vsg::dmat4& matrix) const override { matrix = mMat; }
   private:
     vsg::dmat4 mMat;
-};
-
-class UpdateVRVisitor : public vsg::Visitor
-{
-  public:
-    UpdateVRVisitor() = delete;
-    UpdateVRVisitor(vrhelp::Env* vr, vrhelp::Controller* left, vrhelp::Controller* right, vrhelp::Device* hmd)
-      : mVr(vr), mLeft(left), mRight(right), mHmd(hmd) {}
-
-    virtual void apply(vsg::Group& o) override {
-      std::string v;
-      if( mLeft ) {
-        if( o.getValue(OpenVRIDTag, v) && v == LeftControllerID ) {
-          if( auto txf = o.cast<vsg::MatrixTransform>() ) {
-            auto mat = mLeft->deviceToAbsoluteMatrix();
-            vsg::dmat4 vmat(glm::value_ptr(mat));
-            txf->setMatrix(vmat);
-          }
-        }
-      }
-      if( mRight ) {
-        if( o.getValue(OpenVRIDTag, v) && v == RightControllerID ) {
-          if( auto txf = o.cast<vsg::MatrixTransform>() ) {
-            auto mat = mRight->deviceToAbsoluteMatrix();
-            vsg::dmat4 vmat(glm::value_ptr(mat));
-            txf->setMatrix(vmat);
-          }
-        }
-      }
-    }
-
-
-  private:
-    vrhelp::Env* mVr = nullptr;
-    vrhelp::Controller* mLeft = nullptr;
-    vrhelp::Controller* mRight = nullptr;
-    vrhelp::Device* mHmd = nullptr;
 };
 
 class SubmitOpenVRCommand : public vsg::Command
