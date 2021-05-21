@@ -324,11 +324,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   // add close handler to respond the close window button and pressing escape
   viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
-
   // Create the framebuffers and render graph for HMD view
-  // TODO: Will need one of these for each eye
-  // TODO: This crashes
-/*
   vsg::CompileTraversal compile(window);
   uint32_t hmdWidth=0, hmdHeight=0;
   vr->getRecommendedTargetSize(hmdWidth, hmdHeight);
@@ -338,23 +334,21 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   auto hmdRenderGraph = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageLeft);
   auto hmdView = vsg::View::create(hmdCamera, sceneRoot);
   hmdRenderGraph->addChild(hmdView);
-*/
 
   // Create render graph for desktop window
   desktopCamera = createCameraForScene(sceneRoot, window->extent2D());
   auto desktopRenderGraph = vsg::createRenderGraphForView(window, desktopCamera, sceneRoot);
 
   // separateCommandGraph == true in vsgrendertotexture example
-  //auto hmdCommandGraph = vsg::CommandGraph::create(window);
-  //hmdCommandGraph->addChild(hmdRenderGraph);
-  //vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
-  //hmdCommandGraph->addChild(hmdSubmitCommand);
+  auto hmdCommandGraph = vsg::CommandGraph::create(window);
+  hmdCommandGraph->addChild(hmdRenderGraph);
+  vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
+  hmdCommandGraph->addChild(hmdSubmitCommand);
   
   auto desktopCommandGraph = vsg::CommandGraph::create(window);
   desktopCommandGraph->addChild(desktopRenderGraph);
 
-  //viewer->assignRecordAndSubmitTaskAndPresentation({hmdCommandGraph, desktopCommandGraph});
-  viewer->assignRecordAndSubmitTaskAndPresentation({desktopCommandGraph});
+  viewer->assignRecordAndSubmitTaskAndPresentation({hmdCommandGraph, desktopCommandGraph});
 
   return viewer;
 }
