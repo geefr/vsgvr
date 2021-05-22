@@ -7,6 +7,7 @@
 #include "vr/controller.h"
 
 #include "updatevrvisitor.h"
+#include "submitopenvrcommand.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -33,83 +34,37 @@ HMDImage hmdImageRight;
 
 auto imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
-vsg::dmat4 openVRMatToVSG( glm::dmat4 mat ) {
-  vsg::dmat4 result( glm::value_ptr(mat) );
+vsg::dmat4 openVRMatToVSG(glm::dmat4 mat)
+{
+  vsg::dmat4 result(glm::value_ptr(mat));
   return result;
 }
 
 class RawProjectionMatrix : public vsg::ProjectionMatrix
 {
-  public:
-    RawProjectionMatrix( vsg::dmat4 mat ) : mMat(mat) {}
-    void get(vsg::mat4& matrix) const override { matrix = mMat; }
-    void get(vsg::dmat4& matrix) const override { matrix = mMat; }
-  private:
-    vsg::dmat4 mMat;
+public:
+  RawProjectionMatrix(vsg::dmat4 mat) : mMat(mat) {}
+  void get(vsg::mat4 &matrix) const override { matrix = mMat; }
+  void get(vsg::dmat4 &matrix) const override { matrix = mMat; }
+
+private:
+  vsg::dmat4 mMat;
 };
 
 class RawViewMatrix : public vsg::ViewMatrix
 {
-  public:
-    RawViewMatrix( vsg::dmat4 mat ) : mMat(mat) {}
-    void get(vsg::mat4& matrix) const override { matrix = mMat; }
-    void get(vsg::dmat4& matrix) const override { matrix = mMat; }
-  private:
-    vsg::dmat4 mMat;
+public:
+  RawViewMatrix(vsg::dmat4 mat) : mMat(mat) {}
+  void get(vsg::mat4 &matrix) const override { matrix = mMat; }
+  void get(vsg::dmat4 &matrix) const override { matrix = mMat; }
+
+private:
+  vsg::dmat4 mMat;
 };
 
-class SubmitOpenVRCommand : public vsg::Command
-{
-  public:
-    SubmitOpenVRCommand(vrhelp::Env* vr)
-      : mVr(vr)
-    {}
-
-    void read(vsg::Input& input) override {}
-    void write(vsg::Output& output) const override {}
-
-    void compile(vsg::Context& context) override {}
-
-    void record(vsg::CommandBuffer& commandBuffer) const override {
-      // Submit to SteamVR
-      vr::VRTextureBounds_t bounds;
-      bounds.uMin = 0.0f;
-      bounds.uMax = 1.0f;
-      bounds.vMin = 0.0f;
-      bounds.vMax = 1.0f;
-/*
-      vr::VRVulkanTextureData_t vulkanData;
-      vulkanData.m_nImage = ( uint64_t ) hmdImageLeft.colourImage.imageView->vk(window->getOrCreateDevice()->deviceID);
-      vulkanData.m_pDevice = ( VkDevice_T * ) window->getOrCreateDevice()->getDevice();
-      vulkanData.m_pPhysicalDevice = ( VkPhysicalDevice_T * ) window->getOrCreateDevice()->getPhysicalDevice()->getPhysicalDevice();
-      vulkanData.m_pInstance = ( VkInstance_T *) window->getOrCreateDevice()->getInstance()->getInstance(); 
-      vulkanData.m_pQueue = ( VkQueue_T * ) window->getOrCreateDevice()->getQueue(0)->queue(); // TODO: use the correct queue ID
-      vulkanData.m_nQueueFamilyIndex = 0; // TODO: use the correct queue ID
-
-      uint32_t hmdWidth=0, hmdHeight=0;
-      mVr->getRecommendedTargetSize(hmdWidth, hmdHeight);
-
-      vulkanData.m_nWidth = hmdWidth;
-      vulkanData.m_nHeight = hmdHeight;
-      vulkanData.m_nFormat = imageFormat;
-      vulkanData.m_nSampleCount = 1;
-
-      vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
-      vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds ); 
-
-      // vulkanData.m_nImage = ( uint64_t ) m_rightEyeDesc.m_pImage;
-      vulkanData.m_nImage = ( uint64_t ) hmdImageLeft.colourImage.imageView->vk(window->getOrCreateDevice()->deviceID);
-      vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
-*/
-    }
-
-  protected:
-    virtual ~SubmitOpenVRCommand() {}
-    vrhelp::Env* mVr = nullptr;
-};
 
 /// Create the render graph for the headset - Rendering into an image, which will be handed off to openvr
-vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device* device, vsg::Context& context, const VkExtent2D& extent, HMDImage& img)
+vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Context &context, const VkExtent2D &extent, HMDImage &img)
 {
   VkExtent3D attachmentExtent{extent.width, extent.height, 1};
   // Attachments
@@ -216,56 +171,60 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device* device, vsg::Co
   rendergraph->framebuffer = fbuf;
 
   rendergraph->clearValues.resize(2);
-  rendergraph->clearValues[0].color = { {0.4f, 0.2f, 0.4f, 1.0f} };
+  rendergraph->clearValues[0].color = {{0.4f, 0.2f, 0.4f, 1.0f}};
   rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
 
   return rendergraph;
 }
 
-vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node* scenegraph, const VkExtent2D& extent)
+vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node *scenegraph, const VkExtent2D &extent)
 {
-  // TODO: camera parameters will be replaced quickly with the hmd's parameters,
-  // so most of this is redundant
-
-  // compute the bounds of the scene graph to help position camera
+  // Create an initial camera - Both the desktop and hmd cameras are intialised like this
+  // but their parameters will be updated each frame based on the hmd's pose/matrices
   vsg::ComputeBounds computeBounds;
   scenegraph->accept(computeBounds);
-  vsg::dvec3 centre = (computeBounds.bounds.min+computeBounds.bounds.max)*0.5;
-  double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
+  vsg::dvec3 centre = (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
+  double radius = vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.6;
   double nearFarRatio = 0.001;
 
   // set up the camera
-  auto lookAt = vsg::LookAt::create(centre+vsg::dvec3(0.0, 0.0, radius * 3.5),
-      centre, vsg::dvec3(0.0, 1.0, 0.0));
+  auto lookAt = vsg::LookAt::create(centre + vsg::dvec3(0.0, 0.0, radius * 3.5),
+                                    centre, vsg::dvec3(0.0, 1.0, 0.0));
 
   auto perspective = vsg::Perspective::create(30.0, static_cast<double>(extent.width) / static_cast<double>(extent.height),
-      nearFarRatio*radius, radius * 4.5);
+                                              nearFarRatio * radius, radius * 4.5);
 
   return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
 }
 
-vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group> sceneRoot, vrhelp::Env* vr) {
+vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group> sceneRoot, vrhelp::Env *vr)
+{
   auto windowTraits = vsg::WindowTraits::create();
   windowTraits->windowTitle = "VSG Test (With VR)";
 
   vsg::CommandLine arguments(&argc, argv);
-  windowTraits->debugLayer = arguments.read({"--debug","-d"});
-  windowTraits->apiDumpLayer = arguments.read({"--api","-a"});
-  if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
-  if( arguments.errors() ) {
+  windowTraits->debugLayer = arguments.read({"--debug", "-d"});
+  windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
+  if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height))
+  {
+    windowTraits->fullscreen = false;
+  }
+  if (arguments.errors())
+  {
     arguments.writeErrorMessages((std::cerr));
     return {};
   }
 
   // Load any vsg files into the scene graph
   vsg::Path path;
-  for( auto i = 1; i < argc; ++i )
+  for (auto i = 1; i < argc; ++i)
   {
     vsg::Path filename = arguments[i];
     path = vsg::filePath(filename);
 
     auto obj = vsg::read_cast<vsg::Node>(filename);
-    if( obj ) {
+    if (obj)
+    {
       sceneRoot->addChild(obj);
     }
   }
@@ -275,7 +234,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   // Create the viewer + desktop window
   auto viewer = vsg::Viewer::create();
   window = vsg::Window::create(windowTraits);
-  if( !window )
+  if (!window)
   {
     std::cout << "Failed to create window" << std::endl;
     return {};
@@ -287,7 +246,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
 
   // Create the framebuffers and render graph for HMD view
   vsg::CompileTraversal compile(window);
-  uint32_t hmdWidth=0, hmdHeight=0;
+  uint32_t hmdWidth = 0, hmdHeight = 0;
   vr->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
   hmdCamera = createCameraForScene(sceneRoot, hmdExtent);
@@ -305,7 +264,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   hmdCommandGraph->addChild(hmdRenderGraph);
   vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
   hmdCommandGraph->addChild(hmdSubmitCommand);
-  
+
   auto desktopCommandGraph = vsg::CommandGraph::create(window);
   desktopCommandGraph->addChild(desktopRenderGraph);
 
@@ -314,7 +273,8 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char** argv, vsg::ref_ptr<vsg::Group
   return viewer;
 }
 
-auto initVR( vsg::ref_ptr<vsg::Group> scene ) {
+auto initVR(vsg::ref_ptr<vsg::Group> scene)
+{
   std::unique_ptr<vrhelp::Env> env(new vrhelp::Env(vr::ETrackingUniverseOrigin::TrackingUniverseStanding));
 
   // Create framebuffers/render targets for each eye
@@ -336,20 +296,24 @@ auto initVR( vsg::ref_ptr<vsg::Group> scene ) {
   return env;
 }
 
-
 // Take parameters from openvr, update the vsg scene elements
-void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
+void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
+{
   auto left = vr->leftHand();
   auto right = vr->rightHand();
   auto hmd = vr->hmd();
 
-  if( left ) {
-    if( left->mButtonPressed[vr::k_EButton_SteamVR_Trigger] ) {
+  if (left)
+  {
+    if (left->mButtonPressed[vr::k_EButton_SteamVR_Trigger])
+    {
       std::cerr << "Left trigger pressed\n";
     }
   }
-  if( right ) {
-    if( right->mButtonPressed[vr::k_EButton_SteamVR_Trigger] ) {
+  if (right)
+  {
+    if (right->mButtonPressed[vr::k_EButton_SteamVR_Trigger])
+    {
       std::cerr << "Right trigger pressed\n";
     }
   }
@@ -391,76 +355,60 @@ void updateSceneWithVRState( vrhelp::Env* vr, vsg::ref_ptr<vsg::Group> scene ) {
   hmdCamera->setViewMatrix(vsgView);
 }
 
-int main(int argc, char** argv) {
-  try {
-  // The VSG scene, plus desktop window
-
-  // TODO: This was a hack to get vsg into the same orientation as the headset
-  // Should do this the other way - map openvr matrices through to vsg
-  vsg::dmat4 axesMatNone(
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1);
-  vsg::dmat4 axesMatZY(
-      1, 0, 0, 0,
-      0, 0, 1, 0,
-      0, -1, 0, 0,
-      0, 0, 0, 1);
-  vsg::dmat4 axesMatTest(
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1);
-  vsg::ref_ptr<vsg::Group> scene(new vsg::MatrixTransform(axesMatTest));
-
-  // OpenVR context - TODO: Will terminate if vr isn't active
-  auto vr = initVR(scene);
-
-  auto viewer = initVSG(argc, argv, scene, vr.get());
-  if( !viewer ) return EXIT_FAILURE;
-
-  // Setup initial state
-  updateSceneWithVRState( vr.get(), scene );
-
-  viewer->compile();
-
-  // Render loop
-  while(viewer->advanceToNextFrame())
+int main(int argc, char **argv)
+{
+  try
   {
-    // Input handling for VSG
-    viewer->handleEvents();
+    // The VSG scene, plus desktop window
+    vsg::ref_ptr<vsg::Group> scene(new vsg::Group());
 
-    // OpenVR state update
-    vr->update();
+    // OpenVR context - TODO: Will terminate if vr isn't active
+    auto vr = initVR(scene);
 
-    // TODO: This is far from the optimal approach, but simple to use for now
-    // TODO: Update VSG state for controller positions/etc
+    auto viewer = initVSG(argc, argv, scene, vr.get());
+    if (!viewer)
+      return EXIT_FAILURE;
+
+    // Setup initial state
     updateSceneWithVRState(vr.get(), scene);
 
-    // Other VSG updates
-    viewer->update();
+    viewer->compile();
 
-    // TODO: Update render passes for left/right eyes here
-    // VSG render + present to desktop window
-    viewer->recordAndSubmit();
-    viewer->present();
+    // Render loop
+    while (viewer->advanceToNextFrame())
+    {
+      // Input handling for VSG
+      viewer->handleEvents();
 
-    // VR presentation
-    // TODO
-    // vr->submitFrames( leftTexID, rightTexID );
-    // TODO: The pose updates here aren't great. Should be as async as possible, 
-    // and should ask for poses x seconds into the future, 
-    // when photons will be shot into the users face.
-    // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
-    vr->waitGetPoses();
+      // OpenVR state update
+      vr->update();
 
-    // viewer->deviceWaitIdle();
+      // TODO: This is far from the optimal approach, but simple to use for now
+      // TODO: Update VSG state for controller positions/etc
+      updateSceneWithVRState(vr.get(), scene);
+
+      // Other VSG updates
+      viewer->update();
+
+      // TODO: Update render passes for left/right eyes here
+      // VSG render + present to desktop window
+      viewer->recordAndSubmit();
+      viewer->present();
+
+      // VR presentation
+      // TODO
+      // vr->submitFrames( leftTexID, rightTexID );
+      // TODO: The pose updates here aren't great. Should be as async as possible,
+      // and should ask for poses x seconds into the future,
+      // when photons will be shot into the users face.
+      // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
+      vr->waitGetPoses();
+    }
   }
-  } catch( vsg::Exception& e) {
+  catch (vsg::Exception &e)
+  {
     std::cerr << "Exception: " << e.message << std::endl;
   }
 
   return EXIT_SUCCESS;
 }
-
