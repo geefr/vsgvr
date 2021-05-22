@@ -11,7 +11,10 @@ set( vr_h
     controller.h
 )
 
-include_directories( ${OPENVR_ROOT}/headers )
+include_directories( 
+  ${OPENVR_ROOT}/headers
+  ${Vulkan_INCLUDE_DIRS}
+)
 link_directories( ${OPENVR_ROOT}/lib/linux64 )
 
 add_library( vrhelp STATIC ${vr_cpp} ${vr_h} )

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 
 project(VSG_VR_Test)
 
@@ -18,7 +18,8 @@ set(OpenGL_GL_PREFERENCE GLVND)
 #endif()
 
 # Package/System requirements
-find_package(vsg)
+find_package(vsg REQUIRED)
+find_package(Vulkan REQUIRED)
 
 # TODO: Paths hardcoded for now
 if( NOT OPENVR_ROOT )
