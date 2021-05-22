@@ -1,5 +1,18 @@
 # VSG OpenVR prototype
 
+## Status
+
+Linux Build | Building
+Windows Build | Untested, should build
+Code  | Messy
+OpenVR Input | Present, through 'vrhelp' namespace. Needs rework eventually.
+Controller tracking | Working
+HMD tracking | Working
+HMD Presentation | Broken
+Correct Matrices for HMD | Unlikely
+
+## Setup
+
 If you don't have a headset see here - Force a null driver to allow basic display:
 https://developer.valvesoftware.com/wiki/SteamVR/steamvr.vrsettings
 
