@@ -8,12 +8,14 @@
 
 #include "updatevrvisitor.h"
 #include "submitopenvrcommand.h"
+#include "rawmatrices.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
 #include <memory>
 #include <string>
+#include <fmt/core.h>
 
 #include "models/controller/model_controller.cpp"
 #include "models/floorpad/model_floorpad.cpp"
@@ -39,29 +41,6 @@ vsg::dmat4 openVRMatToVSG(glm::dmat4 mat)
   vsg::dmat4 result(glm::value_ptr(mat));
   return result;
 }
-
-class RawProjectionMatrix : public vsg::ProjectionMatrix
-{
-public:
-  RawProjectionMatrix(vsg::dmat4 mat) : mMat(mat) {}
-  void get(vsg::mat4 &matrix) const override { matrix = mMat; }
-  void get(vsg::dmat4 &matrix) const override { matrix = mMat; }
-
-private:
-  vsg::dmat4 mMat;
-};
-
-class RawViewMatrix : public vsg::ViewMatrix
-{
-public:
-  RawViewMatrix(vsg::dmat4 mat) : mMat(mat) {}
-  void get(vsg::mat4 &matrix) const override { matrix = mMat; }
-  void get(vsg::dmat4 &matrix) const override { matrix = mMat; }
-
-private:
-  vsg::dmat4 mMat;
-};
-
 
 /// Create the render graph for the headset - Rendering into an image, which will be handed off to openvr
 vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Context &context, const VkExtent2D &extent, HMDImage &img)
@@ -308,6 +287,8 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
     if (left->mButtonPressed[vr::k_EButton_SteamVR_Trigger])
     {
       std::cerr << "Left trigger pressed\n";
+      auto lPos = left->positionAbsolute();
+      fmt::print("Left Position: {},{},{}\n", lPos[0], lPos[1], lPos[2]);
     }
   }
   if (right)
@@ -315,11 +296,13 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
     if (right->mButtonPressed[vr::k_EButton_SteamVR_Trigger])
     {
       std::cerr << "Right trigger pressed\n";
+      auto rPos = right->positionAbsolute();
+      fmt::print("Right Position: {},{},{}\n", rPos[0], rPos[1], rPos[2]);
     }
   }
 
   // Update models
-  auto v = new UpdateVRVisitor(vr, left, right, hmd);
+  vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
   scene->accept(*v);
 
   // Position the camera based on HMD location

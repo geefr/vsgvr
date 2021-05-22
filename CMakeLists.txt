@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(VSG_VR_Test)
 
+include(FetchContent)
+
 if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
   set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE )
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
@@ -31,11 +33,19 @@ else()
 endif()
 #####################
 
+FetchContent_Declare(fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG master
+)
+FetchContent_MakeAvailable(fmt)
+
+#####################
+
 add_subdirectory( vr )
 
 
 add_executable( example_vr example_vr.cpp )
-target_link_libraries( example_vr vsg::vsg vrhelp )
+target_link_libraries( example_vr vsg::vsg vrhelp fmt::fmt )
 target_link_directories( example_vr PRIVATE ${OPENVR_ROOT}/lib/linux64 )
 target_include_directories( example_vr PRIVATE ${OPENVR_ROOT}/headers )
 

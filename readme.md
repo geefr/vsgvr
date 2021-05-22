@@ -9,10 +9,11 @@ Linux Build | Building
 Windows Build | Untested, should build
 Code  | Messy
 OpenVR Input | Present, through 'vrhelp' namespace. Needs rework eventually.
-Controller tracking | Broken
-HMD tracking | Broken
-HMD Presentation | Broken
-Correct Matrices for HMD | Unlikely
+Controller tracking | Working
+Controller models in scene | Working
+HMD tracking | Partially Working
+HMD Presentation | Broken - Connected to vr compositor but not presenting frames
+Correct Matrices for HMD | No - Desktop view upside down
 
 Bugs:
 * Segfault on exit
