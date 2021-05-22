@@ -9,10 +9,13 @@ Linux Build | Building
 Windows Build | Untested, should build
 Code  | Messy
 OpenVR Input | Present, through 'vrhelp' namespace. Needs rework eventually.
-Controller tracking | Working
-HMD tracking | Working
+Controller tracking | Broken
+HMD tracking | Broken
 HMD Presentation | Broken
 Correct Matrices for HMD | Unlikely
+
+Bugs:
+* Segfault on exit
 
 ## Setup
 
