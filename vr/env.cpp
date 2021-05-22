@@ -345,8 +345,8 @@ namespace vrhelp
     vr::Texture_t texture = {&vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto};
     vr::VRCompositor()->Submit(vr::Eye_Left, &texture, &bounds);
 
-    // vulkanData.m_nImage = (uint64_t)rightImg;
-    // vr::VRCompositor()->Submit(vr::Eye_Right, &texture, &bounds);
+    vulkanData.m_nImage = (uint64_t)rightImg;
+    vr::VRCompositor()->Submit(vr::Eye_Right, &texture, &bounds);
   }
 #endif
 

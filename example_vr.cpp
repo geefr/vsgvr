@@ -103,7 +103,7 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[0].finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-  
+
   // Depth attachment
   attachments[1].format = depthFormat;
   attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
@@ -158,7 +158,7 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   rendergraph->framebuffer = fbuf;
 
   rendergraph->clearValues.resize(2);
-  rendergraph->clearValues[0].color = {{0.4f, 0.2f, 0.4f, 1.0f}};
+  rendergraph->clearValues[0].color = {{0.9f, 0.2f, 0.9f, 1.0f}};
   rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
 
   return rendergraph; 
@@ -262,6 +262,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
     std::cout << "Failed to create window" << std::endl;
     return {};
   }
+
 
   viewer->addWindow(window);
   // add close handler to respond the close window button and pressing escape

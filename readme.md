@@ -12,7 +12,7 @@ OpenVR Input | Present, through 'vrhelp' namespace. Needs rework eventually.
 Controller tracking | Working
 Controller models in scene | Working
 HMD tracking | Partially Working
-HMD Presentation | Broken - Connected to vr compositor but not presenting frames
+HMD Presentation | Partially Working - Limited render test to null steamvr driver :)
 Correct Matrices for HMD | No - Desktop view upside down
 
 Bugs:
