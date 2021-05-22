@@ -16,9 +16,9 @@ namespace vrhelp {
     /// Factory method to create device given generic stuff
     static std::unique_ptr<Device> enumerate(vr::IVRSystem* context, uint32_t id);
 
-    /// Device -> Absolute matrix, glm layout, -Ve Z forward
+    /// Device space -> Absolute (world space) matrix, glm layout, -Ve Z forward
     glm::dmat4x4 deviceToAbsoluteMatrix() const;
-    /// Device -> absolute matrix, glm layout, +Ve Z up
+    /// Device space -> Absolute (world space) matrix, glm layout, +Ve Z up
     glm::dmat4x4 deviceToAbsoluteMatrixZup() const;
 
     /// Position of device in world space

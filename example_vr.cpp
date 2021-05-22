@@ -7,7 +7,6 @@
 #include "vr/controller.h"
 
 #include "updatevrvisitor.h"
-#include "submitopenvrcommand.h"
 #include "rawmatrices.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -18,10 +17,11 @@
 #include <fmt/core.h>
 
 #include "models/controller/model_controller.cpp"
-#include "models/floorpad/model_floorpad.cpp"
+#include "models/world/model_world.cpp"
 
 vsg::ref_ptr<vsg::Window> window;
-vsg::ref_ptr<vsg::Camera> hmdCamera;
+vsg::ref_ptr<vsg::Camera> hmdCameraLeft;
+vsg::ref_ptr<vsg::Camera> hmdCameraRight;
 vsg::ref_ptr<vsg::Camera> desktopCamera;
 
 struct HMDImage
@@ -36,6 +36,7 @@ struct HMDImage
 HMDImage hmdImageLeft;
 HMDImage hmdImageRight;
 vsg::ref_ptr<vsg::CommandGraph> hmdCommandGraph;
+auto hmdImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
 std::list<std::string> vrRequiredInstanceExtensions;
 std::list<std::string> vrRequiredDeviceExtensions;
@@ -47,7 +48,7 @@ vsg::dmat4 openVRMatToVSG(glm::dmat4 mat)
 }
 
 /// Create the render graph for the headset - Rendering into an image, which will be handed off to openvr
-vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Context &context, const VkExtent2D &extent, HMDImage &img)
+vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Context &context, const VkExtent2D &extent, HMDImage &img, VkClearColorValue& clearColour)
 {
   VkExtent3D attachmentExtent{extent.width, extent.height, 1};
 
@@ -150,7 +151,7 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   auto renderPass = vsg::RenderPass::create(device, attachments, subpassDescription, dependencies);
 
   // Framebuffer
-  auto fbuf = vsg::Framebuffer::create(renderPass, vsg::ImageViews{hmdImageLeft.colourImageInfo.imageView, hmdImageLeft.depthImageInfo.imageView}, extent.width, extent.height, 1);
+  auto fbuf = vsg::Framebuffer::create(renderPass, vsg::ImageViews{img.colourImageInfo.imageView, img.depthImageInfo.imageView}, extent.width, extent.height, 1);
 
   auto rendergraph = vsg::RenderGraph::create();
   rendergraph->renderArea.offset = VkOffset2D{0, 0};
@@ -158,7 +159,7 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   rendergraph->framebuffer = fbuf;
 
   rendergraph->clearValues.resize(2);
-  rendergraph->clearValues[0].color = {{0.9f, 0.2f, 0.9f, 1.0f}};
+  rendergraph->clearValues[0].color = clearColour;
   rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
 
   return rendergraph; 
@@ -170,7 +171,7 @@ void submitVRFrames(vrhelp::Env* vr, vsg::Window* window)
   auto height = hmdImageLeft.height;
 
   auto lImg = hmdImageLeft.colourImage->vk(window->getDevice()->deviceID);
-  auto rImg = hmdImageLeft.colourImage->vk(window->getDevice()->deviceID);
+  auto rImg = hmdImageRight.colourImage->vk(window->getDevice()->deviceID);
 
   vr->submitFrames(
     lImg,
@@ -228,8 +229,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
 
   // Check what extensions are needed by OpenVR
   // TODO: We need a physical device to check extensions, but also need a list of extensions before creating the window
-  // Expect this needs to move down into say an HmdWindow class?
-  // TODO: vsg::Names stores const char*s - Will be invalid after this method...
+  // Expect this needs to move down into say an HmdWindow class? For now use a dummy window just to get a device..
   {
     auto tempWindow = vsg::Window::create(vsg::WindowTraits::create());
     vrRequiredInstanceExtensions = vr->instanceExtensionsRequired();
@@ -252,7 +252,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
     }
   }
 
-  sceneRoot->addChild(model_floorpad());
+  sceneRoot->addChild(model_world());
 
   // Create the viewer + desktop window
   auto viewer = vsg::Viewer::create();
@@ -265,7 +265,6 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
 
 
   viewer->addWindow(window);
-  // add close handler to respond the close window button and pressing escape
   viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
   // Create the framebuffers and render graph for HMD view
@@ -275,11 +274,15 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   vr->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
 
-  // TODO: This is a placeholder camera - Need one for each eye, rendering to hmdImageXX
-  hmdCamera = createCameraForScene(sceneRoot, hmdExtent);
-  auto hmdRenderGraph = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageLeft);
-  auto hmdView = vsg::View::create(hmdCamera, sceneRoot);
-  hmdRenderGraph->addChild(hmdView);
+  hmdCameraLeft = createCameraForScene(sceneRoot, hmdExtent);
+  auto hmdRenderGraphLeft = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageLeft, window->clearColor());
+  auto hmdViewLeft = vsg::View::create(hmdCameraLeft, sceneRoot);
+  hmdRenderGraphLeft->addChild(hmdViewLeft);
+
+  hmdCameraRight = createCameraForScene(sceneRoot, hmdExtent);  
+  auto hmdRenderGraphRight = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageRight, window->clearColor());
+  auto hmdViewRight = vsg::View::create(hmdCameraRight, sceneRoot);
+  hmdRenderGraphRight->addChild(hmdViewRight);
 
   // Create render graph for desktop window
   desktopCamera = createCameraForScene(sceneRoot, window->extent2D());
@@ -289,19 +292,10 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   // TODO: In an ideal scenario the desktop & hmd render passes would be independent,
   // and running at different framerates. Don't think that's possible with this setup.
   hmdCommandGraph = vsg::CommandGraph::create(window);
-  hmdCommandGraph->addChild(hmdRenderGraph);
-  vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(
-    vr,
-    window,
-    window->extent2D().width,
-    window->extent2D().height,
-    hmdImageLeft.colourImage,
-    hmdImageLeft.colourImage, // TODO: Initialise hmd right image
-    hmdCommandGraph
-  ));
+  hmdCommandGraph->addChild(hmdRenderGraphLeft);
+  hmdCommandGraph->addChild(hmdRenderGraphRight);
 
-  hmdCommandGraph->addChild(hmdSubmitCommand);
-
+  // TODO: If the desktop is a mirror of the headset, then it should be -> Should just blit the headset's images rather than a whole camera
   auto desktopCommandGraph = vsg::CommandGraph::create(window);
   desktopCommandGraph->addChild(desktopRenderGraph);
 
@@ -358,37 +352,45 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
   scene->accept(*v);
 
-  // Position the camera based on HMD location
-  glm::dmat4x4 hmdPoseMat(1.f);
-  glm::dmat4x4 hmdPoseMatInv(1.f);
-
-  // The headset's position in the world
-  hmdPoseMat = hmd->deviceToAbsoluteMatrix();
-  hmdPoseMatInv = glm::inverse(hmdPoseMat);
-
-  // TODO: View/Projection matrices are a little tricky here due to the
-  // coordinate space adjustment...I've probably got it wrong somehow
+  // Projection matrices are relatively simple
+  // TODO: Are the 'raw' matrix classes needed any more? Can the mats be set directly in stock vsg?
+  // TODO: There's something wrong with the projection matrices - hmd view is good but lighting acts weird. Maybe this needs an axes correction?
   float nearPlane = 0.001f;
   float farPlane = 10.0f;
+
+  auto leftProj = vr->getProjectionMatrix(vr::EVREye::Eye_Left, nearPlane, farPlane);
+  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjLeft(new RawProjectionMatrix(openVRMatToVSG(leftProj)));
+  hmdCameraLeft->setProjectionMatrix(vsgProjLeft);
+
   auto rightProj = vr->getProjectionMatrix(vr::EVREye::Eye_Right, nearPlane, farPlane);
-  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProj(new RawProjectionMatrix(openVRMatToVSG(rightProj)));
-  desktopCamera->setProjectionMatrix(vsgProj);
-  hmdCamera->setProjectionMatrix(vsgProj);
+  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjRight(new RawProjectionMatrix(openVRMatToVSG(rightProj)));
+  hmdCameraRight->setProjectionMatrix(vsgProjRight);
 
-  //auto radius = 2.0;
-  //vsg::ref_ptr<vsg::ProjectionMatrix> perspective = vsg::Perspective::create(30.0, 800.0 / 600.0, nearPlane / farPlane * radius, radius * 4.5);
 
-  auto rightEyeFromHead = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
-  //vsg::dmat4 axesMat(
-  //  1, 0, 0, 0,
-  //  0, 0, 1, 0,
-  //  0, -1, 0, 0,
-  //  0, 0, 0, 1);
-  auto viewMat = openVRMatToVSG(rightEyeFromHead * hmdPoseMatInv); // * axesMat;
+  // View matrices for each eye
+  auto hmdToWorld = hmd->deviceToAbsoluteMatrix();
+  auto hmdToWorldInv = glm::inverse(hmdToWorld);
+  auto hmdToLeftEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
+  auto hmdToRightEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
+  
+  // With a conversion to account for openvr/vsg differences
+  // TODO: I think this is incomplete but not sure what's correct - My models are z-forward, y-up
+  vsg::dmat4 axesMat(
+   1, 0, 0, 0,
+   0, -1, 0, 0,
+   0, 0, 1, 0,
+   0, 0, 0, 1);
+  auto viewMatLeft = axesMat * openVRMatToVSG(hmdToLeftEye * hmdToWorldInv);
+  auto viewMatRight = axesMat * openVRMatToVSG(hmdToRightEye * hmdToWorldInv);
 
-  vsg::ref_ptr<vsg::ViewMatrix> vsgView(new RawViewMatrix(viewMat));
-  desktopCamera->setViewMatrix(vsgView);
-  hmdCamera->setViewMatrix(vsgView);
+  hmdCameraLeft->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
+  hmdCameraRight->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatRight)));
+
+  // Bind the desktop camera to one of the eyes
+  // TODO: This should probably just be a perspective camera, that happens to track the user's head,
+  // doesn't need to be the actual projection used by each eye.
+  desktopCamera->setProjectionMatrix(vsgProjLeft);
+  desktopCamera->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
 }
 
 int main(int argc, char **argv)

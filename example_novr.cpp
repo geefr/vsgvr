@@ -6,7 +6,7 @@
 #include <string>
 
 #include "models/controller/model_controller.cpp"
-#include "models/floorpad/model_floorpad.cpp"
+#include "models/world/model_world.cpp"
 
 vsg::ref_ptr<vsg::Window> window;
 vsg::ref_ptr<vsg::Camera> desktopCamera;
@@ -62,7 +62,7 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
     }
   }
 
-  sceneRoot->addChild(model_floorpad());
+  sceneRoot->addChild(model_world());
 
   // Create the viewer + desktop window
   auto viewer = vsg::Viewer::create();
