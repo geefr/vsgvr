@@ -1,5 +1,4 @@
-#ifndef VRHELL_CONTROLLER_H
-#define VRHELL_CONTROLLER_H
+#pragma once
 
 #include "device.h"
 
@@ -29,4 +28,3 @@ namespace vrhelp {
   inline void Controller::buttonTouch(uint32_t button) { mButtonTouched[button] = true; }
   inline void Controller::buttonUntouch(uint32_t button) { mButtonTouched[button] = false; }
 }
-#endif

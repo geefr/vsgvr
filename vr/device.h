@@ -1,5 +1,4 @@
-#ifndef VRHELL_DEVICE_H
-#define VRHELL_DEVICE_H
+#pragma once
 
 #include "openvr.h"
 #include "glm/glm.hpp"
@@ -43,4 +42,3 @@ namespace vrhelp {
 			vr::TrackedDeviceProperty prop);
 	};
 }
-#endif

@@ -33,8 +33,7 @@ struct HMDImage
 };
 HMDImage hmdImageLeft;
 HMDImage hmdImageRight;
-
-auto imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+auto hmdImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
 vsg::dmat4 openVRMatToVSG(glm::dmat4 mat)
 {
@@ -53,14 +52,13 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   img.colourImage->extent = attachmentExtent;
   img.colourImage->mipLevels = 1;
   img.colourImage->arrayLayers = 1;
-  img.colourImage->format = imageFormat;
+  img.colourImage->format = hmdImageFormat;
   img.colourImage->samples = VK_SAMPLE_COUNT_1_BIT;
   img.colourImage->tiling = VK_IMAGE_TILING_OPTIMAL;
   img.colourImage->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   img.colourImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   img.colourImage->flags = 0;
   img.colourImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
   img.colourImageInfo.sampler = nullptr;
   img.colourImageInfo.imageView = vsg::createImageView(context, img.colourImage, VK_IMAGE_ASPECT_COLOR_BIT);
   img.colourImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -88,7 +86,7 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   // attachment descriptions
   vsg::RenderPass::Attachments attachments(2);
   // Color attachment
-  attachments[0].format = imageFormat;
+  attachments[0].format = hmdImageFormat;
   attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -153,7 +151,7 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   rendergraph->clearValues[0].color = {{0.4f, 0.2f, 0.4f, 1.0f}};
   rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
 
-  return rendergraph;
+  return rendergraph; 
 }
 
 vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node *scenegraph, const VkExtent2D &extent)
@@ -178,6 +176,7 @@ vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node *scenegraph, const VkEx
 
 vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group> sceneRoot, vrhelp::Env *vr)
 {
+  // Initialise the application, and desktop window
   auto windowTraits = vsg::WindowTraits::create();
   windowTraits->windowTitle = "VSG Test (With VR)";
 
@@ -224,12 +223,14 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
   // Create the framebuffers and render graph for HMD view
+  // HMD is rendered through 2 cameras (bound to each eye), rendering into vulkan images, and presented through the vr api
   vsg::CompileTraversal compile(window);
   uint32_t hmdWidth = 0, hmdHeight = 0;
   vr->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
-  hmdCamera = createCameraForScene(sceneRoot, hmdExtent);
 
+  // TODO: This is a placeholder camera - Need one for each eye, rendering to hmdImageXX
+  hmdCamera = createCameraForScene(sceneRoot, hmdExtent);
   auto hmdRenderGraph = createHmdRenderGraph(window->getDevice(), compile.context, hmdExtent, hmdImageLeft);
   auto hmdView = vsg::View::create(hmdCamera, sceneRoot);
   hmdRenderGraph->addChild(hmdView);
@@ -238,7 +239,9 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   desktopCamera = createCameraForScene(sceneRoot, window->extent2D());
   auto desktopRenderGraph = vsg::createRenderGraphForView(window, desktopCamera, sceneRoot);
 
-  // separateCommandGraph == true in vsgrendertotexture example
+  // Based on separateCommandGraph == true in vsgrendertotexture example
+  // TODO: In an ideal scenario the desktop & hmd render passes would be independent,
+  // and running at different framerates. Don't think that's possible with this setup.
   auto hmdCommandGraph = vsg::CommandGraph::create(window);
   hmdCommandGraph->addChild(hmdRenderGraph);
   vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
@@ -255,11 +258,6 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
 auto initVR(vsg::ref_ptr<vsg::Group> scene)
 {
   std::unique_ptr<vrhelp::Env> env(new vrhelp::Env(vr::ETrackingUniverseOrigin::TrackingUniverseStanding));
-
-  // Create framebuffers/render targets for each eye
-  // TODO: Will need to create through osg
-  // but in a format openvr can handle
-  // and in a way we can access the vulkan handles, and otherwise control presentation
 
   // Add controller models to the scene
   vsg::ref_ptr<vsg::Group> leftNode = vsg::MatrixTransform::create();

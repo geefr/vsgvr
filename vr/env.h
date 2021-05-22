@@ -1,12 +1,16 @@
+#pragma once
 
-#ifndef VRHELL_H
-#define VRHELL_H
-
-#ifdef _WIN32
-# include "GL/glew.h"
+#ifdef VR_SUBMIT_OPENGL
+# ifdef _WIN32
+#  include <GL/glew.h>
+# endif
+# include <GL/gl.h>
+#elif VR_SUBMIT_VULKAN
+# include <vulkan/vulkan.h>
+#else
+# error "No VR Frame submission mode selected, define either VR_SUBMIT_OPENGL or VR_SUBMIT_VULKAN"
 #endif
 
-#include "GL/gl.h"
 #include "glm/glm.hpp"
 #include "device.h"
 #include "controller.h"
@@ -51,13 +55,21 @@ namespace vrhelp {
     // glm::dmat4x4 getProjectionMatrixZup(vr::EVREye eye);
     glm::dmat4x4 getEyeToHeadTransform(vr::EVREye eye);
 
+#ifdef VR_SUBMIT_OPENGL
     /**
-     * Submit textures to OpenVR
+     * Submit OpenGL textures to OpenVR
      *
      * @param left The ID of the left eye texture
      * @param right The ID of the right eye texture
      */
     void submitFrames( GLuint leftTex, GLuint rightTex );
+#elif VR_SUBMIT_VULKAN
+    /**
+     * Submit Vulkan images to OpenVR
+     */
+    void submitFrames(VkImage leftImg, VkImage rightImg, VkDevice device, VkPhysicalDevice physDevice, 
+    VkInstance instance, VkQueue queue, uint32_t queueFamIndex, uint32_t width, uint32_t height, VkFormat format, int msaaSamples);
+#endif
 
     /// TODO
     void waitGetPoses();
@@ -81,6 +93,3 @@ namespace vrhelp {
 	inline const Env::DeviceList& Env::devices() const { return mDevices; }
   inline void Env::logging(bool enabled) { mLogging = enabled; }
 }
-#endif
-
-
