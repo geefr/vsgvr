@@ -54,3 +54,5 @@ add_executable( example_novr example_novr.cpp )
 target_link_libraries( example_novr vsg::vsg vrhelp )
 target_link_directories( example_novr PRIVATE ${OPENVR_ROOT}/lib/linux64 )
 target_include_directories( example_novr PRIVATE ${OPENVR_ROOT}/headers )
+
+add_subdirectory( tests )

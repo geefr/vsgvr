@@ -30,10 +30,15 @@ struct HMDImage
   vsg::ref_ptr<vsg::Image> colourImage;
   vsg::ImageInfo depthImageInfo;
   vsg::ref_ptr<vsg::Image> depthImage;
+  uint32_t width;
+  uint32_t height;
 };
 HMDImage hmdImageLeft;
 HMDImage hmdImageRight;
-auto hmdImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+vsg::ref_ptr<vsg::CommandGraph> hmdCommandGraph;
+
+std::list<std::string> vrRequiredInstanceExtensions;
+std::list<std::string> vrRequiredDeviceExtensions;
 
 vsg::dmat4 openVRMatToVSG(glm::dmat4 mat)
 {
@@ -45,6 +50,10 @@ vsg::dmat4 openVRMatToVSG(glm::dmat4 mat)
 vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Context &context, const VkExtent2D &extent, HMDImage &img)
 {
   VkExtent3D attachmentExtent{extent.width, extent.height, 1};
+
+  img.width = extent.width;
+  img.height = extent.height;
+
   // Attachments
   // create image for color attachment
   img.colourImage = vsg::Image::create();
@@ -154,6 +163,29 @@ vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Co
   return rendergraph; 
 }
 
+void submitVRFrames(vrhelp::Env* vr, vsg::Window* window)
+{
+  auto width = hmdImageLeft.width;
+  auto height = hmdImageLeft.height;
+
+  auto lImg = hmdImageLeft.colourImage->vk(window->getDevice()->deviceID);
+  auto rImg = hmdImageLeft.colourImage->vk(window->getDevice()->deviceID);
+
+  vr->submitFrames(
+    lImg,
+    rImg,
+    *window->getDevice(),
+    *window->getPhysicalDevice(),
+    *window->getInstance(),
+    *window->getDevice()->getQueue(hmdCommandGraph->queueFamily),
+    hmdCommandGraph->queueFamily,
+    width,
+    height,
+    hmdImageFormat,
+    VK_SAMPLE_COUNT_1_BIT
+  );
+}
+
 vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::Node *scenegraph, const VkExtent2D &extent)
 {
   // Create an initial camera - Both the desktop and hmd cameras are intialised like this
@@ -191,6 +223,18 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   {
     arguments.writeErrorMessages((std::cerr));
     return {};
+  }
+
+  // Check what extensions are needed by OpenVR
+  // TODO: We need a physical device to check extensions, but also need a list of extensions before creating the window
+  // Expect this needs to move down into say an HmdWindow class?
+  // TODO: vsg::Names stores const char*s - Will be invalid after this method...
+  {
+    auto tempWindow = vsg::Window::create(vsg::WindowTraits::create());
+    vrRequiredInstanceExtensions = vr->instanceExtensionsRequired();
+    vrRequiredDeviceExtensions = vr->deviceExtensionsRequired(*tempWindow->getOrCreatePhysicalDevice());
+    for( auto& ext : vrRequiredInstanceExtensions ) windowTraits->instanceExtensionNames.push_back(ext.c_str());
+    for( auto& ext : vrRequiredDeviceExtensions ) windowTraits->deviceExtensionNames.push_back(ext.c_str());
   }
 
   // Load any vsg files into the scene graph
@@ -242,9 +286,18 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   // Based on separateCommandGraph == true in vsgrendertotexture example
   // TODO: In an ideal scenario the desktop & hmd render passes would be independent,
   // and running at different framerates. Don't think that's possible with this setup.
-  auto hmdCommandGraph = vsg::CommandGraph::create(window);
+  hmdCommandGraph = vsg::CommandGraph::create(window);
   hmdCommandGraph->addChild(hmdRenderGraph);
-  vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(vr));
+  vsg::ref_ptr<vsg::Command> hmdSubmitCommand(new SubmitOpenVRCommand(
+    vr,
+    window,
+    window->extent2D().width,
+    window->extent2D().height,
+    hmdImageLeft.colourImage,
+    hmdImageLeft.colourImage, // TODO: Initialise hmd right image
+    hmdCommandGraph
+  ));
+
   hmdCommandGraph->addChild(hmdSubmitCommand);
 
   auto desktopCommandGraph = vsg::CommandGraph::create(window);
@@ -377,11 +430,11 @@ int main(int argc, char **argv)
       viewer->present();
 
       // VR presentation
-      // TODO
-      // vr->submitFrames( leftTexID, rightTexID );
-      // TODO: The pose updates here aren't great. Should be as async as possible,
-      // and should ask for poses x seconds into the future,
-      // when photons will be shot into the users face.
+      submitVRFrames(vr.get(), viewer->windows().front());
+
+      // TODO: The pose updates here aren't great. This should be updated
+      // to be async, using 'explicit timings'
+      // https://github.com/ValveSoftware/openvr/wiki/Vulkan#explicit-timing
       // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
       vr->waitGetPoses();
     }

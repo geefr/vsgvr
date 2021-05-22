@@ -238,6 +238,87 @@ namespace vrhelp
     vr::VRCompositor()->PostPresentHandoff();
   }
 #elif defined(VR_SUBMIT_VULKAN)
+
+  std::list<std::string> Env::instanceExtensionsRequired() const
+  {
+    if( !vr::VRCompositor() ) return {};
+
+    std::list<std::string> extensions;
+    uint32_t nBufferSize = vr::VRCompositor()->GetVulkanInstanceExtensionsRequired(nullptr, 0);
+    if (nBufferSize > 0)
+    {
+      // Allocate memory for the space separated list and query for it
+      char *pExtensionStr = new char[nBufferSize];
+      pExtensionStr[0] = 0;
+      vr::VRCompositor()->GetVulkanInstanceExtensionsRequired(pExtensionStr, nBufferSize);
+
+      // Break up the space separated list into entries on the CUtlStringList
+      std::string curExtStr;
+      uint32_t nIndex = 0;
+      while (pExtensionStr[nIndex] != 0 && (nIndex < nBufferSize))
+      {
+        if (pExtensionStr[nIndex] == ' ')
+        {
+          extensions.push_back(curExtStr);
+          curExtStr.clear();
+        }
+        else
+        {
+          curExtStr += pExtensionStr[nIndex];
+        }
+        nIndex++;
+      }
+      if (curExtStr.size() > 0)
+      {
+        extensions.push_back(curExtStr);
+      }
+
+      delete[] pExtensionStr;
+    }
+
+    return extensions;
+  }
+
+  std::list<std::string> Env::deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const
+  {
+    if (!vr::VRCompositor()) return {};
+
+    std::list<std::string> extensions;
+    uint32_t nBufferSize = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(physicalDevice, nullptr, 0);
+    if (nBufferSize > 0)
+    {
+      // Allocate memory for the space separated list and query for it
+      char *pExtensionStr = new char[nBufferSize];
+      pExtensionStr[0] = 0;
+      vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(physicalDevice, pExtensionStr, nBufferSize);
+
+      // Break up the space separated list into entries on the CUtlStringList
+      std::string curExtStr;
+      uint32_t nIndex = 0;
+      while (pExtensionStr[nIndex] != 0 && (nIndex < nBufferSize))
+      {
+        if (pExtensionStr[nIndex] == ' ')
+        {
+          extensions.push_back(curExtStr);
+          curExtStr.clear();
+        }
+        else
+        {
+          curExtStr += pExtensionStr[nIndex];
+        }
+        nIndex++;
+      }
+      if (curExtStr.size() > 0)
+      {
+        extensions.push_back(curExtStr);
+      }
+
+      delete[] pExtensionStr;
+    }
+
+    return extensions;
+  }
+
   void Env::submitFrames(VkImage leftImg, VkImage rightImg, VkDevice device, VkPhysicalDevice physDevice, 
     VkInstance instance, VkQueue queue, uint32_t queueFamIndex, uint32_t width, uint32_t height, VkFormat format, int msaaSamples)
   {
@@ -264,8 +345,8 @@ namespace vrhelp
     vr::Texture_t texture = {&vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto};
     vr::VRCompositor()->Submit(vr::Eye_Left, &texture, &bounds);
 
-    vulkanData.m_nImage = (uint64_t)rightImg;
-    vr::VRCompositor()->Submit(vr::Eye_Right, &texture, &bounds);
+    // vulkanData.m_nImage = (uint64_t)rightImg;
+    // vr::VRCompositor()->Submit(vr::Eye_Right, &texture, &bounds);
   }
 #endif
 

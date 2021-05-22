@@ -19,7 +19,7 @@
 
 #include <string>
 #include <map>
-
+#include <list>
 
 namespace vrhelp {
   /**
@@ -64,11 +64,15 @@ namespace vrhelp {
      */
     void submitFrames( GLuint leftTex, GLuint rightTex );
 #elif VR_SUBMIT_VULKAN
+
+    std::list<std::string> instanceExtensionsRequired() const;
+    std::list<std::string> deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const;
+
     /**
      * Submit Vulkan images to OpenVR
      */
     void submitFrames(VkImage leftImg, VkImage rightImg, VkDevice device, VkPhysicalDevice physDevice, 
-    VkInstance instance, VkQueue queue, uint32_t queueFamIndex, uint32_t width, uint32_t height, VkFormat format, int msaaSamples);
+      VkInstance instance, VkQueue queue, uint32_t queueFamIndex, uint32_t width, uint32_t height, VkFormat format, int msaaSamples);
 #endif
 
     /// TODO
