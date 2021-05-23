@@ -320,7 +320,7 @@ auto initVR(vsg::ref_ptr<vsg::Group> scene)
 
   vsg::ref_ptr<vsg::Group> leftNode = vsg::MatrixTransform::create();
   vsg::ref_ptr<vsg::Group> rightNode = vsg::MatrixTransform::create();
-  auto controllerNode = vsg::read_cast<vsg::Node>("world.vsgt");
+  auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
   if( controllerNode ) {
     leftNode->addChild(controllerNode);
     rightNode->addChild(controllerNode);
