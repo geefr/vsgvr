@@ -50,10 +50,8 @@ target_link_libraries( example_vr vsg::vsg vrhelp fmt::fmt )
 target_link_directories( example_vr PRIVATE ${OPENVR_ROOT}/lib/linux64 )
 target_include_directories( example_vr PRIVATE ${OPENVR_ROOT}/headers )
 
-
-add_executable( example_novr example_novr.cpp )
-target_link_libraries( example_novr vsg::vsg vrhelp )
-target_link_directories( example_novr PRIVATE ${OPENVR_ROOT}/lib/linux64 )
-target_include_directories( example_novr PRIVATE ${OPENVR_ROOT}/headers )
+# Copy models into the build dir
+configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/world.vsgt COPYONLY)
+configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller.vsgt COPYONLY)
 
 add_subdirectory( tests )

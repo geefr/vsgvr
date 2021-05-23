@@ -16,9 +16,6 @@
 #include <string>
 #include <fmt/core.h>
 
-#include "models/controller/model_controller.cpp"
-#include "models/world/model_world.cpp"
-
 vsg::ref_ptr<vsg::Window> window;
 vsg::ref_ptr<vsg::Camera> hmdCameraLeft;
 vsg::ref_ptr<vsg::Camera> hmdCameraRight;
@@ -252,7 +249,12 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
     }
   }
 
-  sceneRoot->addChild(model_world());
+  auto worldNode = vsg::read_cast<vsg::Node>("world.vsgt");
+  if( worldNode ) {
+    sceneRoot->addChild(worldNode);
+  } else {
+    fmt::print("Failed to read world.vsgt\n");
+  }
 
   // Create the viewer + desktop window
   auto viewer = vsg::Viewer::create();
@@ -309,14 +311,22 @@ auto initVR(vsg::ref_ptr<vsg::Group> scene)
   std::unique_ptr<vrhelp::Env> env(new vrhelp::Env(vr::ETrackingUniverseOrigin::TrackingUniverseStanding));
 
   // Add controller models to the scene
-  vsg::ref_ptr<vsg::Group> leftNode = vsg::MatrixTransform::create();
-  leftNode->addChild(model_controller());
-  leftNode->setValue(OpenVRIDTag, LeftControllerID);
-  scene->addChild(leftNode);
 
+
+  vsg::ref_ptr<vsg::Group> leftNode = vsg::MatrixTransform::create();
   vsg::ref_ptr<vsg::Group> rightNode = vsg::MatrixTransform::create();
-  rightNode->addChild(model_controller());
+  auto controllerNode = vsg::read_cast<vsg::Node>("world.vsgt");
+  if( controllerNode ) {
+    leftNode->addChild(controllerNode);
+    rightNode->addChild(controllerNode);
+  } else {
+    fmt::print("Failed to read controller.vsgt\n");
+  }
+  
+  leftNode->setValue(OpenVRIDTag, LeftControllerID);
   rightNode->setValue(OpenVRIDTag, RightControllerID);
+  
+  scene->addChild(leftNode);
   scene->addChild(rightNode);
 
   return env;
