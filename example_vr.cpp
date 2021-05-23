@@ -367,6 +367,13 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
   scene->accept(*v);
 
+  // TODO: I think this is incomplete but not sure what's correct - My models are z-forward, y-up
+  vsg::dmat4 axesMat(
+   1, 0, 0, 0,
+   0, -1, 0, 0,
+   0, 0, 1, 0,
+   0, 0, 0, 1);
+
   // Projection matrices are relatively simple
   // TODO: Are the 'raw' matrix classes needed any more? Can the mats be set directly in stock vsg?
   // TODO: There's something wrong with the projection matrices - hmd view is good but lighting acts weird. Maybe this needs an axes correction?
@@ -389,12 +396,6 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   auto hmdToRightEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
   
   // With a conversion to account for openvr/vsg differences
-  // TODO: I think this is incomplete but not sure what's correct - My models are z-forward, y-up
-  vsg::dmat4 axesMat(
-   1, 0, 0, 0,
-   0, -1, 0, 0,
-   0, 0, 1, 0,
-   0, 0, 0, 1);
   auto viewMatLeft = axesMat * openVRMatToVSG(hmdToLeftEye * hmdToWorldInv);
   auto viewMatRight = axesMat * openVRMatToVSG(hmdToRightEye * hmdToWorldInv);
 
