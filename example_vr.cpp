@@ -235,6 +235,11 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
     for( auto& ext : vrRequiredDeviceExtensions ) windowTraits->deviceExtensionNames.push_back(ext.c_str());
   }
 
+  // As this example renders the HMD images as part of the main desktop viewer it's important that vsync
+  // be disabled. Otherwise the HMD's maximum framerate will be the same as the desktop monitor.
+  // Other desktop-related settings may have an impact on headset output with this setup..
+  windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+
   // Load any vsg files into the scene graph
   vsg::Path path;
   for (auto i = 1; i < argc; ++i)
