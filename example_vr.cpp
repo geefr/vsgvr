@@ -414,7 +414,12 @@ int main(int argc, char **argv)
   try
   {
     // The VSG scene, plus desktop window
-    vsg::ref_ptr<vsg::Group> scene(new vsg::Group());
+    vsg::dmat4 axesMat(
+      1, 0, 0, 0,
+      0, 0, -1, 0,
+      0, 1, 0, 0,
+      0, 0, 0, 1);
+    vsg::ref_ptr<vsg::Group> scene(new vsg::MatrixTransform(axesMat));
 
     // OpenVR context - TODO: Will terminate if vr isn't active
     auto vr = initVR(scene);
