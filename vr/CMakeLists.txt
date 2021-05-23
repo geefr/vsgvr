@@ -15,13 +15,11 @@ include_directories(
   ${OPENVR_ROOT}/headers
   ${Vulkan_INCLUDE_DIRS}
 )
-link_directories( ${OPENVR_ROOT}/lib/linux64 )
 
 add_library( vrhelp STATIC ${vr_cpp} ${vr_h} )
 target_compile_definitions( vrhelp PUBLIC VR_SUBMIT_VULKAN )
-
-target_link_libraries( vrhelp ${OPENVR_LIB} )
+target_link_libraries( vrhelp PUBLIC ${OPENVR_LIB} )
+target_link_directories( vrhelp PUBLIC ${OPENVR_LIBDIR} )
 if( MSVC )
-  target_link_libraries( vrhelp glm )
+  target_link_libraries( vrhelp PUBLIC glm )
 endif()
-

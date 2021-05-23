@@ -443,9 +443,13 @@ int main(int argc, char **argv)
       vr->waitGetPoses();
     }
   }
-  catch (vsg::Exception &e)
+  catch (vsg::Exception& e)
   {
-    std::cerr << "Exception: " << e.message << std::endl;
+    fmt::print("Exception: {}\n", e.message);
+  }
+  catch (std::exception& e)
+  {
+    fmt::print("Exception: {}\n", e.what());
   }
 
   return EXIT_SUCCESS;

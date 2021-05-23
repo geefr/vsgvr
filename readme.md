@@ -3,7 +3,7 @@
 Thing                        | Status
 -----------------------------|--------
 Linux Build                  | Building
-Windows Build                | Untested, should build
+Windows Build                | Building
 Code                         | Messy
 OpenVR Input                 | Present, through 'vrhelp' namespace. Needs rework eventually.
 Controller tracking          | Working
@@ -13,7 +13,8 @@ HMD Presentation             | Working, tested with null steamvr driver & HTC Vi
 Correct Matrices for HMD     | Definitely not
 
 Bugs:
-* Segfault on exit
+* Segfault on exit (Only on linux?)
+* Model loading on windows -> vsgconv to C++ source fails to compile, due to > 16KB string literals
 * Lighting isn't correct - likely projection matrix wrong?
 * Models all need to be y-up z-forward to work, axis mapping for vr matrices probably wrong
 * Models are missing materials - Could use some help on blender -> vsg export..

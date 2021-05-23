@@ -5,6 +5,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <stdexcept>
+
 namespace vrhelp {
 
   Device::Device(vr::IVRSystem* context, uint32_t id, vr::ETrackedDeviceClass devClass)
