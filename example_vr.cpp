@@ -367,12 +367,9 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
   scene->accept(*v);
 
-  // TODO: I think this is incomplete but not sure what's correct - My models are z-forward, y-up
-  vsg::dmat4 axesMat(
-   1, 0, 0, 0,
-   0, -1, 0, 0,
-   0, 0, 1, 0,
-   0, 0, 0, 1);
+  // OpenVR space is x right, y up, z backward
+  // Convert to VSG by rotating around x
+  vsg::dmat4 axesMat = vsg::rotate(vsg::PI / 2.0, 1.0, 0.0, 0.0);
 
   // Projection matrices are relatively simple
   // TODO: Are the 'raw' matrix classes needed any more? Can the mats be set directly in stock vsg?
@@ -414,12 +411,7 @@ int main(int argc, char **argv)
   try
   {
     // The VSG scene, plus desktop window
-    vsg::dmat4 axesMat(
-      1, 0, 0, 0,
-      0, 0, -1, 0,
-      0, 1, 0, 0,
-      0, 0, 0, 1);
-    vsg::ref_ptr<vsg::Group> scene(new vsg::MatrixTransform(axesMat));
+    vsg::ref_ptr<vsg::Group> scene(new vsg::Group());
 
     // OpenVR context - TODO: Will terminate if vr isn't active
     auto vr = initVR(scene);

@@ -17,6 +17,7 @@ public:
 
   virtual void apply(vsg::Group &o) override
   {
+    // TODO: Need to convert controller positions into vsg world space
     std::string v;
     if (mLeft)
     {
