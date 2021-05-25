@@ -367,9 +367,21 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
   scene->accept(*v);
 
+  // VSG space is x right, z up, y forward
   // OpenVR space is x right, y up, z backward
-  // Convert to VSG by rotating around x
-  vsg::dmat4 axesMat = vsg::rotate(vsg::PI / 2.0, 1.0, 0.0, 0.0);
+  auto axesMat = vsg::dmat4(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 1.0  
+  );
+
+  auto axesMatProj = vsg::dmat4(
+    -1.0, 0.0, 0.0, 0.0,
+    0.0, -1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0  
+  );
 
   // Projection matrices are relatively simple
   // TODO: Are the 'raw' matrix classes needed any more? Can the mats be set directly in stock vsg?
@@ -378,23 +390,23 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   float farPlane = 10.0f;
 
   auto leftProj = vr->getProjectionMatrix(vr::EVREye::Eye_Left, nearPlane, farPlane);
-  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjLeft(new RawProjectionMatrix(openVRMatToVSG(leftProj)));
+  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjLeft(new RawProjectionMatrix(axesMatProj * openVRMatToVSG(leftProj)));
   hmdCameraLeft->setProjectionMatrix(vsgProjLeft);
 
   auto rightProj = vr->getProjectionMatrix(vr::EVREye::Eye_Right, nearPlane, farPlane);
-  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjRight(new RawProjectionMatrix(openVRMatToVSG(rightProj)));
+  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjRight(new RawProjectionMatrix(axesMatProj * openVRMatToVSG(rightProj)));
   hmdCameraRight->setProjectionMatrix(vsgProjRight);
-
 
   // View matrices for each eye
   auto hmdToWorld = hmd->deviceToAbsoluteMatrix();
   auto hmdToWorldInv = glm::inverse(hmdToWorld);
+  //glm::dmat4x4 hmdToWorldInv = glm::lookAt(glm::dvec3(0.0, 0.0, -2.0), glm::dvec3(0.0, 3.0, 0.0), glm::dvec3(0.0, 1.0, 0.0));
   auto hmdToLeftEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
   auto hmdToRightEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
   
   // With a conversion to account for openvr/vsg differences
-  auto viewMatLeft = axesMat * openVRMatToVSG(hmdToLeftEye * hmdToWorldInv);
-  auto viewMatRight = axesMat * openVRMatToVSG(hmdToRightEye * hmdToWorldInv);
+  auto viewMatLeft = openVRMatToVSG(hmdToLeftEye * hmdToWorldInv) * axesMat;
+  auto viewMatRight = openVRMatToVSG(hmdToRightEye * hmdToWorldInv) * axesMat;
 
   hmdCameraLeft->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
   hmdCameraRight->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatRight)));
