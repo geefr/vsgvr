@@ -371,14 +371,21 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   // OpenVR space is x right, y up, z backward
   auto axesMat = vsg::dmat4(
     1.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, -1.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 1.0  
   );
 
-  auto axesMatProj = vsg::dmat4(
-    -1.0, 0.0, 0.0, 0.0,
+  auto axesMat2 = vsg::dmat4(
+    1.0, 0.0, 0.0, 0.0,
     0.0, -1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0  
+  );
+
+  auto axesMatProj = vsg::dmat4(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
     0.0, 0.0, 0.0, 1.0  
   );
@@ -405,8 +412,8 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   auto hmdToRightEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
   
   // With a conversion to account for openvr/vsg differences
-  auto viewMatLeft = openVRMatToVSG(hmdToLeftEye * hmdToWorldInv) * axesMat;
-  auto viewMatRight = openVRMatToVSG(hmdToRightEye * hmdToWorldInv) * axesMat;
+  auto viewMatLeft = axesMat2 * openVRMatToVSG(hmdToLeftEye * hmdToWorldInv) * axesMat;
+  auto viewMatRight = axesMat2 * openVRMatToVSG(hmdToRightEye * hmdToWorldInv) * axesMat;
 
   hmdCameraLeft->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
   hmdCameraRight->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatRight)));
