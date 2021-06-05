@@ -244,21 +244,6 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
   // Load any vsg files into the scene graph
-  // Everything except the VR models are wrapped in a matrix
-  // transform, to bring things into the OpenVR coordinate space
-  //
-  // VSG space is x right, z up, y forward
-  // OpenVR space is x right, y up, z backward 
-  auto axesMat = vsg::dmat4(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, -1.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 1.0  
-  );
-  // auto axesMat = vsg::rotate(- vsg::PI / 2.0, 1.0, 0.0, 0.0);
-  auto vsgScene = vsg::MatrixTransform::create(axesMat);
-  sceneRoot->addChild(vsgScene);
-
   vsg::Path path;
   for (auto i = 1; i < argc; ++i)
   {
@@ -268,13 +253,13 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
     auto obj = vsg::read_cast<vsg::Node>(filename);
     if (obj)
     {
-      vsgScene->addChild(obj);
+      sceneRoot->addChild(obj);
     }
   }
 
   auto worldNode = vsg::read_cast<vsg::Node>("world.vsgt");
   if( worldNode ) {
-    vsgScene->addChild(worldNode);
+    sceneRoot->addChild(worldNode);
   } else {
     fmt::print("Failed to read world.vsgt\n");
   }
@@ -426,64 +411,24 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   // View matrices for each eye
   auto hmdToWorld = hmd->deviceToAbsoluteMatrix();
 
-  glm::dvec3 scale;
-  glm::dquat rotation;
-  glm::dvec3 translation;
-  glm::dvec3 skew_;
-  glm::dvec4 perspective_;
-  glm::decompose(hmdToWorld, scale, rotation, translation, skew_, perspective_);
+  // glm::dvec3 scale;
+  // glm::dquat rotation;
+  // glm::dvec3 translation;
+  // glm::dvec3 skew_;
+  // glm::dvec4 perspective_;
+  // glm::decompose(hmdToWorld, scale, rotation, translation, skew_, perspective_);
 
-  fmt::print("Hmd To World Translation: {:.2f},{:.2f},{:.2f}\n", translation.x, translation.y, translation.z);
-  fmt::print("Hmd To World Rotation: {:.2f},{:.2f},{:.2f}\n", rotation.x, rotation.y, rotation.z);
+  // fmt::print("Hmd To World Translation: {:.2f},{:.2f},{:.2f}\n", translation.x, translation.y, translation.z);
+  // fmt::print("Hmd To World Rotation: {:.2f},{:.2f},{:.2f}\n", rotation.x, rotation.y, rotation.z);
 
-  // glm::dmat4 rotMat(1.0);
-  // rotMat = glm::rotate(rotMat, - vsg::PI / 2.0, glm::dvec3(1.0, 0.0, 0.0));
-
-  // scale = rotMat * scale;
-  // translation = translation;
-  // worldToHmd = scale * translation * rotation;
-
-  // hmdToWorld = glm::dmat4(1.0);
-
-  // // Apply translation
-  // hmdToWorld = hmdToWorld * glm::translate(glm::dmat4(1.0), glm::dvec3(
-  //   translation.x,
-  //   - translation.z,
-  //   translation.y
-  // ));
-
-  // // Apply rotation
-  // glm::dquat vsgRot;
-  // vsgRot.x = rotation.x;
-  // vsgRot.y = rotation.z;
-  // vsgRot.z = rotation.y;
-  // vsgRot.w = rotation.w;
-  // hmdToWorld = hmdToWorld * glm::toMat4(vsgRot);
-  
-  // glm::dvec3 rotVSGEulerFromQuat = glm::eulerAngles(vsgRot);
-  // fmt::print("Hmd To World VSG (From Quat): {:.2f},{:.2f},{:.2f}\n", rotVSGEulerFromQuat.x, rotVSGEulerFromQuat.y, rotVSGEulerFromQuat.z);
-
-  // hmdToWorld = hmdToWorld * glm::rotate(glm::dmat4(1.0), - vsg::PI / 2.0, glm::dvec3(1.0, 0.0, 0.0)) * glm::toMat4(vsgRot);
-
-
-  // glm::dvec3 rotOpenVREuler = glm::eulerAngles(rotation);
-  // fmt::print("Hmd To World OpenVR: {:.2f},{:.2f},{:.2f}\n", rotOpenVREuler.x, rotOpenVREuler.y, rotOpenVREuler.z);
-  // glm::dvec3 rotVSGEuler;
-  // rotVSGEuler.x = rotOpenVREuler.x;
-  // rotVSGEuler.y = rotOpenVREuler.z; // For some reason the z axis points forwards in openvr, despite docs saying otherwise (Gen 1 Vive)
-  // rotVSGEuler.z = rotOpenVREuler.y;
-  // fmt::print("Hmd To World VSG (From Euler): {:.2f},{:.2f},{:.2f}\n", rotVSGEuler.x, rotVSGEuler.y, rotVSGEuler.z);
-
-
-  
   auto worldToHmd = glm::inverse(hmdToWorld);
-  glm::decompose(worldToHmd, scale, rotation, translation, skew_, perspective_);
+  // glm::decompose(worldToHmd, scale, rotation, translation, skew_, perspective_);
 
-  fmt::print("World To Hmd Translation: {:.2f},{:.2f},{:.2f}\n", translation.x, translation.y, translation.z);
-  fmt::print("World To Hmd Rotation: {:.2f},{:.2f},{:.2f}\n", rotation.x, rotation.y, rotation.z);
+  // fmt::print("World To Hmd Translation: {:.2f},{:.2f},{:.2f}\n", translation.x, translation.y, translation.z);
+  // fmt::print("World To Hmd Rotation: {:.2f},{:.2f},{:.2f}\n", rotation.x, rotation.y, rotation.z);
 
-
-  vsg::dmat4 axesMat(
+  auto vsgWorldToOVRWorld = vsg::rotate(- vsg::PI / 2.0, 1.0, 0.0, 0.0);
+  vsg::dmat4 viewAxesMat(
     1, 0, 0, 0,
     0, -1, 0, 0,
     0, 0, 1, 0,
@@ -491,8 +436,8 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
 
   auto hmdToLeftEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
   auto hmdToRightEye = glm::inverse(vr->getEyeToHeadTransform(vr::EVREye::Eye_Right));
-  auto viewMatLeft = axesMat * openVRMatToVSG(hmdToLeftEye * worldToHmd);
-  auto viewMatRight = axesMat * openVRMatToVSG(hmdToRightEye * worldToHmd);
+  auto viewMatLeft = viewAxesMat * openVRMatToVSG(hmdToLeftEye * worldToHmd) * vsgWorldToOVRWorld;
+  auto viewMatRight = viewAxesMat * openVRMatToVSG(hmdToRightEye * worldToHmd) * vsgWorldToOVRWorld;
 
   hmdCameraLeft->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
   hmdCameraRight->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatRight)));
