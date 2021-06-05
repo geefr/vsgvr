@@ -17,6 +17,14 @@ public:
 
   virtual void apply(vsg::Group &o) override
   {
+    // Transform from openvr world space -> vsg world space
+    vsg::dmat4 axesMat(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, -1.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    );
+
     std::string v;
     if (mLeft)
     {
@@ -26,7 +34,7 @@ public:
         {
           auto mat = mLeft->deviceToAbsoluteMatrix();
           vsg::dmat4 vmat(glm::value_ptr(mat));
-          txf->setMatrix(vmat);
+          txf->setMatrix(axesMat * vmat);
         }
       }
     }
@@ -38,7 +46,7 @@ public:
         {
           auto mat = mRight->deviceToAbsoluteMatrix();
           vsg::dmat4 vmat(glm::value_ptr(mat));
-          txf->setMatrix(vmat);
+          txf->setMatrix(axesMat * vmat);
         }
       }
     }
