@@ -8,15 +8,13 @@ Code                         | Messy
 OpenVR Input                 | Present, through 'vrhelp' namespace. Needs rework eventually.
 Controller tracking          | Working
 Controller models in scene   | Working
-HMD tracking                 | Working, but errors in projection/view matrices
+HMD tracking                 | Working
 HMD Presentation             | Working, tested with null steamvr driver & HTC Vive on Linux
-Correct Matrices for HMD     | View/Projection matrices may be correct..
 
 Issue                        | Status
 -----------------------------|-------
 Segfault on exit             | Only on my laptop (quadro M2000), using null steamvr headset?
-Model loading on windows     | vsgconv to C++ source fails to compile, due to > 16KB string literals
-Lighting isn't correct       | likely projection matrix wrong?
+Lighting isn't correct       | likely due to axes swap in view matrix - Shaders include hardcoded light source, which isn't transformed by the view matrix..
 HMD Tracking is laggy        | Recent improvements, but not perfect. Tracking slightly delayed, should switch to explicit frame timings or otherwise fight waitGetPoses..
 
 ## Setup
