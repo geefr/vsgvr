@@ -10,15 +10,14 @@ Controller tracking          | Working
 Controller models in scene   | Working
 HMD tracking                 | Working, but errors in projection/view matrices
 HMD Presentation             | Working, tested with null steamvr driver & HTC Vive on Linux
-Correct Matrices for HMD     | Definitely not
+Correct Matrices for HMD     | View/Projection matrices may be correct..
 
-Bugs:
-* Segfault on exit (Only on linux?)
-* Model loading on windows -> vsgconv to C++ source fails to compile, due to > 16KB string literals
-* Lighting isn't correct - likely projection matrix wrong?
-* Models all need to be y-up z-forward to work, axis mapping for vr matrices probably wrong
-* Models are missing materials - Could use some help on blender -> vsg export..
-* HMD Tracking is laggy - At least 1 frame delayed, need to tweak the current setup or switch to explicit frame timings as recommended
+Issue                        | Status
+-----------------------------|-------
+Segfault on exit             | Only on my laptop (quadro M2000), using null steamvr headset?
+Model loading on windows     | vsgconv to C++ source fails to compile, due to > 16KB string literals
+Lighting isn't correct       | likely projection matrix wrong?
+HMD Tracking is laggy        | Recent improvements, but not perfect. Tracking slightly delayed, should switch to explicit frame timings or otherwise fight waitGetPoses..
 
 ## Setup
 
@@ -28,9 +27,11 @@ https://developer.valvesoftware.com/wiki/SteamVR/steamvr.vrsettings
 vr folder contains some basic openvr wrappers, pulled from one of my other projects. It'll need rework to say the least, should probably be rewritten completely.
 
 Building requires:
+* cmake > 3.14
 * vulkan sdk/vulkan scene graph
 * OpenVR sdk
-* libglm-dev
+* glm (Fetched automatically)
+* fmtlib (Fetched automatically)
 
 ```
 cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang"  -DOPENVR_ROOT="/path/to/OpenVR" /path/to/vsg_vr_test
