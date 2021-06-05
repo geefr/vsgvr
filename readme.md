@@ -15,6 +15,7 @@ Issue                        | Status
 -----------------------------|-------
 Segfault on exit             | Only on my laptop (quadro M2000), using null steamvr headset?
 Lighting isn't correct       | likely due to axes swap in view matrix - Shaders include hardcoded light source, which isn't transformed by the view matrix..
+Textures are rotated         | Similar issue to the lighting - axes swap seems to make textures in the scene swap as well (or rather, textures are in vsg space, while view is in openvr space)
 HMD Tracking is laggy        | Recent improvements, but not perfect. Tracking slightly delayed, should switch to explicit frame timings or otherwise fight waitGetPoses..
 
 ## Setup
