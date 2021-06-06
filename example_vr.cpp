@@ -368,39 +368,12 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
   scene->accept(*v);
 
-  // VSG space is x right, z up, y forward
-  // OpenVR space is x right, y up, z backward 
-  // auto axesMat = vsg::dmat4(
-  //   1.0, 0.0, 0.0, 0.0,
-  //   0.0, 0.0, 1.0, 0.0,
-  //   0.0, -1.0, 0.0, 0.0,
-  //   0.0, 0.0, 0.0, 1.0  
-  // );
-
-  // auto axesMat2 = vsg::dmat4(
-  //   1.0, 0.0, 0.0, 0.0,
-  //   0.0, -1.0, 0.0, 0.0,
-  //   0.0, 0.0, 1.0, 0.0,
-  //   0.0, 0.0, 0.0, 1.0  
-  // );
-
-  // auto axesMatProj = vsg::dmat4(
-  //   1.0, 0.0, 0.0, 0.0,
-  //   0.0, 1.0, 0.0, 0.0,
-  //   0.0, 0.0, 1.0, 0.0,
-  //   0.0, 0.0, 0.0, 1.0  
-  // );
-
-  // Projection matrices are relatively simple
+  // Projection matrices are relatively simple, provided directly by openVR
   // TODO: Are the 'raw' matrix classes needed any more? Can the mats be set directly in stock vsg?
-  // TODO: There's something wrong with the projection matrices - hmd view is good but lighting acts weird. Maybe this needs an axes correction?
   float nearPlane = 0.001f;
   float farPlane = 10.0f;
 
   auto leftProj = vr->getProjectionMatrix(vr::EVREye::Eye_Left, nearPlane, farPlane);
-
-  // auto leftProj = glm::perspective(90.0f, 1.0f, nearPlane, farPlane);
-
   vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjLeft(new RawProjectionMatrix( /* axesMatProj */ openVRMatToVSG(leftProj)));
   hmdCameraLeft->setProjectionMatrix(vsgProjLeft);
 
@@ -408,26 +381,13 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjRight(new RawProjectionMatrix( /* axesMatProj */ openVRMatToVSG(rightProj)));
   hmdCameraRight->setProjectionMatrix(vsgProjRight);
 
-  // View matrices for each eye
+  // View matrices for each eye are also provided, but assume
+  // data is in the openVR coordinate space (y-up, z-backward)
   auto hmdToWorld = hmd->deviceToAbsoluteMatrix();
-
-  // glm::dvec3 scale;
-  // glm::dquat rotation;
-  // glm::dvec3 translation;
-  // glm::dvec3 skew_;
-  // glm::dvec4 perspective_;
-  // glm::decompose(hmdToWorld, scale, rotation, translation, skew_, perspective_);
-
-  // fmt::print("Hmd To World Translation: {:.2f},{:.2f},{:.2f}\n", translation.x, translation.y, translation.z);
-  // fmt::print("Hmd To World Rotation: {:.2f},{:.2f},{:.2f}\n", rotation.x, rotation.y, rotation.z);
-
   auto worldToHmd = glm::inverse(hmdToWorld);
-  // glm::decompose(worldToHmd, scale, rotation, translation, skew_, perspective_);
-
-  // fmt::print("World To Hmd Translation: {:.2f},{:.2f},{:.2f}\n", translation.x, translation.y, translation.z);
-  // fmt::print("World To Hmd Rotation: {:.2f},{:.2f},{:.2f}\n", rotation.x, rotation.y, rotation.z);
-
+  // Rotate everything into the openVR space
   auto vsgWorldToOVRWorld = vsg::rotate(- vsg::PI / 2.0, 1.0, 0.0, 0.0);
+  // And flip the viewport
   vsg::dmat4 viewAxesMat(
     1, 0, 0, 0,
     0, -1, 0, 0,
@@ -442,9 +402,8 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   hmdCameraLeft->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
   hmdCameraRight->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatRight)));
 
-  // Bind the desktop camera to one of the eyes
-  // TODO: This should probably just be a perspective camera, that happens to track the user's head,
-  // doesn't need to be the actual projection used by each eye.
+  // For now bind the mirror window to one of the eyes. The desktop view could 
+  // have any projection, and be bound to the hmd's position.
   desktopCamera->setProjectionMatrix(vsgProjLeft);
   desktopCamera->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
 }
@@ -477,7 +436,6 @@ int main(int argc, char **argv)
       // OpenVR state update
       vr->update();
 
-      // TODO: This is far from the optimal approach, but simple to use for now
       // TODO: Update VSG state for controller positions/etc
       updateSceneWithVRState(vr.get(), scene);
 
@@ -492,7 +450,7 @@ int main(int argc, char **argv)
       // VR presentation
       submitVRFrames(vr.get(), viewer->windows().front());
 
-      // TODO: The pose updates here aren't great. This should be updated
+      // TODO: The pose updates here aren't perfect. This should be updated
       // to be async, using 'explicit timings'
       // https://github.com/ValveSoftware/openvr/wiki/Vulkan#explicit-timing
       // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
