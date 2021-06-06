@@ -58,7 +58,9 @@ add_subdirectory( vr )
 
 add_executable( example_vr example_vr.cpp )
 target_link_libraries( example_vr vsg::vsg vrhelp fmt::fmt )
-target_include_directories( example_vr PRIVATE ${OPENVR_ROOT}/headers )
+target_include_directories( example_vr PRIVATE 
+  ${OPENVR_ROOT}/headers
+  vsgvr/include )
 if( MSVC )
   set_target_properties(example_vr PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OPENVR_BINDIR}")
 endif()

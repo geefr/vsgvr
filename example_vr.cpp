@@ -7,8 +7,10 @@
 #include "vr/controller.h"
 
 #include "updatevrvisitor.h"
-#include "rawmatrices.h"
+#include <vsgvr/ExplicitProjectionMatrix.h>
+#include <vsgvr/ExplicitViewMatrix.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/euler_angles.hpp>
@@ -374,11 +376,11 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   float farPlane = 10.0f;
 
   auto leftProj = vr->getProjectionMatrix(vr::EVREye::Eye_Left, nearPlane, farPlane);
-  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjLeft(new RawProjectionMatrix( /* axesMatProj */ openVRMatToVSG(leftProj)));
+  auto vsgProjLeft = vsgvr::ExplicitProjectionMatrix::create(openVRMatToVSG(leftProj));
   hmdCameraLeft->setProjectionMatrix(vsgProjLeft);
 
   auto rightProj = vr->getProjectionMatrix(vr::EVREye::Eye_Right, nearPlane, farPlane);
-  vsg::ref_ptr<vsg::ProjectionMatrix> vsgProjRight(new RawProjectionMatrix( /* axesMatProj */ openVRMatToVSG(rightProj)));
+  auto vsgProjRight = vsgvr::ExplicitProjectionMatrix::create(openVRMatToVSG(rightProj));
   hmdCameraRight->setProjectionMatrix(vsgProjRight);
 
   // View matrices for each eye are also provided, but assume
@@ -399,13 +401,13 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   auto viewMatLeft = viewAxesMat * openVRMatToVSG(hmdToLeftEye * worldToHmd) * vsgWorldToOVRWorld;
   auto viewMatRight = viewAxesMat * openVRMatToVSG(hmdToRightEye * worldToHmd) * vsgWorldToOVRWorld;
 
-  hmdCameraLeft->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
-  hmdCameraRight->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatRight)));
+  hmdCameraLeft->setViewMatrix(vsgvr::ExplicitViewMatrix::create(viewMatLeft));
+  hmdCameraRight->setViewMatrix(vsgvr::ExplicitViewMatrix::create(viewMatRight));
 
   // For now bind the mirror window to one of the eyes. The desktop view could 
   // have any projection, and be bound to the hmd's position.
   desktopCamera->setProjectionMatrix(vsgProjLeft);
-  desktopCamera->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(new RawViewMatrix(viewMatLeft)));
+  desktopCamera->setViewMatrix(vsg::ref_ptr<vsg::ViewMatrix>(vsgvr::ExplicitViewMatrix::create(viewMatLeft)));
 }
 
 int main(int argc, char **argv)
