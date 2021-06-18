@@ -55,9 +55,10 @@ endif()
 #####################
 
 add_subdirectory( vr )
+add_subdirectory( vsgvr )
 
 add_executable( example_vr example_vr.cpp )
-target_link_libraries( example_vr vsg::vsg vrhelp fmt::fmt )
+target_link_libraries( example_vr vsg::vsg vsgvr fmt::fmt )
 target_include_directories( example_vr PRIVATE 
   ${OPENVR_ROOT}/headers
   vsgvr/include )

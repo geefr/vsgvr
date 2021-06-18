@@ -6,15 +6,16 @@
 #include "vr/device.h"
 #include "vr/controller.h"
 
-#include "updatevrvisitor.h"
-#include <vsgvr/ExplicitProjectionMatrix.h>
-#include <vsgvr/ExplicitViewMatrix.h>
-
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+
+#include <vsgvr/VR.h>
+#include <vsgvr/UpdateVRVisitor.h>
+#include <vsgvr/ExplicitProjectionMatrix.h>
+#include <vsgvr/ExplicitViewMatrix.h>
 
 #include <iostream>
 #include <memory>
@@ -316,30 +317,6 @@ vsg::ref_ptr<vsg::Viewer> initVSG(int argc, char **argv, vsg::ref_ptr<vsg::Group
   return viewer;
 }
 
-auto initVR(vsg::ref_ptr<vsg::Group> scene)
-{
-  std::unique_ptr<vrhelp::Env> env(new vrhelp::Env(vr::ETrackingUniverseOrigin::TrackingUniverseStanding));
-
-  // Add controller models to the scene
-  vsg::ref_ptr<vsg::Group> leftNode = vsg::MatrixTransform::create();
-  vsg::ref_ptr<vsg::Group> rightNode = vsg::MatrixTransform::create();
-  auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
-  if( controllerNode ) {
-    leftNode->addChild(controllerNode);
-    rightNode->addChild(controllerNode);
-  } else {
-    fmt::print("Failed to read controller.vsgt\n");
-  }
-  
-  leftNode->setValue(OpenVRIDTag, LeftControllerID);
-  rightNode->setValue(OpenVRIDTag, RightControllerID);
-  
-  scene->addChild(leftNode);
-  scene->addChild(rightNode);
-
-  return env;
-}
-
 // Take parameters from openvr, update the vsg scene elements
 void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
 {
@@ -367,7 +344,7 @@ void updateSceneWithVRState(vrhelp::Env *vr, vsg::ref_ptr<vsg::Group> scene)
   }
 
   // Update models
-  vsg::ref_ptr<vsg::Visitor> v(new UpdateVRVisitor(vr, left, right, hmd));
+  vsg::ref_ptr<vsg::Visitor> v(new vsgvr::UpdateVRVisitor(*vr));
   scene->accept(*v);
 
   // Projection matrices are relatively simple, provided directly by openVR
@@ -418,7 +395,9 @@ int main(int argc, char **argv)
     vsg::ref_ptr<vsg::Group> scene(new vsg::Group());
 
     // OpenVR context - TODO: Will terminate if vr isn't active
-    auto vr = initVR(scene);
+    auto vr = vsgvr::initVR();
+    auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
+    vsgvr::createDeviceNodes(*vr, scene, controllerNode);
 
     auto viewer = initVSG(argc, argv, scene, vr.get());
     if (!viewer)
