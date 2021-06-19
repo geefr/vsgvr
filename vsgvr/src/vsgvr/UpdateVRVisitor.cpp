@@ -36,7 +36,7 @@ namespace vsgvr
 
         auto mat = it->second->deviceToAbsoluteMatrix();
         vsg::dmat4 vmat(glm::value_ptr(mat)); // TODO: Remove glm
-        txf->setMatrix(vmat);
+        txf->matrix = vmat;
       }
     }
 

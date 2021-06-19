@@ -8,7 +8,6 @@ example_vr.cpp should be similar enough to a desktop 'hello world' - As long as 
 Rough TODO:
 * Lots of cleanups - code style will be way off
 * May need an HMDWindow class, to split out some functionality currently hardcoded into VRViewer
-* Need to update to latest vsg - May be able to delete the Explicit projection classes with the recent api rework
 * Binding devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
 * Map vr input handling to vsg event system
 * Need to remove glm

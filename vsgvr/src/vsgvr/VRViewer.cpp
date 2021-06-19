@@ -11,8 +11,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsgvr/VRViewer.h>
 #include <vsgvr/UpdateVRVisitor.h>
 
-#include <vsgvr/ExplicitProjectionMatrix.h>
-#include <vsgvr/ExplicitViewMatrix.h>
+#include <vsgvr/VRProjectionMatrix.h>
+#include <vsgvr/VRViewMatrix.h>
 
 #include <vsg/viewer/View.h>
 #include <vsg/viewer/RenderGraph.h>
@@ -65,26 +65,23 @@ namespace vsgvr
         {
             // Projection matrices are fairly simple
             auto proj = projectionMatrices[i];
-            auto vsgProj = vsgvr::ExplicitProjectionMatrix::create(vsg::dmat4(glm::value_ptr(proj)));
-            m_hmdCameras[i]->setProjectionMatrix(vsgProj);
+            m_hmdCameras[i]->projectionMatrix = vsgvr::VRProjectionMatrix::create(vsg::dmat4(glm::value_ptr(proj)));
 
             auto hmdToEye = glm::inverse(eyeToHeadTransforms[i]);
             auto m = hmdToEye * worldToHmd;
             auto viewMat = viewAxesMat * vsg::dmat4(glm::value_ptr(m)) * vsgWorldToOVRWorld;
-
-            m_hmdCameras[i]->setViewMatrix(vsgvr::ExplicitViewMatrix::create(viewMat));
+            m_hmdCameras[i]->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
         }
 
         // For now bind the mirror window to one of the eyes. The desktop view could
         // have any projection, and be bound to the hmd's position.
         auto proj = projectionMatrices[0];
-        auto vsgProj = vsgvr::ExplicitProjectionMatrix::create(vsg::dmat4(glm::value_ptr(proj)));
-        m_desktopCamera->setProjectionMatrix(vsgProj);
+        m_desktopCamera->projectionMatrix = vsgvr::VRProjectionMatrix::create(vsg::dmat4(glm::value_ptr(proj)));
 
         auto hmdToEye = glm::inverse(eyeToHeadTransforms[0]);
         auto m = hmdToEye * worldToHmd;
         auto viewMat = viewAxesMat * vsg::dmat4(glm::value_ptr(m)) * vsgWorldToOVRWorld;
-        m_desktopCamera->setViewMatrix(vsgvr::ExplicitViewMatrix::create(viewMat));
+        m_desktopCamera->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
     }
 
     void VRViewer::present()
