@@ -11,6 +11,8 @@ Rough TODO:
 * Need to update to latest vsg - May be able to delete the Explicit projection classes with the recent api rework
 * Binding devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
 * Map vr input handling to vsg event system
+* Need to remove glm
+* Need to remove fmt
 
 Thing                        | Status
 -----------------------------|--------
