@@ -1,5 +1,16 @@
 # VSG OpenVR prototype
 
+Latest State: vsgvr library created, functionality encapsulated in a few functions & VRViewer class.
+Hardcoded to OpenVR for now - The 'vr' folder needs to be migrated to a generic vr/xr backend interface in vsgvr.
+
+example_vr.cpp should be similar enough to a desktop 'hello world' - As long as openvr is available before it's started it should 'just work'
+
+Rough TODO:
+* Lots of cleanups - code style will be way off
+* May need an HMDWindow class, to split out some functionality currently hardcoded into VRViewer
+* Need to update to latest vsg - May be able to delete the Explicit projection classes with the recent api rework
+* Binding devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
+
 Thing                        | Status
 -----------------------------|--------
 Linux Build                  | Building
@@ -13,7 +24,7 @@ HMD Presentation             | Working, tested with null steamvr driver & HTC Vi
 
 Issue                        | Status
 -----------------------------|-------
-Segfault on exit             | Only on my laptop (quadro M2000), using null steamvr headset?
+Segfault on exit             | Only on Linux?
 Lighting isn't correct       | likely due to axes swap in view matrix - Shaders include hardcoded light source, which isn't transformed by the view matrix..
 HMD Tracking is laggy        | Recent improvements, but not perfect. Tracking slightly delayed, should switch to explicit frame timings or otherwise fight waitGetPoses..
 
