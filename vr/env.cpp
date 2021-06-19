@@ -319,9 +319,12 @@ namespace vrhelp
     return extensions;
   }
 
-  void Env::submitFrames(VkImage leftImg, VkImage rightImg, VkDevice device, VkPhysicalDevice physDevice, 
+  void Env::submitFrames(const std::vector<VkImage> images, VkDevice device, VkPhysicalDevice physDevice, 
     VkInstance instance, VkQueue queue, uint32_t queueFamIndex, uint32_t width, uint32_t height, VkFormat format, int msaaSamples)
   {
+    auto& leftImg = images[0];
+    auto& rightImg = images[1];
+
     // Submit to SteamVR
     vr::VRTextureBounds_t bounds;
     bounds.uMin = 0.0f;

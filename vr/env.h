@@ -20,6 +20,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <vector>
 
 namespace vrhelp {
   /**
@@ -55,6 +56,8 @@ namespace vrhelp {
     // glm::dmat4x4 getProjectionMatrixZup(vr::EVREye eye);
     glm::dmat4x4 getEyeToHeadTransform(vr::EVREye eye);
 
+    uint32_t numberOfHmdImages() const { return 2; }
+
 #ifdef VR_SUBMIT_OPENGL
     /**
      * Submit OpenGL textures to OpenVR
@@ -71,7 +74,7 @@ namespace vrhelp {
     /**
      * Submit Vulkan images to OpenVR
      */
-    void submitFrames(VkImage leftImg, VkImage rightImg, VkDevice device, VkPhysicalDevice physDevice, 
+    void submitFrames(const std::vector<VkImage> images, VkDevice device, VkPhysicalDevice physDevice, 
       VkInstance instance, VkQueue queue, uint32_t queueFamIndex, uint32_t width, uint32_t height, VkFormat format, int msaaSamples);
 #endif
 

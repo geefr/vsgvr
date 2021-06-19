@@ -27,9 +27,9 @@ namespace vsgvr {
     const std::string TAG_DEVICE_ID = "vsgvr::device::id";
 
     /// Connect to the VR runtime and initialise a context
-    std::unique_ptr<vsgvr::Context> initVR();
+    std::shared_ptr<vsgvr::Context> initVR();
 
     /// Add a MatrixTransform to the scene for each tracked device
-    void createDeviceNodes(const vsgvr::Context& ctx, vsg::ref_ptr<vsg::Group> parentNode, vsg::ref_ptr<vsg::Node> controllerModel = {});
+    void createDeviceNodes(std::shared_ptr<vsgvr::Context> ctx, vsg::ref_ptr<vsg::Group> parentNode, vsg::ref_ptr<vsg::Node> controllerModel = {});
 
 } // namespace vsg

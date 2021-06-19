@@ -16,9 +16,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/nodes/MatrixTransform.h>
 
-
-#include <fmt/core.h>
-
 namespace vsgvr
 {
   UpdateVRVisitor::UpdateVRVisitor(const vsgvr::Context &ctx)
@@ -45,8 +42,6 @@ namespace vsgvr
         auto &devices = m_ctx.devices();
         auto it = std::find_if(devices.begin(), devices.end(), 
           [&val](auto& d) { return d.second->mSerial == val; });
-
-        fmt::print("Updating device: {}, {}\n", it->second->mName, it->second->mSerial);
 
         auto mat = it->second->deviceToAbsoluteMatrix();
         vsg::dmat4 vmat(glm::value_ptr(mat)); // TODO: Remove glm

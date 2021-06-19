@@ -15,14 +15,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 namespace vsgvr
 {
-    std::unique_ptr<vsgvr::Context> initVR() 
+    std::shared_ptr<vsgvr::Context> initVR() 
     {
-        return std::make_unique<vsgvr::Context>(vr::ETrackingUniverseOrigin::TrackingUniverseStanding);
+        return std::make_shared<vsgvr::Context>(vr::ETrackingUniverseOrigin::TrackingUniverseStanding);
     }
 
-    void createDeviceNodes(const vsgvr::Context& ctx, vsg::ref_ptr<vsg::Group> parentNode, vsg::ref_ptr<vsg::Node> controllerModel)
+    void createDeviceNodes(std::shared_ptr<vsgvr::Context> ctx, vsg::ref_ptr<vsg::Group> parentNode, vsg::ref_ptr<vsg::Node> controllerModel)
     {
-        auto& devices = ctx.devices();
+        auto& devices = ctx->devices();
         for( auto& device : devices )
         {
             vsg::ref_ptr<vsg::Group> deviceNode = vsg::MatrixTransform::create();
