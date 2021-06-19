@@ -1,0 +1,3 @@
+[submodule "Format.cmake"]
+	path = Format.cmake
+	url = https://github.com/TheLartians/Format.cmake

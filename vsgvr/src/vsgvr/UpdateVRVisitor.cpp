@@ -1,11 +1,22 @@
 /*
 Copyright(c) 2021 Gareth Francis
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsgvr/UpdateVRVisitor.h>
@@ -16,30 +27,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/nodes/MatrixTransform.h>
 
-namespace vsgvr
-{
-  UpdateVRVisitor::UpdateVRVisitor(const vsgvr::Context &ctx)
-      : m_ctx(ctx)
-  {
-  }
+namespace vsgvr {
+UpdateVRVisitor::UpdateVRVisitor(const vsgvr::Context &ctx) : m_ctx(ctx) {}
 
-  void UpdateVRVisitor::apply(vsg::Group &o)
-  {
-    std::string val;
-    if (o.getValue(vsgvr::TAG_DEVICE_ID, val))
-    {
-      if (auto txf = o.cast<vsg::MatrixTransform>())
-      {
-        auto &devices = m_ctx.devices();
-        auto it = std::find_if(devices.begin(), devices.end(), 
-          [&val](auto& d) { return d.second->mSerial == val; });
+void UpdateVRVisitor::apply(vsg::Group &o) {
+  std::string val;
+  if (o.getValue(vsgvr::TAG_DEVICE_ID, val)) {
+    if (auto txf = o.cast<vsg::MatrixTransform>()) {
+      auto &devices = m_ctx.devices();
+      auto it = std::find_if(devices.begin(), devices.end(), [&val](auto &d) {
+        return d.second->mSerial == val;
+      });
 
-        auto mat = it->second->deviceToAbsoluteMatrix();
-        vsg::dmat4 vmat(glm::value_ptr(mat)); // TODO: Remove glm
-        txf->matrix = vmat;
-      }
+      auto mat = it->second->deviceToAbsoluteMatrix();
+      vsg::dmat4 vmat(glm::value_ptr(mat)); // TODO: Remove glm
+      txf->matrix = vmat;
     }
-
-    o.traverse(*this);
   }
+
+  o.traverse(*this);
 }
+} // namespace vsgvr

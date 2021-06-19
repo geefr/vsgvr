@@ -17,6 +17,9 @@ set(OpenGL_GL_PREFERENCE GLVND)
 #  set( CMAKE_CXX_FLAGS "-Werror=all -Wno-error=unused-variable" )
 #endif()
 
+set( FORMAT_SKIP_CMAKE ON )
+add_subdirectory(Format.cmake)
+
 # Package/System requirements
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)

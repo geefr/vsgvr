@@ -2,63 +2,67 @@
 
 #include <vsgvr/VRViewer.h>
 
-int main(int argc, char** argv)
-{
-    // set up defaults and read command line arguments to override them
-    vsg::CommandLine arguments(&argc, argv);
+int main(int argc, char **argv) {
+  // set up defaults and read command line arguments to override them
+  vsg::CommandLine arguments(&argc, argv);
 
-    // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO realted options to use when reading and writing files.
-    auto options = vsg::Options::create();
-    arguments.read(options);
+  // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO
+  // realted options to use when reading and writing files.
+  auto options = vsg::Options::create();
+  arguments.read(options);
 
-    vsg::Path filename = "world.vsgt";
-    if (argc > 1) filename = arguments[1];
-    if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
+  vsg::Path filename = "world.vsgt";
+  if (argc > 1)
+    filename = arguments[1];
+  if (arguments.errors())
+    return arguments.writeErrorMessages(std::cerr);
 
-    // load the scene graph
-    vsg::ref_ptr<vsg::Group> vsg_scene = vsg::read_cast<vsg::Group>(filename, options);
-    if (!vsg_scene) return 0;
-    
-    // Initialise vr, and add nodes to the scene graph for each tracked device
-    // TODO: If controllers are off when program starts they won't be added later
-    auto vr = vsgvr::initVR();
-    auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
-    vsgvr::createDeviceNodes(vr, vsg_scene, controllerNode);
+  // load the scene graph
+  vsg::ref_ptr<vsg::Group> vsg_scene =
+      vsg::read_cast<vsg::Group>(filename, options);
+  if (!vsg_scene)
+    return 0;
 
-    // Create the VR Viewer
-    // This viewer creates its own desktop window internally along
-    // with cameras, event handlers, etc
-    // The provided window traits are a template - The viewer will configure
-    // any additional settings as needed (such as disabling v-sync)
-    auto windowTraits = vsg::WindowTraits::create();
-    windowTraits->windowTitle = "VSGVR Example";
-    windowTraits->debugLayer = arguments.read({"--debug", "-d"});
-    windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
-    if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height))
-    {
-        windowTraits->fullscreen = false;
-    }
+  // Initialise vr, and add nodes to the scene graph for each tracked device
+  // TODO: If controllers are off when program starts they won't be added later
+  auto vr = vsgvr::initVR();
+  auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
+  vsgvr::createDeviceNodes(vr, vsg_scene, controllerNode);
 
-    auto viewer = vsgvr::VRViewer::create(vr, windowTraits);
+  // Create the VR Viewer
+  // This viewer creates its own desktop window internally along
+  // with cameras, event handlers, etc
+  // The provided window traits are a template - The viewer will configure
+  // any additional settings as needed (such as disabling v-sync)
+  auto windowTraits = vsg::WindowTraits::create();
+  windowTraits->windowTitle = "VSGVR Example";
+  windowTraits->debugLayer = arguments.read({"--debug", "-d"});
+  windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
+  if (arguments.read({"--window", "-w"}, windowTraits->width,
+                     windowTraits->height)) {
+    windowTraits->fullscreen = false;
+  }
 
-    // add close handler to respond the close window button and pressing escape
-    viewer->addEventHandler(vsg::CloseHandler::create(viewer));
+  auto viewer = vsgvr::VRViewer::create(vr, windowTraits);
 
-    // add the CommandGraph to render the scene
-    auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
-    viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+  // add close handler to respond the close window button and pressing escape
+  viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
-    // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
-    viewer->compile();
+  // add the CommandGraph to render the scene
+  auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
+  viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
-    // Render loop
-    while (viewer->advanceToNextFrame())
-    {
-        viewer->handleEvents();
-        viewer->update();
-        viewer->recordAndSubmit();
-        viewer->present();
-    }
+  // compile all Vulkan objects and transfer image, vertex and primitive data to
+  // GPU
+  viewer->compile();
 
-    return EXIT_SUCCESS;
+  // Render loop
+  while (viewer->advanceToNextFrame()) {
+    viewer->handleEvents();
+    viewer->update();
+    viewer->recordAndSubmit();
+    viewer->present();
+  }
+
+  return EXIT_SUCCESS;
 }
