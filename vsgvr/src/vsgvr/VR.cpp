@@ -30,13 +30,9 @@ namespace vsgvr
             deviceNode->setValue(vsgvr::TAG_DEVICE_ID, device.second->mSerial);
             parentNode->addChild(deviceNode);
 
-            if( auto controller = dynamic_cast<vsgvr::Controller*>(device.second.get()) )
-            {
-                if( controllerModel )
-                {
+            if( controllerModel )
+                if( auto controller = dynamic_cast<vsgvr::Controller*>(device.second.get()) )
                     deviceNode->addChild(controllerModel);
-                }
-            }
         }
     }
 } // namespace vsg

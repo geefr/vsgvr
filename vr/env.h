@@ -52,6 +52,9 @@ namespace vrhelp {
     vrhelp::Controller* rightHand() const;
     vrhelp::Device* hmd() const;
 
+    std::vector<glm::dmat4x4> getProjectionMatrices(float nearZ, float farZ);
+    std::vector<glm::dmat4x4> getEyeToHeadTransforms();
+
     glm::dmat4x4 getProjectionMatrix(vr::EVREye eye, float nearZ, float farZ);
     // glm::dmat4x4 getProjectionMatrixZup(vr::EVREye eye);
     glm::dmat4x4 getEyeToHeadTransform(vr::EVREye eye);

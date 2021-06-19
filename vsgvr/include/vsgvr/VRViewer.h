@@ -45,16 +45,18 @@ namespace vsgvr
             uint32_t width;
             uint32_t height;
         };
-        std::vector<HMDImage> hmdImages;
-        vsg::ref_ptr<vsg::CommandGraph> hmdCommandGraph;
         const VkFormat hmdImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+        std::vector<HMDImage> hmdImages;
+        std::vector<vsg::ref_ptr<vsg::View>> views;
+        std::vector<vsg::ref_ptr<vsg::Camera>> m_hmdCameras;
+        vsg::ref_ptr<vsg::CommandGraph> hmdCommandGraph;
+        
         std::shared_ptr<vsgvr::Context> m_ctx;
         vsg::ref_ptr<vsg::Window> m_desktopWindow;
+        vsg::ref_ptr<vsg::Camera> m_desktopCamera;
         std::list<std::string> vrRequiredInstanceExtensions;
         std::list<std::string> vrRequiredDeviceExtensions;
-        std::list<vsg::ref_ptr<vsg::View>> views;
 
-        // void submitVRFrames(std::shared_ptr<vsgvr::Context> ctx, vsg::Window *window);
         vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D &extent);
         vsg::ref_ptr<vsg::RenderGraph> createHmdRenderGraph(vsg::Device *device, vsg::Context &context, const VkExtent2D &extent, HMDImage &img, VkClearColorValue &clearColour);
         void submitVRFrames();

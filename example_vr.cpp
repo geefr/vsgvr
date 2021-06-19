@@ -40,7 +40,6 @@ int main(int argc, char** argv)
     }
 
     auto viewer = vsgvr::VRViewer::create(vr, windowTraits);
-    auto window = viewer->windows().front();
 
     // add close handler to respond the close window button and pressing escape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));

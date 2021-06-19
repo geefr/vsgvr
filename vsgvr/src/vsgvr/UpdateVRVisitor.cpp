@@ -25,27 +25,18 @@ namespace vsgvr
 
   void UpdateVRVisitor::apply(vsg::Group &o)
   {
-    // Transformation from openvr world space -> vsg world space
-    // TODO: This should be defined by the context, as vr spaces may vary
-    const vsg::dmat4 axesMat(
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, -1.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 1.0);
-
     std::string val;
     if (o.getValue(vsgvr::TAG_DEVICE_ID, val))
     {
       if (auto txf = o.cast<vsg::MatrixTransform>())
       {
-        
         auto &devices = m_ctx.devices();
         auto it = std::find_if(devices.begin(), devices.end(), 
           [&val](auto& d) { return d.second->mSerial == val; });
 
         auto mat = it->second->deviceToAbsoluteMatrix();
         vsg::dmat4 vmat(glm::value_ptr(mat)); // TODO: Remove glm
-        txf->setMatrix(axesMat * vmat);
+        txf->setMatrix(vmat);
       }
     }
 

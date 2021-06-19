@@ -11,16 +11,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsgvr/VRViewer.h>
 #include <vsgvr/UpdateVRVisitor.h>
 
+#include <vsgvr/ExplicitProjectionMatrix.h>
+#include <vsgvr/ExplicitViewMatrix.h>
+
 #include <vsg/viewer/View.h>
 #include <vsg/viewer/RenderGraph.h>
 #include <vsg/core/Exception.h>
 #include <vsg/traversals/ComputeBounds.h>
 
+// TODO: Remove glm
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtc/type_ptr.hpp>
 
 namespace vsgvr
 {
     VRViewer::VRViewer(std::shared_ptr<vsgvr::Context> ctx, vsg::ref_ptr<vsg::WindowTraits> windowTraits)
-      : m_ctx(ctx)
+        : m_ctx(ctx)
     {
         createDesktopWindow(windowTraits);
     }
@@ -32,7 +38,53 @@ namespace vsgvr
         // Update all tracked devices
         m_ctx->update();
         vsg::ref_ptr<vsg::Visitor> v(new vsgvr::UpdateVRVisitor(*m_ctx));
-        for( auto& view : views ) view->accept(*v);
+        for (auto &view : views)
+            view->accept(*v);
+
+        // Rotate everything into the openVR space
+        auto vsgWorldToOVRWorld = vsg::rotate(-vsg::PI / 2.0, 1.0, 0.0, 0.0);
+        // And flip the viewport
+        vsg::dmat4 viewAxesMat(
+            1, 0, 0, 0,
+            0, -1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+
+        // Update each of the vr cameras
+        float nearPlane = 0.01f;
+        float farPlane = 20.0f;
+        auto projectionMatrices = m_ctx->getProjectionMatrices(nearPlane, farPlane);
+        auto eyeToHeadTransforms = m_ctx->getEyeToHeadTransforms();
+
+        // View matrices for each eye are provided, but assume
+        // data is in the openVR coordinate space (y-up, z-backward)
+        auto hmdToWorld = m_ctx->hmd()->deviceToAbsoluteMatrix();
+        auto worldToHmd = glm::inverse(hmdToWorld);
+
+        for( auto i = 0u; i < m_ctx->numberOfHmdImages(); ++i)
+        {
+            // Projection matrices are fairly simple
+            auto proj = projectionMatrices[i];
+            auto vsgProj = vsgvr::ExplicitProjectionMatrix::create(vsg::dmat4(glm::value_ptr(proj)));
+            m_hmdCameras[i]->setProjectionMatrix(vsgProj);
+
+            auto hmdToEye = glm::inverse(eyeToHeadTransforms[i]);
+            auto m = hmdToEye * worldToHmd;
+            auto viewMat = viewAxesMat * vsg::dmat4(glm::value_ptr(m)) * vsgWorldToOVRWorld;
+
+            m_hmdCameras[i]->setViewMatrix(vsgvr::ExplicitViewMatrix::create(viewMat));
+        }
+
+        // For now bind the mirror window to one of the eyes. The desktop view could
+        // have any projection, and be bound to the hmd's position.
+        auto proj = projectionMatrices[0];
+        auto vsgProj = vsgvr::ExplicitProjectionMatrix::create(vsg::dmat4(glm::value_ptr(proj)));
+        m_desktopCamera->setProjectionMatrix(vsgProj);
+
+        auto hmdToEye = glm::inverse(eyeToHeadTransforms[0]);
+        auto m = hmdToEye * worldToHmd;
+        auto viewMat = viewAxesMat * vsg::dmat4(glm::value_ptr(m)) * vsgWorldToOVRWorld;
+        m_desktopCamera->setViewMatrix(vsgvr::ExplicitViewMatrix::create(viewMat));
     }
 
     void VRViewer::present()
@@ -76,7 +128,7 @@ namespace vsgvr
         windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
         m_desktopWindow = vsg::Window::create(windowTraits);
-        if(!m_desktopWindow)
+        if (!m_desktopWindow)
         {
             throw vsg::Exception{"Failed to create desktop mirror window"};
         }
@@ -98,10 +150,11 @@ namespace vsgvr
         hmdCommandGraph = vsg::CommandGraph::create(m_desktopWindow);
         auto desktopCommandGraph = vsg::CommandGraph::create(m_desktopWindow);
 
-        for( auto imgI = 0u; imgI < numImages; ++imgI )
+        for (auto imgI = 0u; imgI < numImages; ++imgI)
         {
             auto image = HMDImage();
             auto camera = createCameraForScene(vsg_scene, hmdExtent);
+            m_hmdCameras.push_back(camera);
             auto renderGraph = createHmdRenderGraph(m_desktopWindow->getDevice(), compile.context, hmdExtent, image, m_desktopWindow->clearColor());
             hmdImages.push_back(image);
             auto view = vsg::View::create(camera, vsg_scene);
@@ -111,8 +164,8 @@ namespace vsgvr
         }
 
         // Create render graph for desktop window
-        auto desktopCamera = createCameraForScene(vsg_scene, m_desktopWindow->extent2D());
-        auto desktopRenderGraph = vsg::createRenderGraphForView(m_desktopWindow, desktopCamera, vsg_scene);
+        m_desktopCamera = createCameraForScene(vsg_scene, m_desktopWindow->extent2D());
+        auto desktopRenderGraph = vsg::createRenderGraphForView(m_desktopWindow, m_desktopCamera, vsg_scene);
         desktopCommandGraph->addChild(desktopRenderGraph);
 
         return {desktopCommandGraph, hmdCommandGraph};
@@ -258,7 +311,8 @@ namespace vsgvr
     void VRViewer::submitVRFrames()
     {
         std::vector<VkImage> images;
-        for( auto& img : hmdImages ) images.push_back(img.colourImage->vk(m_desktopWindow->getDevice()->deviceID));
+        for (auto &img : hmdImages)
+            images.push_back(img.colourImage->vk(m_desktopWindow->getDevice()->deviceID));
 
         m_ctx->submitFrames(
             images,

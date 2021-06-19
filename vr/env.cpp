@@ -147,6 +147,22 @@ namespace vrhelp
     return it->second.get();
   }
 
+  std::vector<glm::dmat4x4> Env::getProjectionMatrices(float nearZ, float farZ)
+  {
+    return {
+      getProjectionMatrix(vr::EVREye::Eye_Left, nearZ, farZ),
+      getProjectionMatrix(vr::EVREye::Eye_Right, nearZ, farZ)
+    };
+  }
+
+  std::vector<glm::dmat4x4> Env::getEyeToHeadTransforms()
+  {
+    return {
+      getEyeToHeadTransform(vr::EVREye::Eye_Left),
+      getEyeToHeadTransform(vr::EVREye::Eye_Right)
+    };
+  }
+
   glm::dmat4x4 Env::getProjectionMatrix(vr::EVREye eye, float nearZ, float farZ)
   {
     auto projMat = mContext->GetProjectionMatrix(eye, nearZ, farZ);
