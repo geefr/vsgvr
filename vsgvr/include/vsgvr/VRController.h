@@ -21,41 +21,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/TrackedDevice.h>
+#include <vsgvr/VRDevice.h>
 
 namespace vsgvr
 {
-  class VRContext : public vsg::Inherit<vsg::Object, VRContext>
+
+  class VSG_DECLSPEC VRController : public vsg::Inherit<vsgvr::VRDevice, VRController>
   {
   public:
-    using TrackedDevices = std::vector<vsg::ref_ptr<vsgvr::TrackedDevice>>;
-
-    enum class TrackingOrigin
-    {
-      Uncalibrated,
-      Seated,
-      Standing,
-    };
-
-    VRContext(TrackingOrigin origin = vsgvr::TrackingOrigin::Standing);
-    virtual ~VRContext();
-
-    virtual void update() = 0;
-    virtual void waitGetPoses() = 0;
-
-    virtual const TrackedDevices& devices() const = 0;
-
-    virtual vsg::ref_ptr<TrackedDevice> leftHand() const = 0;
-    virtual vsg::ref_ptr<TrackedDevice> rightHand() const = 0;
-    virtual vsg::ref_ptr<TrackedDevice> hmd() const = 0;
-
-    virtual uint32_t numberOfHmdImages() const = 0;
-    virtual void getRecommendedTargetSize(uint32_t &width, uint32_t &height) =  0;
-
-    virtual void submitFrames(std::vector<vsgvr::HMDImage> images) = 0;
-
-  protected:
-    vsgvr::TrackingOrigin originType = vsgvr::TrackingOrigin::Standing;
-    TrackedDevices devices;
+    VRController(std::string deviceName, std::string deviceSerial);
+    virtual ~VRController();
   };
+
 }

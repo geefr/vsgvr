@@ -21,25 +21,22 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <vsgvr/VRContext.h>
+
 #include <vsg/nodes/Group.h>
 #include <vsg/state/Image.h>
 #include <vsg/state/ImageInfo.h>
 
 #include <memory>
 
-// TODO: Generic interface for vr backends
-#include "../../../vr/env.h"
+namespace vsgvr
+{
 
-namespace vsgvr {
-// TODO: Placeholder types - Will need to migrate vrhelp classes in, make
-// generic to account for other backends
-using Context = vrhelp::Env;
-using Controller = vrhelp::Controller;
+  const std::string TAG_DEVICE_NAME = "vsgvr::device::name";
+  const std::string TAG_DEVICE_ID = "vsgvr::device::id";
 
-const std::string TAG_DEVICE_NAME = "vsgvr::device::name";
-const std::string TAG_DEVICE_ID = "vsgvr::device::id";
-
-struct HMDImage {
+  struct HMDImage
+  {
     vsg::ImageInfo colourImageInfo;
     vsg::ref_ptr<vsg::Image> colourImage;
     vsg::ImageInfo depthImageInfo;
@@ -48,12 +45,9 @@ struct HMDImage {
     uint32_t height;
   };
 
-/// Connect to the VR runtime and initialise a context
-std::shared_ptr<vsgvr::Context> initVR();
-
-/// Add a MatrixTransform to the scene for each tracked device
-void createDeviceNodes(std::shared_ptr<vsgvr::Context> ctx,
-                       vsg::ref_ptr<vsg::Group> parentNode,
-                       vsg::ref_ptr<vsg::Node> controllerModel = {});
+  /// Add a MatrixTransform to the scene for each tracked device
+  void createDeviceNodes(vsg::ref_ptr<vsgvr::VRContext> ctx,
+                         vsg::ref_ptr<vsg::Group> parentNode,
+                         vsg::ref_ptr<vsg::Node> controllerModel = {});
 
 } // namespace vsgvr

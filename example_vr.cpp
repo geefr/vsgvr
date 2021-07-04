@@ -1,6 +1,7 @@
 #include <vsg/all.h>
 
 #include <vsgvr/VRViewer.h>
+#include <vsgvr/openvr/OpenVRContext.h>
 
 int main(int argc, char **argv) {
   // set up defaults and read command line arguments to override them
@@ -25,7 +26,7 @@ int main(int argc, char **argv) {
 
   // Initialise vr, and add nodes to the scene graph for each tracked device
   // TODO: If controllers are off when program starts they won't be added later
-  auto vr = vsgvr::initVR();
+  auto vr = vsgvr::OpenVRContext::create();
   auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
   vsgvr::createDeviceNodes(vr, vsg_scene, controllerNode);
 

@@ -21,10 +21,14 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <vsg/core/Object.h>
+#include <vsg/core/Inherit.h>
+#include <vsg/maths/mat4.h>
+
 namespace vsgvr
 {
 
-  class VSG_DECLSPEC TrackedDevice : public vsg::Inherit<vsg::Object, Device>
+  class VSG_DECLSPEC VRDevice : public vsg::Inherit<vsg::Object, VRDevice>
   {
   public:
     enum class DeviceType
@@ -37,11 +41,16 @@ namespace vsgvr
       DisplayRedirect,
     };
 
-    TrackedDevice(TrackedDevice::Type type);
-
     DeviceType deviceType = DeviceType::Invalid;
 
-  private:
+    std::string name;
+    std::string serial;
+
+    vsg::dmat4 deviceToAbsoluteMatrix;
+
+  protected:
+    VRDevice(DeviceType type, std::string deviceName, std::string deviceSerial);
+    virtual ~VRDevice();
   };
 
 }

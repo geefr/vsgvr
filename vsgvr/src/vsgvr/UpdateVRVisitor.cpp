@@ -28,20 +28,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/nodes/MatrixTransform.h>
 
 namespace vsgvr {
-UpdateVRVisitor::UpdateVRVisitor(const vsgvr::Context &ctx) : m_ctx(ctx) {}
+UpdateVRVisitor::UpdateVRVisitor(vsg::ref_ptr<vsgvr::VRContext> context) : ctx(context) {}
 
 void UpdateVRVisitor::apply(vsg::Group &o) {
   std::string val;
   if (o.getValue(vsgvr::TAG_DEVICE_ID, val)) {
     if (auto txf = o.cast<vsg::MatrixTransform>()) {
-      auto &devices = m_ctx.devices();
+      auto &devices = ctx->devices();
       auto it = std::find_if(devices.begin(), devices.end(), [&val](auto &d) {
-        return d.second->mSerial == val;
+        return d.second->serial == val;
       });
 
-      auto mat = it->second->deviceToAbsoluteMatrix();
-      vsg::dmat4 vmat(glm::value_ptr(mat)); // TODO: Remove glm
-      txf->matrix = vmat;
+      txf->matrix = it->second->deviceToAbsoluteMatrix;
     }
   }
 

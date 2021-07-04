@@ -24,26 +24,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/nodes/MatrixTransform.h>
 
-namespace vsgvr {
-std::shared_ptr<vsgvr::Context> initVR() {
-  return std::make_shared<vsgvr::Context>(
-      vr::ETrackingUniverseOrigin::TrackingUniverseStanding);
-}
+namespace vsgvr
+{
+  void createDeviceNodes(vsg::ref_ptr<vsgvr::VRContext> ctx,
+                         vsg::ref_ptr<vsg::Group> parentNode,
+                         vsg::ref_ptr<vsg::Node> controllerModel)
+  {
+    auto &devices = ctx->devices();
+    for (auto &device : devices)
+    {
+      vsg::ref_ptr<vsg::Group> deviceNode = vsg::MatrixTransform::create();
+      deviceNode->setValue(vsgvr::TAG_DEVICE_NAME, device.second->name);
+      deviceNode->setValue(vsgvr::TAG_DEVICE_ID, device.second->serial);
+      parentNode->addChild(deviceNode);
 
-void createDeviceNodes(std::shared_ptr<vsgvr::Context> ctx,
-                       vsg::ref_ptr<vsg::Group> parentNode,
-                       vsg::ref_ptr<vsg::Node> controllerModel) {
-  auto &devices = ctx->devices();
-  for (auto &device : devices) {
-    vsg::ref_ptr<vsg::Group> deviceNode = vsg::MatrixTransform::create();
-    deviceNode->setValue(vsgvr::TAG_DEVICE_NAME, device.second->mName);
-    deviceNode->setValue(vsgvr::TAG_DEVICE_ID, device.second->mSerial);
-    parentNode->addChild(deviceNode);
-
-    if (controllerModel)
-      if (auto controller =
-              dynamic_cast<vsgvr::Controller *>(device.second.get()))
-        deviceNode->addChild(controllerModel);
+      if (controllerModel)
+        if (auto controller =
+                dynamic_cast<vsgvr::VRController *>(device.second.get()))
+          deviceNode->addChild(controllerModel);
+    }
   }
-}
 } // namespace vsgvr

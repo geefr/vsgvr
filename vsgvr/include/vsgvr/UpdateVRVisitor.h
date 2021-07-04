@@ -29,10 +29,10 @@ class VSG_DECLSPEC UpdateVRVisitor
     : public vsg::Inherit<vsg::Visitor, UpdateVRVisitor> {
 public:
   UpdateVRVisitor() = delete;
-  UpdateVRVisitor(const vsgvr::Context &ctx);
+  UpdateVRVisitor(vsg::ref_ptr<vsgvr::VRContext> context);
   virtual void apply(vsg::Group &o) override;
 
 private:
-  const vsgvr::Context &m_ctx;
+  vsg::ref_ptr<vsgvr::VRContext> ctx;
 };
 } // namespace vsgvr
