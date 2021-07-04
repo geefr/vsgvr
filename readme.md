@@ -11,7 +11,6 @@ Rough TODO:
 * Binding devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
 * Map vr input handling to vsg event system
 * Need to remove glm
-* Need to remove fmt
 
 Thing                        | Status
 -----------------------------|--------
@@ -42,7 +41,6 @@ Building requires:
 * vulkan sdk/vulkan scene graph
 * OpenVR sdk
 * glm (Fetched automatically)
-* fmtlib (Fetched automatically)
 
 ```
 cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang"  -DOPENVR_ROOT="/path/to/OpenVR" /path/to/vsg_vr_test

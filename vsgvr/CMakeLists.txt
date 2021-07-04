@@ -14,4 +14,4 @@ target_include_directories(
   ${PROJECT_SOURCE_DIR}/vr
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries( vsgvr PUBLIC vsg::vsg vrhelp fmt::fmt )
+target_link_libraries( vsgvr PUBLIC vsg::vsg vrhelp )

@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsg/nodes/Group.h>
+#include <vsg/state/Image.h>
+#include <vsg/state/ImageInfo.h>
 
 #include <memory>
 
@@ -32,11 +34,19 @@ namespace vsgvr {
 // TODO: Placeholder types - Will need to migrate vrhelp classes in, make
 // generic to account for other backends
 using Context = vrhelp::Env;
-using Device = vrhelp::Device;
 using Controller = vrhelp::Controller;
 
 const std::string TAG_DEVICE_NAME = "vsgvr::device::name";
 const std::string TAG_DEVICE_ID = "vsgvr::device::id";
+
+struct HMDImage {
+    vsg::ImageInfo colourImageInfo;
+    vsg::ref_ptr<vsg::Image> colourImage;
+    vsg::ImageInfo depthImageInfo;
+    vsg::ref_ptr<vsg::Image> depthImage;
+    uint32_t width;
+    uint32_t height;
+  };
 
 /// Connect to the VR runtime and initialise a context
 std::shared_ptr<vsgvr::Context> initVR();
