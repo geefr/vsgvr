@@ -1,35 +1,35 @@
 #include "vr/env.h"
 
 #include <chrono>
-#include <fmt/core.h>
 #include <memory>
+#include <iostream>
 #include <vsg/all.h>
 
 int main(void) {
   vrhelp::Env vr(vr::ETrackingUniverseOrigin::TrackingUniverseStanding);
   auto instanceExtensions = vr.instanceExtensionsRequired();
-  fmt::print("Instance Extensions Required:\n");
+  std::cout << "Instance Extensions Required:\n";
   for (auto &ext : instanceExtensions) {
-    fmt::print("\t{}\n", ext);
+    std::cout << "\t" << ext << "\n";
   }
 
   auto windowTraits = vsg::WindowTraits::create();
   auto window = vsg::Window::create(windowTraits);
   if (!window) {
-    fmt::print("Failed to create window\n");
+    std::cout << "Failed to create window\n";
     return EXIT_FAILURE;
   }
 
   auto physDev = window->getOrCreatePhysicalDevice();
   if (!physDev) {
-    fmt::print("Failed to create physical device\n");
+    std::cout << "Failed to create physical device\n";
     return EXIT_FAILURE;
   }
 
   auto deviceExtensions = vr.deviceExtensionsRequired(*physDev);
-  fmt::print("Device Extensions Required:\n");
+  std::cout << "Device Extensions Required:\n";
   for (auto &ext : deviceExtensions) {
-    fmt::print("\t{}\n", ext);
+    std::cout << "\t" << ext << "\n";
   }
 
   // Create a window for real, with all the required extensions
