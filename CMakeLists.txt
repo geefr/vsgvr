@@ -13,35 +13,12 @@ endif()
 set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
 
-#if( NOT MSVC )
-#  set( CMAKE_CXX_FLAGS "-Werror=all -Wno-error=unused-variable" )
-#endif()
-
 set( FORMAT_SKIP_CMAKE ON )
 add_subdirectory(deps/Format.cmake)
 
 # Package/System requirements
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)
-#####################
-
-# FetchContent_Declare(openvr
-#   GIT_REPOSITORY https://github.com/ValveSoftware/openvr
-#   GIT_TAG v1.16.8
-# )
-# # FetchContent_MakeAvailable(openvr)
-# FetchContent_GetProperties(openvr)
-# if(NOT openvr_POPULATED)
-#     FetchContent_Populate(openvr)
-# endif()
-
-FetchContent_Declare(glm
-  GIT_REPOSITORY https://github.com/g-truc/glm.git
-  GIT_TAG 0.9.9.8
-)
-FetchContent_MakeAvailable(glm)
-
-#####################
 
 # TODO: openvr paths are hardcoded
 set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
