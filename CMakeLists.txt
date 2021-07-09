@@ -13,39 +13,15 @@ endif()
 set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
 
-#if( NOT MSVC )
-#  set( CMAKE_CXX_FLAGS "-Werror=all -Wno-error=unused-variable" )
-#endif()
-
 set( FORMAT_SKIP_CMAKE ON )
-add_subdirectory(Format.cmake)
+add_subdirectory(deps/Format.cmake)
 
 # Package/System requirements
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)
 
-# TODO: Paths hardcoded for now
-if( NOT OPENVR_ROOT )
-  set( OPENVR_ROOT "" CACHE PATH "Root directory of OpenVR SDK" FORCE )
-  message( WARNING "VR Support enabled but OPENVR_ROOT not set")
-endif()
-#####################
-
-FetchContent_Declare(fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 7.1.3
-)
-FetchContent_MakeAvailable(fmt)
-
-FetchContent_Declare(glm
-  GIT_REPOSITORY https://github.com/g-truc/glm.git
-  GIT_TAG 0.9.9.8
-)
-FetchContent_MakeAvailable(glm)
-
-#####################
-
 # TODO: openvr paths are hardcoded
+set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
 set( OPENVR_LIB "openvr_api" )
 if( MSVC )
   set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/win64 )
@@ -57,11 +33,10 @@ endif()
 
 #####################
 
-add_subdirectory( vr )
 add_subdirectory( vsgvr )
 
 add_executable( example_vr example_vr.cpp )
-target_link_libraries( example_vr vsg::vsg vsgvr fmt::fmt )
+target_link_libraries( example_vr vsg::vsg vsgvr )
 target_include_directories( example_vr PRIVATE 
   ${OPENVR_ROOT}/headers
   vsgvr/include )

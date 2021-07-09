@@ -21,18 +21,34 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsg/core/Visitor.h>
-#include <vsgvr/VR.h>
+#include <vsgvr/VRDevice.h>
 
-namespace vsgvr {
-class VSG_DECLSPEC UpdateVRVisitor
-    : public vsg::Inherit<vsg::Visitor, UpdateVRVisitor> {
-public:
-  UpdateVRVisitor() = delete;
-  UpdateVRVisitor(vsg::ref_ptr<vsgvr::VRContext> context);
-  virtual void apply(vsg::Group &o) override;
+#include <map>
 
-private:
-  vsg::ref_ptr<vsgvr::VRContext> ctx;
-};
-} // namespace vsgvr
+namespace vsgvr
+{
+  class VSG_DECLSPEC VRController : public vsg::Inherit<vsgvr::VRDevice, VRController>
+  {
+  public:
+    enum class Role
+    {
+      Unknown,
+      LeftHand,
+      RightHand
+    };
+
+    VRController();
+    VRController(uint32_t deviceId, std::string deviceName, std::string deviceSerial);
+    virtual ~VRController();
+
+    void buttonPress(uint32_t button);
+    void buttonUnPress(uint32_t button);
+    void buttonTouch(uint32_t button);
+    void buttonUntouch(uint32_t button);
+
+    std::map<uint32_t, bool> buttonPressed;
+    std::map<uint32_t, bool> buttonTouched;
+
+    Role role = Role::Unknown;
+  };
+}

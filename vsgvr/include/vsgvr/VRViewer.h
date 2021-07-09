@@ -28,7 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr {
 class VSG_DECLSPEC VRViewer final : public vsg::Inherit<vsg::Viewer, VRViewer> {
 public:
-  VRViewer(std::shared_ptr<vsgvr::Context> ctx,
+  VRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
            vsg::ref_ptr<vsg::WindowTraits> windowTraits);
   VRViewer(const VRViewer &) = delete;
   Viewer &operator=(const VRViewer &) = delete;
@@ -47,21 +47,13 @@ private:
   void addWindow(vsg::ref_ptr<vsg::Window>) override;
   void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
 
-  struct HMDImage {
-    vsg::ImageInfo colourImageInfo;
-    vsg::ref_ptr<vsg::Image> colourImage;
-    vsg::ImageInfo depthImageInfo;
-    vsg::ref_ptr<vsg::Image> depthImage;
-    uint32_t width;
-    uint32_t height;
-  };
   const VkFormat hmdImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-  std::vector<HMDImage> hmdImages;
+  std::vector<vsgvr::HMDImage> hmdImages;
   std::vector<vsg::ref_ptr<vsg::View>> views;
   std::vector<vsg::ref_ptr<vsg::Camera>> m_hmdCameras;
   vsg::ref_ptr<vsg::CommandGraph> hmdCommandGraph;
 
-  std::shared_ptr<vsgvr::Context> m_ctx;
+  vsg::ref_ptr<vsgvr::VRContext> m_ctx;
   vsg::ref_ptr<vsg::Window> m_desktopWindow;
   vsg::ref_ptr<vsg::Camera> m_desktopCamera;
   std::list<std::string> vrRequiredInstanceExtensions;

@@ -1,28 +1,26 @@
 # VSG OpenVR prototype
 
 Latest State: vsgvr library created, functionality encapsulated in a few functions & VRViewer class.
-Hardcoded to OpenVR for now - The 'vr' folder needs to be migrated to a generic vr/xr backend interface in vsgvr.
+Hardcoded to OpenVR for now, but structure should allow for OpenXR/other backends.
 
 example_vr.cpp should be similar enough to a desktop 'hello world' - As long as openvr is available before it's started it should 'just work'
 
 Rough TODO:
-* Lots of cleanups - code style will be way off
+* Lots of cleanups - code style isn't great
 * May need an HMDWindow class, to split out some functionality currently hardcoded into VRViewer
-* Binding devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
+* Binding new devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
 * Map vr input handling to vsg event system
-* Need to remove glm
-* Need to remove fmt
 
 Thing                        | Status
 -----------------------------|--------
 Linux Build                  | Building
 Windows Build                | Building
-Code                         | Messy
-OpenVR Input                 | Present, through 'vrhelp' namespace. Needs rework eventually.
+Code                         | Messy, but in roughly the right structure
+OpenVR Input                 | Present, but input not bound to vsg events (see VRController::buttonPressed)
 Controller tracking          | Working
 Controller models in scene   | Working
 HMD tracking                 | Working
-HMD Presentation             | Working, tested with null steamvr driver & HTC Vive on Linux
+HMD Presentation             | Working
 
 Issue                        | Status
 -----------------------------|-------
@@ -40,9 +38,7 @@ vr folder contains some basic openvr wrappers, pulled from one of my other proje
 Building requires:
 * cmake > 3.14
 * vulkan sdk/vulkan scene graph
-* OpenVR sdk
-* glm (Fetched automatically)
-* fmtlib (Fetched automatically)
+* OpenVR sdk (Included as a submodule in deps)
 
 ```
 cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang"  -DOPENVR_ROOT="/path/to/OpenVR" /path/to/vsg_vr_test

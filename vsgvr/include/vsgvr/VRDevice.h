@@ -21,18 +21,35 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsg/core/Visitor.h>
-#include <vsgvr/VR.h>
+#include <vsg/core/Object.h>
+#include <vsg/core/Inherit.h>
+#include <vsg/maths/mat4.h>
 
-namespace vsgvr {
-class VSG_DECLSPEC UpdateVRVisitor
-    : public vsg::Inherit<vsg::Visitor, UpdateVRVisitor> {
-public:
-  UpdateVRVisitor() = delete;
-  UpdateVRVisitor(vsg::ref_ptr<vsgvr::VRContext> context);
-  virtual void apply(vsg::Group &o) override;
+namespace vsgvr
+{
+  class VSG_DECLSPEC VRDevice : public vsg::Inherit<vsg::Object, VRDevice>
+  {
+  public:
+    enum class DeviceType
+    {
+      Invalid,
+      HMD,
+      Controller,
+      Generic,
+      TrackingReference,
+      DisplayRedirect,
+    };
 
-private:
-  vsg::ref_ptr<vsgvr::VRContext> ctx;
-};
-} // namespace vsgvr
+    VRDevice();
+    VRDevice(DeviceType type, uint32_t deviceId, std::string deviceName, std::string deviceSerial);
+    virtual ~VRDevice();
+
+    DeviceType deviceType = DeviceType::Invalid;
+
+    uint32_t id;
+    std::string name;
+    std::string serial;
+    
+    vsg::dmat4 deviceToAbsoluteMatrix;
+  };
+}
