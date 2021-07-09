@@ -70,6 +70,10 @@ namespace vsgvr
     VRContext();
     VRContext(TrackingOrigin origin);
 
+    void addDevice(uint32_t id, vsg::ref_ptr<vsgvr::VRDevice> device);
+    void removeDevice(uint32_t id);
+    vsg::ref_ptr<vsgvr::VRDevice> getDevice(uint32_t id) const;
+
     TrackingOrigin originType = TrackingOrigin::Standing;
     TrackedDevices vrDevices;
     vsg::ref_ptr<VRController> vrLeftHand;

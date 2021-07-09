@@ -63,31 +63,35 @@ void VRViewer::update() {
 
   // View matrices for each eye are provided, but assume
   // data is in the openVR coordinate space (y-up, z-backward)
-  auto hmdToWorld = m_ctx->hmd()->deviceToAbsoluteMatrix;
-  auto worldToHmd = vsg::inverse(hmdToWorld);
+  auto hmd = m_ctx->hmd();
+  if( hmd )
+  {
+    auto hmdToWorld = m_ctx->hmd()->deviceToAbsoluteMatrix;
+    auto worldToHmd = vsg::inverse(hmdToWorld);
 
-  for (auto i = 0u; i < m_ctx->numberOfHmdImages(); ++i) {
-    // Projection matrices are fairly simple
-    auto proj = projectionMatrices[i];
-    m_hmdCameras[i]->projectionMatrix =
+    for (auto i = 0u; i < m_ctx->numberOfHmdImages(); ++i) {
+      // Projection matrices are fairly simple
+      auto proj = projectionMatrices[i];
+      m_hmdCameras[i]->projectionMatrix =
+          vsgvr::VRProjectionMatrix::create(proj);
+
+      auto hmdToEye = vsg::inverse(eyeToHeadTransforms[i]);
+      auto m = hmdToEye * worldToHmd;
+      auto viewMat = viewAxesMat * m * vsgWorldToOVRWorld;
+      m_hmdCameras[i]->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
+    }
+
+    // For now bind the mirror window to one of the eyes. The desktop view could
+    // have any projection, and be bound to the hmd's position.
+    auto proj = projectionMatrices[0];
+    m_desktopCamera->projectionMatrix =
         vsgvr::VRProjectionMatrix::create(proj);
 
-    auto hmdToEye = vsg::inverse(eyeToHeadTransforms[i]);
+    auto hmdToEye = vsg::inverse(eyeToHeadTransforms[0]);
     auto m = hmdToEye * worldToHmd;
     auto viewMat = viewAxesMat * m * vsgWorldToOVRWorld;
-    m_hmdCameras[i]->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
+    m_desktopCamera->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
   }
-
-  // For now bind the mirror window to one of the eyes. The desktop view could
-  // have any projection, and be bound to the hmd's position.
-  auto proj = projectionMatrices[0];
-  m_desktopCamera->projectionMatrix =
-      vsgvr::VRProjectionMatrix::create(proj);
-
-  auto hmdToEye = vsg::inverse(eyeToHeadTransforms[0]);
-  auto m = hmdToEye * worldToHmd;
-  auto viewMat = viewAxesMat * m * vsgWorldToOVRWorld;
-  m_desktopCamera->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
 }
 
 void VRViewer::present() {

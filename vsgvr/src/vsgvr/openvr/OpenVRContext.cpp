@@ -116,9 +116,29 @@ namespace vsgvr
             switch (devClass)
             {
             case vr::TrackedDeviceClass_Controller:
-                return VRController::create(id, name, serial);
+            {
+                auto controller = VRController::create(id, name, serial);
+
+                auto role = ctx->GetInt32TrackedDeviceProperty(
+                    id, vr::ETrackedDeviceProperty::Prop_ControllerRoleHint_Int32);
+                if( role == vr::TrackedControllerRole_LeftHand )
+                {
+                    controller->role = VRController::Role::LeftHand;
+                }
+                else if( role == vr::TrackedControllerRole_RightHand )
+                {
+                    controller->role = VRController::Role::RightHand;
+                }
+                else
+                {
+                    controller->role = VRController::Role::Unknown;
+                }
+
+                return controller;
+            }
             case vr::TrackedDeviceClass_Invalid:
             case vr::TrackedDeviceClass_HMD:
+                return VRDevice::create(VRDevice::DeviceType::HMD, id, name, serial);
             case vr::TrackedDeviceClass_GenericTracker:
             case vr::TrackedDeviceClass_TrackingReference:
             case vr::TrackedDeviceClass_DisplayRedirect:
@@ -250,7 +270,7 @@ namespace vsgvr
             auto dev = m->enumerate(id);
             if (!dev)
                 continue;
-            vrDevices[id] = dev;
+            addDevice(id, dev);
         }
     }
 
@@ -278,21 +298,21 @@ namespace vsgvr
                 auto dev = m->enumerate(ev.trackedDeviceIndex);
                 if (!dev)
                     continue;
-                vrDevices[ev.trackedDeviceIndex] = dev;
+                addDevice(ev.trackedDeviceIndex, dev);
             }
             else if (ev.eventType == vr::VREvent_TrackedDeviceDeactivated)
             {
-                vrDevices.erase(ev.trackedDeviceIndex);
+                removeDevice(ev.trackedDeviceIndex);
             }
             else
             {
-                auto dev = vrDevices.find(ev.trackedDeviceIndex);
-                if (dev == vrDevices.end())
+                auto dev = getDevice(ev.trackedDeviceIndex);
+                if( !dev )
                 {
                     continue;
                 }
 
-                auto controller = dynamic_cast<VRController *>(dev->second.get());
+                auto controller = dev.cast<VRController>();
                 if (!controller)
                 {
                     continue;
@@ -339,8 +359,8 @@ namespace vsgvr
         // Update poses of tracked devices
         for (uint32_t id = 0; id < vr::k_unMaxTrackedDeviceCount; ++id)
         {
-            auto dev = vrDevices.find(id);
-            if (dev == vrDevices.end())
+            auto dev = getDevice(id);
+            if( !dev )
             {
                 continue;
             }
@@ -350,7 +370,7 @@ namespace vsgvr
                 continue;
             }
 
-            m->setDevicePose(dev->second, pose);
+            m->setDevicePose(dev, pose);
         }
     }
 
@@ -404,5 +424,5 @@ namespace vsgvr
     }
 
     std::list<std::string> OpenVRContext::instanceExtensionsRequired() const { return m->instanceExtensionsRequired(); }
-    std::list<std::string> OpenVRContext::deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const { return deviceExtensionsRequired(physicalDevice); };
+    std::list<std::string> OpenVRContext::deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const { return m->deviceExtensionsRequired(physicalDevice); };
 }

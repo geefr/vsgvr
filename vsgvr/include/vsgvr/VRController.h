@@ -30,6 +30,13 @@ namespace vsgvr
   class VSG_DECLSPEC VRController : public vsg::Inherit<vsgvr::VRDevice, VRController>
   {
   public:
+    enum class Role
+    {
+      Unknown,
+      LeftHand,
+      RightHand
+    };
+
     VRController();
     VRController(uint32_t deviceId, std::string deviceName, std::string deviceSerial);
     virtual ~VRController();
@@ -41,5 +48,7 @@ namespace vsgvr
 
     std::map<uint32_t, bool> buttonPressed;
     std::map<uint32_t, bool> buttonTouched;
+
+    Role role = Role::Unknown;
   };
 }
