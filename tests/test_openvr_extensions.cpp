@@ -1,4 +1,4 @@
-#include "vr/env.h"
+#include <vsgvr/openvr/OpenVRContext.h>
 
 #include <chrono>
 #include <memory>
@@ -6,7 +6,7 @@
 #include <vsg/all.h>
 
 int main(void) {
-  vrhelp::Env vr(vr::ETrackingUniverseOrigin::TrackingUniverseStanding);
+  vsgvr::OpenVRContext vr(vsgvr::VRContext::TrackingOrigin::Standing);
   auto instanceExtensions = vr.instanceExtensionsRequired();
   std::cout << "Instance Extensions Required:\n";
   for (auto &ext : instanceExtensions) {

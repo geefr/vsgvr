@@ -56,7 +56,6 @@ endif()
 
 #####################
 
-# add_subdirectory( vr )
 add_subdirectory( vsgvr )
 
 add_executable( example_vr example_vr.cpp )

@@ -2,6 +2,10 @@
 
 namespace vsgvr
 {
+  VRContext::VRContext()
+    : originType(TrackingOrigin::Standing)
+    {}
+
   VRContext::VRContext(TrackingOrigin origin)
     : originType(origin)
     {}
@@ -12,5 +16,4 @@ namespace vsgvr
   vsg::ref_ptr<VRController> VRContext::leftHand() const { return vrLeftHand; }
   vsg::ref_ptr<VRController> VRContext::rightHand() const { return vrRightHand; }
   vsg::ref_ptr<VRDevice> VRContext::hmd() const { return vrHmd; }
-
 }

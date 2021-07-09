@@ -4,8 +4,12 @@ file(GLOB HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/vsgvr/*.h )
 set( SOURCES 
   src/vsgvr/VR.cpp
   src/vsgvr/VRContext.cpp
+  src/vsgvr/VRDevice.cpp
+  src/vsgvr/VRController.cpp
+
   src/vsgvr/VRViewer.cpp
   src/vsgvr/UpdateVRVisitor.cpp
+
   src/vsgvr/openvr/OpenVRContext.cpp
 )
 

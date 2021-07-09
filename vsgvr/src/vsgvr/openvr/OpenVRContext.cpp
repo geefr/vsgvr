@@ -6,6 +6,7 @@
 
 #include <openvr.h>
 
+#include <memory>
 #include <sstream>
 
 namespace vsgvr
@@ -64,6 +65,43 @@ namespace vsgvr
             };
         }
 
+        std::string to_string(vr::ETrackedDeviceClass devClass)
+        {
+            switch (devClass)
+            {
+            case vr::TrackedDeviceClass_Invalid:
+                return "Invalid";
+            case vr::TrackedDeviceClass_HMD:
+                return "HMD";
+            case vr::TrackedDeviceClass_Controller:
+                return "Controller";
+            case vr::TrackedDeviceClass_GenericTracker:
+                return "Generic Tracker";
+            case vr::TrackedDeviceClass_TrackingReference:
+                return "Base Station";
+            case vr::TrackedDeviceClass_DisplayRedirect:
+                return "Display Redirect";
+            case vr::TrackedDeviceClass_Max:
+                return "Max";
+            }
+            return "Unknown";
+        }
+
+        std::string getDeviceString(vr::TrackedDeviceIndex_t dev, vr::TrackedDeviceProperty prop) {
+            vr::TrackedPropertyError err;
+            auto sLen = ctx->GetStringTrackedDeviceProperty(dev, prop, nullptr, 0, &err);
+            if (sLen == 0)
+            {
+                return "";
+            }
+            std::unique_ptr<char[]> res(new char[sLen]);
+            if (ctx->GetStringTrackedDeviceProperty(dev, prop, res.get(), sLen, &err) != sLen || !res)
+            {
+                throw vsg::Exception{"Failed to read device string"};
+            }
+            return std::string(res.get());
+        }
+
         /// Factory method to create device given generic stuff
         vsg::ref_ptr<VRDevice> enumerate(uint32_t id)
         {
@@ -71,13 +109,14 @@ namespace vsgvr
 
             // Query the common stuff
             auto devClass = ctx->GetTrackedDeviceClass(id);
-
+            auto name = to_string(devClass);
+            auto serial = getDeviceString(id, vr::Prop_SerialNumber_String);
+            
             // Setup the child class bits
             switch (devClass)
             {
             case vr::TrackedDeviceClass_Controller:
-                return VRController::create(ctx, id);
-                #error blablabla you stopped here
+                return VRController::create(id, name, serial);
             case vr::TrackedDeviceClass_Invalid:
             case vr::TrackedDeviceClass_HMD:
             case vr::TrackedDeviceClass_GenericTracker:
@@ -85,11 +124,101 @@ namespace vsgvr
             case vr::TrackedDeviceClass_DisplayRedirect:
             case vr::TrackedDeviceClass_Max:
             default:
-                return 
-                return std::move(
-                    std::unique_ptr<Device>(new Device(context, id, devClass)));
-                break;
+                // TODO: Not all types have a class yet, assign any unknowns as generic trackers
+                return VRDevice::create(VRDevice::DeviceType::Generic, id, name, serial);
             }
+        }
+
+        void setDevicePose(vsg::ref_ptr<vsgvr::VRDevice> dev, vr::TrackedDevicePose_t pose)
+        {
+            auto p = pose.mDeviceToAbsoluteTracking.m;
+            dev->deviceToAbsoluteMatrix = {
+                p[0][0], p[1][0], p[2][0], 0.f, p[0][1], p[1][1], p[2][1], 0.f,
+                p[0][2], p[1][2], p[2][2], 0.f, p[0][3], p[1][3], p[2][3], 1.f
+            };
+        }
+
+        std::list<std::string> instanceExtensionsRequired() const
+        {
+            if (!vr::VRCompositor())
+                return {};
+
+            std::list<std::string> extensions;
+            uint32_t nBufferSize = vr::VRCompositor()->GetVulkanInstanceExtensionsRequired(nullptr, 0);
+            if (nBufferSize > 0)
+            {
+                // Allocate memory for the space separated list and query for it
+                char *pExtensionStr = new char[nBufferSize];
+                pExtensionStr[0] = 0;
+                vr::VRCompositor()->GetVulkanInstanceExtensionsRequired(pExtensionStr, nBufferSize);
+
+                // Break up the space separated list into entries on the CUtlStringList
+                std::string curExtStr;
+                uint32_t nIndex = 0;
+                while (pExtensionStr[nIndex] != 0 && (nIndex < nBufferSize))
+                {
+                    if (pExtensionStr[nIndex] == ' ')
+                    {
+                        extensions.push_back(curExtStr);
+                        curExtStr.clear();
+                    }
+                    else
+                    {
+                        curExtStr += pExtensionStr[nIndex];
+                    }
+                    nIndex++;
+                }
+                if (curExtStr.size() > 0)
+                {
+                    extensions.push_back(curExtStr);
+                }
+
+                delete[] pExtensionStr;
+            }
+
+            return extensions;
+        }
+
+        std::list<std::string> deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const
+        {
+            if (!vr::VRCompositor())
+                return {};
+
+            std::list<std::string> extensions;
+            uint32_t nBufferSize = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(physicalDevice, nullptr, 0);
+            if (nBufferSize > 0)
+            {
+                // Allocate memory for the space separated list and query for it
+                char *pExtensionStr = new char[nBufferSize];
+                pExtensionStr[0] = 0;
+                vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(
+                    physicalDevice, pExtensionStr, nBufferSize);
+
+                // Break up the space separated list into entries on the CUtlStringList
+                std::string curExtStr;
+                uint32_t nIndex = 0;
+                while (pExtensionStr[nIndex] != 0 && (nIndex < nBufferSize))
+                {
+                    if (pExtensionStr[nIndex] == ' ')
+                    {
+                        extensions.push_back(curExtStr);
+                        curExtStr.clear();
+                    }
+                    else
+                    {
+                        curExtStr += pExtensionStr[nIndex];
+                    }
+                    nIndex++;
+                }
+                if (curExtStr.size() > 0)
+                {
+                    extensions.push_back(curExtStr);
+                }
+
+                delete[] pExtensionStr;
+            }
+
+            return extensions;
         }
     };
 
@@ -118,10 +247,10 @@ namespace vsgvr
         for (auto id = vr::k_unTrackedDeviceIndex_Hmd;
              id < vr::k_unMaxTrackedDeviceCount; ++id)
         {
-            auto dev = Device::enumerate(m->ctx, id);
+            auto dev = m->enumerate(id);
             if (!dev)
                 continue;
-            devices[id] = vsgvr::OpenVRDevice::create(dev);
+            vrDevices[id] = dev;
         }
     }
 
@@ -146,24 +275,24 @@ namespace vsgvr
                 ev.eventType == vr::VREvent_TrackedDeviceUpdated)
             {
                 // (re)enumerate the device
-                auto dev = Device::enumerate(mContext, ev.trackedDeviceIndex);
+                auto dev = m->enumerate(ev.trackedDeviceIndex);
                 if (!dev)
                     continue;
-                devices[ev.trackedDeviceIndex] = vsgvr::OpenVRDevice::create(dev);
+                vrDevices[ev.trackedDeviceIndex] = dev;
             }
             else if (ev.eventType == vr::VREvent_TrackedDeviceDeactivated)
             {
-                devices.erase(ev.trackedDeviceIndex);
+                vrDevices.erase(ev.trackedDeviceIndex);
             }
             else
             {
-                auto dev = devices.find(ev.trackedDeviceIndex);
-                if (dev == devices.end())
+                auto dev = vrDevices.find(ev.trackedDeviceIndex);
+                if (dev == vrDevices.end())
                 {
                     continue;
                 }
 
-                auto controller = dynamic_cast<OpenVRController *>(dev->second.get());
+                auto controller = dynamic_cast<VRController *>(dev->second.get());
                 if (!controller)
                 {
                     continue;
@@ -190,19 +319,17 @@ namespace vsgvr
         }
     }
 
-    std::vector<vsg::dmat4> getProjectionMatrices(float nearZ, float farZ)
+    std::vector<vsg::dmat4> OpenVRContext::getProjectionMatrices(float nearZ, float farZ)
     {
         return {m->getProjectionMatrix(vr::EVREye::Eye_Left, nearZ, farZ),
                 m->getProjectionMatrix(vr::EVREye::Eye_Right, nearZ, farZ)};
     }
 
-    std::vector<vsg::dmat4> getEyeToHeadTransforms()
+    std::vector<vsg::dmat4> OpenVRContext::getEyeToHeadTransforms()
     {
         return {m->getEyeToHeadTransform(vr::EVREye::Eye_Left),
                 m->getEyeToHeadTransform(vr::EVREye::Eye_Right)};
     }
-
-    
 
     void OpenVRContext::waitGetPoses()
     {
@@ -212,8 +339,8 @@ namespace vsgvr
         // Update poses of tracked devices
         for (uint32_t id = 0; id < vr::k_unMaxTrackedDeviceCount; ++id)
         {
-            auto dev = devices.find(id);
-            if (dev == devices.end())
+            auto dev = vrDevices.find(id);
+            if (dev == vrDevices.end())
             {
                 continue;
             }
@@ -222,7 +349,8 @@ namespace vsgvr
             {
                 continue;
             }
-            dev->second->pose = pose;
+
+            m->setDevicePose(dev->second, pose);
         }
     }
 
@@ -234,9 +362,9 @@ namespace vsgvr
 
     bool OpenVRContext::getRecommendedTargetSize(uint32_t &width, uint32_t &height)
     {
-        if (!m->ctx)
-            return;
+        if (!m->ctx) return false;
         m->ctx->GetRecommendedRenderTargetSize(&width, &height);
+        return true;
     }
 
     void OpenVRContext::submitFrames(const std::vector<VkImage> images, VkDevice device,
@@ -274,4 +402,7 @@ namespace vsgvr
         vulkanData.m_nImage = (uint64_t)rightImg;
         vr::VRCompositor()->Submit(vr::Eye_Right, &texture, &bounds);
     }
+
+    std::list<std::string> OpenVRContext::instanceExtensionsRequired() const { return m->instanceExtensionsRequired(); }
+    std::list<std::string> OpenVRContext::deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const { return deviceExtensionsRequired(physicalDevice); };
 }

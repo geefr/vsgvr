@@ -30,10 +30,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  class VRContext : public vsg::Inherit<vsg::Object, VRContext>
+  class VSG_DECLSPEC VRContext : public vsg::Inherit<vsg::Object, VRContext>
   {
   public:
-    using TrackedDevices = std::map<std::string, vsg::ref_ptr<vsgvr::VRDevice>>;
+    using TrackedDevices = std::map<uint32_t, vsg::ref_ptr<vsgvr::VRDevice>>;
 
     enum class TrackingOrigin
     {
@@ -41,8 +41,6 @@ namespace vsgvr
       Seated,
       Standing,
     };
-
-    VRContext(TrackingOrigin origin);
     virtual ~VRContext();
 
     virtual void update() = 0;
@@ -69,6 +67,9 @@ namespace vsgvr
     virtual std::list<std::string> deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const = 0;
 
   protected:
+    VRContext();
+    VRContext(TrackingOrigin origin);
+
     TrackingOrigin originType = TrackingOrigin::Standing;
     TrackedDevices vrDevices;
     vsg::ref_ptr<VRController> vrLeftHand;

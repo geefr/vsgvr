@@ -27,7 +27,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-
   class VSG_DECLSPEC VRDevice : public vsg::Inherit<vsg::Object, VRDevice>
   {
   public:
@@ -41,16 +40,16 @@ namespace vsgvr
       DisplayRedirect,
     };
 
+    VRDevice();
+    VRDevice(DeviceType type, uint32_t deviceId, std::string deviceName, std::string deviceSerial);
+    virtual ~VRDevice();
+
     DeviceType deviceType = DeviceType::Invalid;
 
+    uint32_t id;
     std::string name;
     std::string serial;
-
+    
     vsg::dmat4 deviceToAbsoluteMatrix;
-
-  protected:
-    VRDevice(DeviceType type, std::string deviceName, std::string deviceSerial);
-    virtual ~VRDevice();
   };
-
 }

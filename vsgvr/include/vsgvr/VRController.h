@@ -23,14 +23,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/VRDevice.h>
 
+#include <map>
+
 namespace vsgvr
 {
-
   class VSG_DECLSPEC VRController : public vsg::Inherit<vsgvr::VRDevice, VRController>
   {
   public:
-    VRController(std::string deviceName, std::string deviceSerial);
+    VRController();
+    VRController(uint32_t deviceId, std::string deviceName, std::string deviceSerial);
     virtual ~VRController();
-  };
 
+    void buttonPress(uint32_t button);
+    void buttonUnPress(uint32_t button);
+    void buttonTouch(uint32_t button);
+    void buttonUntouch(uint32_t button);
+
+    std::map<uint32_t, bool> buttonPressed;
+    std::map<uint32_t, bool> buttonTouched;
+  };
 }
