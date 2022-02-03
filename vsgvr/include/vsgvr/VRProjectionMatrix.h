@@ -29,8 +29,7 @@ class VSG_DECLSPEC VRProjectionMatrix
 public:
   VRProjectionMatrix(vsg::mat4 matrix) : mat(matrix) {}
   VRProjectionMatrix(vsg::dmat4 matrix) : mat(matrix) {}
-  void get(vsg::mat4 &matrix) const override { matrix = mat; }
-  void get(vsg::dmat4 &matrix) const override { matrix = mat; }
+  vsg::dmat4 transform() const override { return mat; }
 
 private:
   vsg::dmat4 mat;

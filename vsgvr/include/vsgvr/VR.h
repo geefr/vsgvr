@@ -37,9 +37,9 @@ namespace vsgvr
 
   struct HMDImage
   {
-    vsg::ImageInfo colourImageInfo;
+    vsg::ref_ptr<vsg::ImageInfo> colourImageInfo;
     vsg::ref_ptr<vsg::Image> colourImage;
-    vsg::ImageInfo depthImageInfo;
+    vsg::ref_ptr<vsg::ImageInfo> depthImageInfo;
     vsg::ref_ptr<vsg::Image> depthImage;
     uint32_t width;
     uint32_t height;

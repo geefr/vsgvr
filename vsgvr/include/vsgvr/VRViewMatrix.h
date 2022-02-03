@@ -30,8 +30,7 @@ class VSG_DECLSPEC VRViewMatrix
 public:
   VRViewMatrix(vsg::mat4 matrix) : mat(matrix) {}
   VRViewMatrix(vsg::dmat4 matrix) : mat(matrix) {}
-  void get(vsg::mat4 &matrix) const override { matrix = mat; }
-  void get(vsg::dmat4 &matrix) const override { matrix = mat; }
+  vsg::dmat4 transform() const override { return mat; }
 
 private:
   vsg::dmat4 mat;

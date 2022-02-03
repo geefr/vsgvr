@@ -236,10 +236,10 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   img.colourImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   img.colourImage->flags = 0;
   img.colourImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  img.colourImageInfo.sampler = nullptr;
-  img.colourImageInfo.imageView =
+  img.colourImageInfo->sampler = nullptr;
+  img.colourImageInfo->imageView =
       vsg::createImageView(context, img.colourImage, VK_IMAGE_ASPECT_COLOR_BIT);
-  img.colourImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  img.colourImageInfo->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
   // create depth buffer
   VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
@@ -257,10 +257,10 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   img.depthImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
   // XXX Does layout matter?
-  img.depthImageInfo.sampler = nullptr;
-  img.depthImageInfo.imageView =
+  img.depthImageInfo->sampler = nullptr;
+  img.depthImageInfo->imageView =
       vsg::createImageView(context, img.depthImage, VK_IMAGE_ASPECT_DEPTH_BIT);
-  img.depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  img.depthImageInfo->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
   // attachment descriptions
   vsg::RenderPass::Attachments attachments(2);
@@ -325,8 +325,8 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   // Framebuffer
   auto fbuf =
       vsg::Framebuffer::create(renderPass,
-                               vsg::ImageViews{img.colourImageInfo.imageView,
-                                               img.depthImageInfo.imageView},
+                               vsg::ImageViews{img.colourImageInfo->imageView,
+                                               img.depthImageInfo->imageView},
                                extent.width, extent.height, 1);
 
   auto rendergraph = vsg::RenderGraph::create();
