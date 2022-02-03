@@ -30,10 +30,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/RenderGraph.h>
 #include <vsg/viewer/View.h>
 
-// TODO: Remove glm
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtc/type_ptr.hpp>
-
 namespace vsgvr {
 VRViewer::VRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
                    vsg::ref_ptr<vsg::WindowTraits> windowTraits)
@@ -223,6 +219,7 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   // Attachments
   // create image for color attachment
   img.colourImage = vsg::Image::create();
+  img.colourImageInfo = vsg::ImageInfo::create();
   img.colourImage->imageType = VK_IMAGE_TYPE_2D;
   img.colourImage->extent = attachmentExtent;
   img.colourImage->mipLevels = 1;
@@ -244,6 +241,7 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   // create depth buffer
   VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
   img.depthImage = vsg::Image::create();
+  img.depthImageInfo = vsg::ImageInfo::create();
   img.depthImage->imageType = VK_IMAGE_TYPE_2D;
   img.depthImage->extent = attachmentExtent;
   img.depthImage->mipLevels = 1;

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(VSG_VR_Test)
+project(VSGVR)
 
 include(FetchContent)
 
@@ -13,8 +13,8 @@ endif()
 set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
 
-set( FORMAT_SKIP_CMAKE ON )
-add_subdirectory(deps/Format.cmake)
+# set( FORMAT_SKIP_CMAKE ON )
+# add_subdirectory(deps/Format.cmake)
 
 # Package/System requirements
 find_package(vsg REQUIRED)

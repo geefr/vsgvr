@@ -21,10 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/UpdateVRVisitor.h>
 
-// TODO: Remove use of glm
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtc/type_ptr.hpp>
-
 #include <vsg/nodes/MatrixTransform.h>
 
 namespace vsgvr {
