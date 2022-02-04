@@ -1,7 +1,15 @@
 #include <vsg/all.h>
 
 #include <vsgvr/VRViewer.h>
-#include <vsgvr/openvr/OpenVRContext.h>
+
+#ifdef VR_RUNTIME_OPENVR
+# include <vsgvr/openvr/OpenVRContext.h>
+#endif
+
+#ifdef VR_RUNTIME_OPENXR
+# include <vsgvr/openxr/OpenXRContext.h>
+#endif
+
 
 int main(int argc, char **argv) {
   try
@@ -28,7 +36,12 @@ int main(int argc, char **argv) {
 
     // Initialise vr, and add nodes to the scene graph for each tracked device
     // TODO: If controllers are off when program starts they won't be added later
+
+#ifdef VR_RUNTIME_OPENXR
+    auto vr = vsgvr::OpenXRContext::create();
+#elif define(VR_RUNTIME_OPENVR)
     auto vr = vsgvr::OpenVRContext::create();
+#endif
     auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
     vsgvr::createDeviceNodes(vr, vsg_scene, controllerNode);
 

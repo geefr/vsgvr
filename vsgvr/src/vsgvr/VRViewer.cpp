@@ -62,12 +62,12 @@ void VRViewer::update() {
   auto hmd = m_ctx->hmd();
   if( hmd )
   {
-    auto hmdToWorld = m_ctx->hmd()->deviceToAbsoluteMatrix;
+    auto& hmdToWorld = m_ctx->hmd()->deviceToAbsoluteMatrix;
     auto worldToHmd = vsg::inverse(hmdToWorld);
 
     for (auto i = 0u; i < m_ctx->numberOfHmdImages(); ++i) {
       // Projection matrices are fairly simple
-      auto proj = projectionMatrices[i];
+      auto& proj = projectionMatrices[i];
       m_hmdCameras[i]->projectionMatrix =
           vsgvr::VRProjectionMatrix::create(proj);
 
@@ -79,7 +79,7 @@ void VRViewer::update() {
 
     // For now bind the mirror window to one of the eyes. The desktop view could
     // have any projection, and be bound to the hmd's position.
-    auto proj = projectionMatrices[0];
+    auto& proj = projectionMatrices[0];
     m_desktopCamera->projectionMatrix =
         vsgvr::VRProjectionMatrix::create(proj);
 

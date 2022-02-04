@@ -9,6 +9,12 @@ if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
 endif()
 
+if(VR_RUNTIME STREQUAL "openvr")
+  add_compile_definitions( VR_RUNTIME_OPENVR=1 )
+elseif(VR_RUNTIME STREQUAL "openxr")
+  add_compile_definitions( VR_RUNTIME_OPENXR=1)
+endif()
+
 # Compiler/Tool requirements
 set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -20,15 +26,24 @@ set(OpenGL_GL_PREFERENCE GLVND)
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)
 
-# TODO: openvr paths are hardcoded
-set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
-set( OPENVR_LIB "openvr_api" )
-if( MSVC )
-  set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/win64 )
-  set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/win64 )
-else()
-  set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/linux64 )
-  set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/linux64 )
+set( VR_RUNTIME "openvr" CACHE STRING "The VR Backend/Runtime to use")
+set_property(CACHE VR_RUNTIME PROPERTY STRINGS "openvr" "openxr")
+
+if(VR_RUNTIME STREQUAL "openvr" )
+  # TODO: openvr paths are hardcoded
+  set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
+  set( OPENVR_LIB "openvr_api" )
+  if( MSVC )
+    set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/win64 )
+    set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/win64 )
+  else()
+    set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/linux64 )
+    set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/linux64 )
+  endif()
+endif()
+
+if(VR_RUNTIME STREQUAL "openxr")
+  add_subdirectory( deps/openxr )
 endif()
 
 #####################

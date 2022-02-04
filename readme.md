@@ -21,6 +21,7 @@ Controller tracking          | Working
 Controller models in scene   | Working
 HMD tracking                 | Working
 HMD Presentation             | Working
+Desktop view                 | Broken - blank display?
 
 Issue                        | Status
 -----------------------------|-------
@@ -41,6 +42,7 @@ Building requires:
 * OpenVR sdk (Included as a submodule in deps)
 
 ```
+git submodule update --init
 cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang"  -DOPENVR_ROOT="/path/to/OpenVR" /path/to/vsg_vr_test
 make
 ```
