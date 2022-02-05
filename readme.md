@@ -1,9 +1,13 @@
-# VSG OpenVR prototype
+# VSG OpenVR Integration
+
+(prototype) VR support for [VulkanSceneGraph](https://github.com/vsg-dev/VulkanSceneGraph)
 
 Latest State: vsgvr library created, functionality encapsulated in a few functions & VRViewer class.
 Hardcoded to OpenVR for now, but structure should allow for OpenXR/other backends.
 
-example_vr.cpp should be similar enough to a desktop 'hello world' - As long as openvr is available before it's started it should 'just work'
+[![Demo Video](http://img.youtube.com/vi/ZA7syEMAIMo/0.jpg)](http://www.youtube.com/watch?v=ZA7syEMAIMo "vsgvr Demo Video")
+
+example_vr.cpp should be similar enough to a desktop 'hello world' - As long as openvr is available before it's started it should 'just work'.
 
 Rough TODO:
 * Lots of cleanups - code style isn't great
@@ -24,24 +28,27 @@ HMD Presentation             | Working
 
 Issue                        | Status
 -----------------------------|-------
-Segfault on exit             | Only on Linux?
-Lighting isn't correct       | likely due to axes swap in view matrix - Shaders include hardcoded light source, which isn't transformed by the view matrix..
-HMD Tracking is laggy        | Recent improvements, but not perfect. Tracking slightly delayed, should switch to explicit frame timings or otherwise fight waitGetPoses..
+Lighting isn't correct       | Fixed, if the latest vsgXchange/lights_experimental work is used
+Desktop mirror window looks a little different | Will need rework, the desktop view is very basic at the moment
+
 
 ## Setup
 
-If you don't have a headset see here - Force a null driver to allow basic display:
+If you don't have a headset see here - Force a null driver to allow basic display output:
 https://developer.valvesoftware.com/wiki/SteamVR/steamvr.vrsettings
-
-vr folder contains some basic openvr wrappers, pulled from one of my other projects. It'll need rework to say the least, should probably be rewritten completely.
 
 Building requires:
 * cmake > 3.14
-* vulkan sdk/vulkan scene graph
-* OpenVR sdk (Included as a submodule in deps)
+* vulkan sdk
+* VulkanSceneGraph
+* OpenVR sdk (Included as a git submodule)
+* (For model creation) vsgXchange -> As of 2022/02/05 the lights_experimental branch is required
 
 ```
-cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang"  -DOPENVR_ROOT="/path/to/OpenVR" /path/to/vsg_vr_test
+git submodule update --init
+mkdir build
+cd build
+cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang" ../
 make
 ```
 
