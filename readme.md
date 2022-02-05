@@ -48,8 +48,8 @@ make
 # Models
 
 Models created in Blender
-* Controller 'top' is at 0,0
-* Controller 'up' is [0,1,0] in blender space
+* Controller 'top' is at 0,0 (or just below)
+* Controller 'up' is [0,0,-1] in blender space
 
 Export from blender to gltf:
 * Include custom properties

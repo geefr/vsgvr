@@ -30,8 +30,8 @@ Root id=1 vsg::MatrixTransform
            0 0 0 1
           subgraphRequiresLocalFrustum 1
         }
-        matrix -0.290865 -0.0551891 -0.955171 0 0.566393 0.794672 -0.218391 0 0.771101 -0.604525 -0.199883 0
-         0 0 0.0200351 1
+        matrix -0.290865 -0.955171 0.055189 0 0.566393 -0.218391 -0.794672 0 0.771101 -0.199883 0.604525 0
+         0 -0.02 0 1
         subgraphRequiresLocalFrustum 1
       }
       vsg::Node id=7 vsg::MatrixTransform
@@ -1240,8 +1240,8 @@ void main()
           }
           prototypeArrayState id=0
         }
-        matrix 2.98023e-09 -0.025 0 0 0 6.40708e-09 0.107493 0 -0.025 -1.49012e-09 1.49012e-09 0
-         0 0 -0.0940672 1
+        matrix 0.025 0 0 0 0 -0.1 -8.74228e-09 0 0 2.18557e-09 -0.025 0
+         0 0.09 0 1
         subgraphRequiresLocalFrustum 1
       }
       matrix 1 0 0 0 0 1 0 0 0 0 1 0
