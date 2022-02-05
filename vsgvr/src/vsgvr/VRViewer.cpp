@@ -334,7 +334,7 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
 
   rendergraph->clearValues.resize(2);
   rendergraph->clearValues[0].color = clearColour;
-  rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
+  rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{0.0f, 0};
 
   return rendergraph;
 }

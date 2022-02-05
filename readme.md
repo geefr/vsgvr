@@ -44,3 +44,18 @@ Building requires:
 cmake -DCMAKE_PREFIX_PATH="VulkanSceneGraph/lib/cmake/vsg/;VulkanSceneGraph/lib/cmake/vsg_glslang"  -DOPENVR_ROOT="/path/to/OpenVR" /path/to/vsg_vr_test
 make
 ```
+
+# Models
+
+Models created in Blender
+* Controller 'top' is at 0,0
+* Controller 'up' is [0,1,0] in blender space
+
+Export from blender to gltf:
+* Include custom properties
+* Include punctual lights
+* +Y up
+
+Convert to vsg via `vsgconv model.glb model.vsgt`
+* Ensure vsgXchange is built with assimp support
+* Ensure a recent build is used for correct lighting (fd35cc2 or newer)#
