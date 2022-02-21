@@ -282,9 +282,9 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-  VkAttachmentReference colorReference = {
+  vsg::AttachmentReference colorReference = {
       0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-  VkAttachmentReference depthReference = {
+  vsg::AttachmentReference depthReference = {
       1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
   vsg::RenderPass::Subpasses subpassDescription(1);
   subpassDescription[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
