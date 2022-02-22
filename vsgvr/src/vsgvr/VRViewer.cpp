@@ -148,7 +148,7 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   // to the vr backend
   auto numImages = m_ctx->numberOfHmdImages();
 
-  vsg::CompileTraversal compile(m_desktopWindow);
+  vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(m_desktopWindow);
   uint32_t hmdWidth = 0, hmdHeight = 0;
   m_ctx->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
@@ -161,7 +161,7 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
     auto camera = createCameraForScene(vsg_scene, hmdExtent);
     m_hmdCameras.push_back(camera);
     auto renderGraph =
-        createHmdRenderGraph(m_desktopWindow->getDevice(), compile.context,
+        createHmdRenderGraph(m_desktopWindow->getDevice(), *compile->contexts.front(),
                              hmdExtent, image, m_desktopWindow->clearColor());
     hmdImages.push_back(image);
     auto view = vsg::View::create(camera, vsg_scene);
