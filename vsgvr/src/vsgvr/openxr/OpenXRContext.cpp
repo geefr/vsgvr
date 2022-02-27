@@ -122,10 +122,11 @@ XR_LIST_ENUM_XrResult(RESULT_CASE);
 
     return extensions;
   }
-  void checkVulkanPhysicalDeviceIsValid(XrInstance instance, XrSystemId system, vsg::ref_ptr<vsg::Instance> vulkanInstance, vsg::ref_ptr<vsg::PhysicalDevice> vulkanPhysicalDevice) {
-    auto fn = (PFN_xrGetVulkanGraphicsDeviceKHR)xr_pfn(instance, "xrGetVulkanGraphicsDeviceKHR");
+  std::list<std::string> getVulkanDeviceExtensionsRequired(XrInstance instance, XrSystemId system, vsg::ref_ptr<vsg::Instance> vulkanInstance, vsg::ref_ptr<vsg::PhysicalDevice> vulkanPhysicalDevice) {
+  
+    auto GetDevice = (PFN_xrGetVulkanGraphicsDeviceKHR)xr_pfn(instance, "xrGetVulkanGraphicsDeviceKHR");
     VkPhysicalDevice expectedDevice;
-    xr_check(fn(instance, system, *vulkanInstance, &expectedDevice), "Failed to get vulkan graphics device");
+    xr_check(GetDevice(instance, system, *vulkanInstance, &expectedDevice), "Failed to get vulkan graphics device");
 
     if( *vulkanPhysicalDevice != expectedDevice )
     {
@@ -133,6 +134,58 @@ XR_LIST_ENUM_XrResult(RESULT_CASE);
       e.message = "VSGVR TODO: The physical device selected by window initialisation is not the same as selected by OpenXR. Restart and select the correct gpu via WindowTraits::deviceTypePreference";
       throw e;
     }
+
+    auto GetDeviceExtensions = (PFN_xrGetVulkanDeviceExtensionsKHR)xr_pfn(instance, "xrGetVulkanDeviceExtensionsKHR");
+    uint32_t size = 0;
+    xr_check(GetDeviceExtensions(instance, system, 0, &size, nullptr), "Failed to get device extensions (num)");
+
+    std::string names;
+    names.reserve(size);
+    xr_check(GetDeviceExtensions(instance, system, size, &size, names.data()), "Failed to get device extensions");
+    
+    // Single-space delimited
+    std::list<std::string> extensions;
+    std::stringstream s(names);
+    std::string name;
+    while(std::getline(s, name)) extensions.push_back(name);
+
+    return extensions;
+  }
+  XrSession createSession(XrInstance instance, XrSystemId system, VkInstance vulkanInstance, VkPhysicalDevice vulkanPhysicalDevice, VkDevice vulkanDevice, uint32_t qFamilyIndex, uint32_t qIndex) {
+    XrGraphicsBindingVulkanKHR binding;
+    binding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR;
+    binding.next = nullptr;
+    binding.instance = vulkanInstance;
+    binding.physicalDevice = vulkanPhysicalDevice;
+    binding.device = vulkanDevice;
+    binding.queueFamilyIndex = qFamilyIndex;
+    binding.queueIndex = qIndex;
+
+    // TODO: Support for overlays
+    XrSessionCreateInfo info;
+    info.type = XR_TYPE_SESSION_CREATE_INFO;
+    info.next = &binding;
+    info.systemId = system;
+
+/*
+    // HAX HAX HAX
+    VkCommandPoolCreateInfo cmd_pool_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+      .queueFamilyIndex = qFamilyIndex
+    };
+
+    VkCommandPool cmd_pool;
+    if( VK_SUCCESS != vkCreateCommandPool(vulkanDevice, &cmd_pool_info, nullptr, &cmd_pool))
+    {
+      throw std::runtime_error("HAX FAILED :(");
+    }
+    // HAX HAX HAX
+*/
+
+    XrSession session;
+    xr_check(xrCreateSession(instance, &info, &session), "Failed to create OpenXR session");
+    return session;
   }
 }
 
@@ -144,9 +197,10 @@ namespace vsgvr
     XrInstance instance;
     XrSystemId systemID;
     XrSystemProperties systemProperties;
+    XrSession session;
     bool intialised = false;
 
-    void init() {
+    void preVulkanInit() {
       if( intialised ) return;
 
       // TODO: Expose application settings to app, correct engine version from some version header / vsg base
@@ -166,6 +220,29 @@ namespace vsgvr
         systemID = sys.first;
         systemProperties = sys.second;
       }
+    }
+
+    void init(vsg::ref_ptr<vsg::Window> renderWindow) {
+      if( intialised ) return;
+
+      // Window::_initDevice()
+
+      auto qFamily = renderWindow->getPhysicalDevice()->getQueueFamily(renderWindow->traits()->queueFlags);
+      // uint32_t qFamily = 0;
+/*
+      auto [graphicsFamily, presentFamily] = renderWindow->getOrCreatePhysicalDevice()->getQueueFamily(
+        renderWindow->traits()->queueFlags, renderWindow->getOrCreateSurface()
+      );*/
+
+      vkDeviceWaitIdle(*renderWindow->getDevice());
+
+      session = createSession(instance, systemID,
+        *renderWindow->getInstance(),
+        *renderWindow->getPhysicalDevice(),
+        *renderWindow->getDevice(),
+        qFamily,
+        0 // TODO: Always queue 0 in core vsg? Seems unreliable.
+      );
 
       intialised = true;
     }
@@ -191,11 +268,10 @@ namespace vsgvr
     }
 
     std::list<std::string> deviceExtensionsRequired(vsg::ref_ptr<vsg::Instance> vulkanInstance, vsg::ref_ptr<vsg::PhysicalDevice> vulkanPhysicalDevice) {
-      // TODO: This is actually not checking for extensions, rather checking that the physical device
-      //       OpenXR requires is the same as the one the window has selected.
+      // TODO: This also checks that the physical device OpenXR requires is the same as the one the window has selected.
       // Device selection needs refactoring for the OpenXR approach, context needs to be able to instruct
       // the window which device to use (likely core vsg change needed)
-      checkVulkanPhysicalDeviceIsValid(instance, systemID, vulkanInstance, vulkanPhysicalDevice);
+      getVulkanDeviceExtensionsRequired(instance, systemID, vulkanInstance, vulkanPhysicalDevice);
       return {};
     }
   };
@@ -203,12 +279,17 @@ namespace vsgvr
   OpenXRContext::OpenXRContext(vsgvr::VRContext::TrackingOrigin origin)
     : m(new OpenXRContextImpl())
   {
-    m->init();
+    m->preVulkanInit();
   }
 
   OpenXRContext::~OpenXRContext()
   {
     m->deinit();
+  }
+
+  void OpenXRContext::init(vsg::ref_ptr<vsg::Window> renderWindow)
+  {
+    m->init(renderWindow);
   }
 
   void OpenXRContext::update()

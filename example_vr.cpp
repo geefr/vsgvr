@@ -54,8 +54,8 @@ int main(int argc, char **argv) {
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
     // add the CommandGraph to render the scene
-    // auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
-    // viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+    auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
+    viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
     // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
     viewer->compile();

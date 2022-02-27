@@ -39,10 +39,8 @@ public:
 
   void update() override;
   void present() override;
-/*
-  std::vector<vsg::ref_ptr<vsg::CommandGraph>>
-  createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
-*/
+
+  std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
 
 private:
   void addWindow(vsg::ref_ptr<vsg::Window>) override;
@@ -51,5 +49,7 @@ private:
   vsg::ref_ptr<vsgvr::VRContext> m_ctx;
 
   vsg::ref_ptr<vsg::Window> m_desktopWindow;
+
+  uint32_t m_initDelay = 100;
 };
 } // namespace vsgvr

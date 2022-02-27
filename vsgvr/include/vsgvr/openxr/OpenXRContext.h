@@ -32,6 +32,8 @@ namespace vsgvr
     OpenXRContext(vsgvr::VRContext::TrackingOrigin origin = vsgvr::VRContext::TrackingOrigin::Standing);
     virtual ~OpenXRContext();
 
+    void init(vsg::ref_ptr<vsg::Window> renderWindow) override final;
+
     void update() override final;
     void waitGetPoses() override final;
 

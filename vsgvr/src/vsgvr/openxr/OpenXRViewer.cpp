@@ -39,6 +39,12 @@ OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
 
 void OpenXRViewer::update() {
   vsg::Viewer::update();
+
+  if(--m_initDelay == 0)
+  {
+    m_ctx->init(m_desktopWindow);
+  }
+
   return;
 
   /*
@@ -138,6 +144,7 @@ void OpenXRViewer::createDesktopWindow(
   // As such, vsync must be disabled, to avoid the headset being limited
   // to the desktop monitor's refresh rate.
   // TODO: In OpenXR see XR_KHR_vulkan_enable2, but that would need the opposite setup for desktop window.
+  // Arguably the HMD viewer shouldn't have any windows - Desktop window could be on a different instance/device.
   windowTraits->swapchainPreferences.presentMode =
       VK_PRESENT_MODE_IMMEDIATE_KHR;
   m_desktopWindow = vsg::Window::create(windowTraits);
@@ -147,9 +154,41 @@ void OpenXRViewer::createDesktopWindow(
   vsg::Viewer::addWindow(m_desktopWindow);
 }
 
-/*
 std::vector<vsg::ref_ptr<vsg::CommandGraph>>
 OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
+  
+
+  // HAX HAX HAX
+
+  // Create an initial camera - Both the desktop and hmd cameras are intialised
+  // like this but their parameters will be updated each frame based on the
+  // hmd's pose/matrices
+  vsg::ComputeBounds computeBounds;
+  vsg_scene->accept(computeBounds);
+  vsg::dvec3 centre =
+      (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
+  double radius =
+      vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.6;
+  double nearFarRatio = 0.001;
+
+  // set up the camera
+  auto lookAt = vsg::LookAt::create(centre + vsg::dvec3(0.0, 0.0, radius * 3.5),
+                                    centre, vsg::dvec3(0.0, 1.0, 0.0));
+
+  VkExtent2D extent{1024, 768};
+  auto perspective = vsg::Perspective::create(
+      30.0,
+      static_cast<double>(extent.width) / static_cast<double>(extent.height),
+      nearFarRatio * radius, radius * 4.5);
+
+  auto cam = vsg::Camera::create(perspective, lookAt,
+                             vsg::ViewportState::create(extent));
+
+  return {vsg::createCommandGraphForView(m_desktopWindow, cam, vsg_scene)};
+
+  // HAX HAX HAX
+
+  /*
   // Create the framebuffers and command graph for HMD view
   // HMD is rendered through one or more cameras bound to each eye / input image
   // to the vr backend
@@ -184,8 +223,8 @@ OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
       m_desktopWindow, m_desktopCamera, vsg_scene);
   desktopCommandGraph->addChild(desktopRenderGraph);
 
-  return {desktopCommandGraph, hmdCommandGraph};
-}*/
+  return {desktopCommandGraph, hmdCommandGraph};*/
+}
 
 /*
 vsg::ref_ptr<vsg::Camera>

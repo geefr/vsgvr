@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/ref_ptr.h>
 #include <vsg/vk/Instance.h>
 #include <vsg/vk/PhysicalDevice.h>
+#include <vsg/viewer/Window.h>
 
 #include <list>
 #include <string>
@@ -44,6 +45,8 @@ namespace vsgvr
       Standing,
     };
     virtual ~VRContext();
+
+    virtual void init(vsg::ref_ptr<vsg::Window> renderWindow) = 0;
 
     virtual void update() = 0;
     virtual void waitGetPoses() = 0;
