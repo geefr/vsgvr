@@ -42,8 +42,10 @@ int main(int argc, char **argv) {
 #elif define(VR_RUNTIME_OPENVR)
     auto vr = vsgvr::OpenVRContext::create();
 #endif
-    auto controllerNode = vsg::read_cast<vsg::Node>("controller.vsgt");
-    vsgvr::createDeviceNodes(vr, vsg_scene, controllerNode);
+
+    auto controllerNodeLeft = vsg::read_cast<vsg::Node>("controller.vsgt");
+    auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
+    vsgvr::createDeviceNodes(vr, vsg_scene, controllerNodeLeft, controllerNodeRight);
 
     // Create the VR Viewer
     // This viewer creates its own desktop window internally along

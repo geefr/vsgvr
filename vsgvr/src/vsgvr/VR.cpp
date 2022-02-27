@@ -28,7 +28,8 @@ namespace vsgvr
 {
   void createDeviceNodes(vsg::ref_ptr<vsgvr::VRContext> ctx,
                          vsg::ref_ptr<vsg::Group> parentNode,
-                         vsg::ref_ptr<vsg::Node> controllerModel)
+                         vsg::ref_ptr<vsg::Node> controllerModelLeft,
+                         vsg::ref_ptr<vsg::Node> controllerModelRight)
   {
     auto &devices = ctx->devices();
     for (auto &device : devices)
@@ -38,10 +39,29 @@ namespace vsgvr
       deviceNode->setValue(vsgvr::TAG_DEVICE_ID, device.second->serial);
       parentNode->addChild(deviceNode);
 
-      if (controllerModel)
-        if (auto controller =
-                dynamic_cast<vsgvr::VRController *>(device.second.get()))
-          deviceNode->addChild(controllerModel);
+
+      if (controllerModelLeft)
+      {
+        if (auto controller = dynamic_cast<vsgvr::VRController*>(device.second.get()))
+        {
+          if (controller->role == vsgvr::VRController::Role::LeftHand || 
+              controller->role == vsgvr::VRController::Role::Unknown)
+          {
+            deviceNode->addChild(controllerModelLeft);
+          }
+        }
+      }
+
+      if (controllerModelRight)
+      {
+        if (auto controller = dynamic_cast<vsgvr::VRController*>(device.second.get()))
+        {
+          if (controller->role == vsgvr::VRController::Role::RightHand)
+          {
+            deviceNode->addChild(controllerModelRight);
+          }
+        }
+      }
     }
   }
 } // namespace vsgvr

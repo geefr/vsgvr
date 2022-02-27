@@ -48,6 +48,7 @@ namespace vsgvr
   /// Add a MatrixTransform to the scene for each tracked device
   void createDeviceNodes(vsg::ref_ptr<vsgvr::VRContext> ctx,
                          vsg::ref_ptr<vsg::Group> parentNode,
-                         vsg::ref_ptr<vsg::Node> controllerModel = {});
+                         vsg::ref_ptr<vsg::Node> controllerModelLeft = {},
+                         vsg::ref_ptr<vsg::Node> controllerModelRight = {});
 
 } // namespace vsgvr

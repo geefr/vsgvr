@@ -19,7 +19,8 @@ namespace vsgvr
 
         vsg::dmat4 getProjectionMatrix(vr::EVREye eye, float nearZ, float farZ)
         {
-            auto projMat = ctx->GetProjectionMatrix(eye, nearZ, farZ);
+            // vsg uses an inverted depth buffer, just swap Z to achieve it for now
+            auto projMat = ctx->GetProjectionMatrix(eye, farZ, nearZ);
             auto m = projMat.m;
             return {
                 m[0][0],

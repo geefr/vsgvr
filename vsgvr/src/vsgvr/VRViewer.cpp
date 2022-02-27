@@ -148,7 +148,7 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   // to the vr backend
   auto numImages = m_ctx->numberOfHmdImages();
 
-  vsg::CompileTraversal compile(m_desktopWindow);
+  vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(m_desktopWindow);
   uint32_t hmdWidth = 0, hmdHeight = 0;
   m_ctx->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
@@ -161,7 +161,7 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
     auto camera = createCameraForScene(vsg_scene, hmdExtent);
     m_hmdCameras.push_back(camera);
     auto renderGraph =
-        createHmdRenderGraph(m_desktopWindow->getDevice(), compile.context,
+        createHmdRenderGraph(m_desktopWindow->getDevice(), *compile->contexts.front(),
                              hmdExtent, image, m_desktopWindow->clearColor());
     hmdImages.push_back(image);
     auto view = vsg::View::create(camera, vsg_scene);
@@ -282,9 +282,9 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-  VkAttachmentReference colorReference = {
+  vsg::AttachmentReference colorReference = {
       0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-  VkAttachmentReference depthReference = {
+  vsg::AttachmentReference depthReference = {
       1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
   vsg::RenderPass::Subpasses subpassDescription(1);
   subpassDescription[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -334,7 +334,7 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
 
   rendergraph->clearValues.resize(2);
   rendergraph->clearValues[0].color = clearColour;
-  rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
+  rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{0.0f, 0};
 
   return rendergraph;
 }

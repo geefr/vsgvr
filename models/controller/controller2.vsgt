@@ -22,7 +22,7 @@ Root id=1 vsg::MatrixTransform
           vsg::Node id=6 vsg::SpotLight
           {
             name "Spot_Orientation"
-            color 10 0 0.0340713
+            color 0.18457 0 10
             intensity 1
             position 0 0 0
             direction 0 0 -1
