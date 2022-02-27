@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Gareth Francis
+Copyright(c) 2022 Gareth Francis
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsgvr/UpdateVRVisitor.h>
-#include <vsgvr/VRViewer.h>
+#include <vsgvr/OpenXRViewer.h>
 
 #include <vsgvr/VRProjectionMatrix.h>
 #include <vsgvr/VRViewMatrix.h>
@@ -31,13 +31,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/View.h>
 
 namespace vsgvr {
-VRViewer::VRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
+OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
                    vsg::ref_ptr<vsg::WindowTraits> windowTraits)
     : m_ctx(ctx) {
   createDesktopWindow(windowTraits);
 }
 
-void VRViewer::update() {
+void OpenXRViewer::update() {
   vsg::Viewer::update();
 
   // Update all tracked devices
@@ -90,7 +90,7 @@ void VRViewer::update() {
   }
 }
 
-void VRViewer::present() {
+void OpenXRViewer::present() {
   // Call to base class (Desktop window presentation)
   vsg::Viewer::present();
 
@@ -104,11 +104,11 @@ void VRViewer::present() {
   m_ctx->waitGetPoses();
 }
 
-void VRViewer::addWindow(vsg::ref_ptr<vsg::Window>) {
+void OpenXRViewer::addWindow(vsg::ref_ptr<vsg::Window>) {
   // Not allowed - The VRViewer manages its own mirror window
 }
 
-void VRViewer::createDesktopWindow(
+void OpenXRViewer::createDesktopWindow(
     vsg::ref_ptr<vsg::WindowTraits> windowTraits) {
   // Check what extensions are needed by OpenVR
   // TODO: We need a physical device to check extensions, but also need a list
@@ -142,7 +142,7 @@ void VRViewer::createDesktopWindow(
 }
 
 std::vector<vsg::ref_ptr<vsg::CommandGraph>>
-VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
+OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   // Create the framebuffers and command graph for HMD view
   // HMD is rendered through one or more cameras bound to each eye / input image
   // to the vr backend
@@ -181,7 +181,7 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
 }
 
 vsg::ref_ptr<vsg::Camera>
-VRViewer::createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
+OpenXRViewer::createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
                                const VkExtent2D &extent) {
   // Create an initial camera - Both the desktop and hmd cameras are intialised
   // like this but their parameters will be updated each frame based on the
@@ -208,7 +208,7 @@ VRViewer::createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
 }
 
 vsg::ref_ptr<vsg::RenderGraph>
-VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
+OpenXRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
                                const VkExtent2D &extent, HMDImage &img,
                                VkClearColorValue &clearColour) {
   VkExtent3D attachmentExtent{extent.width, extent.height, 1};
@@ -339,7 +339,7 @@ VRViewer::createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
   return rendergraph;
 }
 
-void VRViewer::submitVRFrames() {
+void OpenXRViewer::submitVRFrames() {
   std::vector<VkImage> images;
   for (auto &img : hmdImages)
     images.push_back(

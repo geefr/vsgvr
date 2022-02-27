@@ -9,44 +9,21 @@ if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
 endif()
 
-if(VR_RUNTIME STREQUAL "openvr")
-  add_compile_definitions( VR_RUNTIME_OPENVR=1 )
-elseif(VR_RUNTIME STREQUAL "openxr")
-  add_compile_definitions( VR_RUNTIME_OPENXR=1)
-endif()
-
 # Compiler/Tool requirements
 set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
-
-# set( FORMAT_SKIP_CMAKE ON )
-# add_subdirectory(deps/Format.cmake)
 
 # Package/System requirements
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)
 
-set( VR_RUNTIME "openvr" CACHE STRING "The VR Backend/Runtime to use")
-set_property(CACHE VR_RUNTIME PROPERTY STRINGS "openvr" "openxr")
-
-if(VR_RUNTIME STREQUAL "openvr" )
-  # TODO: openvr paths are hardcoded
-  set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
-  set( OPENVR_LIB "openvr_api" )
-  if( MSVC )
-    set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/win64 )
-    set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/win64 )
-  else()
-    set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/linux64 )
-    set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/linux64 )
-  endif()
-endif()
+set( VR_RUNTIME "openxr" CACHE STRING "The VR Backend/Runtime to use")
+set_property(CACHE VR_RUNTIME PROPERTY STRINGS "openxr")
 
 if(VR_RUNTIME STREQUAL "openxr")
   add_subdirectory( deps/openxr )
+  add_compile_definitions( VR_RUNTIME_OPENXR=1)
 endif()
-
-#####################
 
 add_subdirectory( vsgvr )
 
@@ -55,9 +32,6 @@ target_link_libraries( example_vr vsg::vsg vsgvr )
 target_include_directories( example_vr PRIVATE 
   ${OPENVR_ROOT}/headers
   vsgvr/include )
-if( MSVC )
-  set_target_properties(example_vr PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OPENVR_BINDIR}")
-endif()
 
 # Copy models into the build dir
 configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/world.vsgt COPYONLY)

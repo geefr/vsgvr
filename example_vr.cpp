@@ -1,13 +1,13 @@
 #include <vsg/all.h>
 
-#include <vsgvr/VRViewer.h>
-
 #ifdef VR_RUNTIME_OPENVR
 # include <vsgvr/openvr/OpenVRContext.h>
+# include <vsgvr/openvr/VRViewer.h>
 #endif
 
 #ifdef VR_RUNTIME_OPENXR
 # include <vsgvr/openxr/OpenXRContext.h>
+# include <vsgvr/openxr/OpenXRViewer.h>
 #endif
 
 
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
 #ifdef VR_RUNTIME_OPENXR
     auto vr = vsgvr::OpenXRContext::create();
-#elif define(VR_RUNTIME_OPENVR)
+#elif defined(VR_RUNTIME_OPENVR)
     auto vr = vsgvr::OpenVRContext::create();
 #endif
 
@@ -61,7 +61,12 @@ int main(int argc, char **argv) {
       windowTraits->fullscreen = false;
     }
 
+
+#ifdef VR_RUNTIME_OPENXR
+    auto viewer = vsgvr::XRViewer::create(vr, windowTraits);
+#elif defined(VR_RUNTIME_OPENVR)
     auto viewer = vsgvr::VRViewer::create(vr, windowTraits);
+#endif
 
     // add close handler to respond the close window button and pressing escape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));

@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-Copyright(c) 2021 Gareth Francis
+Copyright(c) 2022 Gareth Francis
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -26,11 +26,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/VR.h>
 
 namespace vsgvr {
-class VSG_DECLSPEC VRViewer final : public vsg::Inherit<vsg::Viewer, VRViewer> {
+class VSG_DECLSPEC OpenXRViewer final : public vsg::Inherit<vsg::Viewer, VRViewer> {
 public:
-  VRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
+  OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
            vsg::ref_ptr<vsg::WindowTraits> windowTraits);
-  VRViewer(const VRViewer &) = delete;
+  OpenXRViewer(const VRViewer &) = delete;
   Viewer &operator=(const VRViewer &) = delete;
 
   // TODO: Could make base poll virtual, or use a Window subclass for events?
@@ -47,24 +47,6 @@ private:
   void addWindow(vsg::ref_ptr<vsg::Window>) override;
   void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
 
-  const VkFormat hmdImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-  std::vector<vsgvr::HMDImage> hmdImages;
-  std::vector<vsg::ref_ptr<vsg::View>> views;
-  std::vector<vsg::ref_ptr<vsg::Camera>> m_hmdCameras;
-  vsg::ref_ptr<vsg::CommandGraph> hmdCommandGraph;
-
   vsg::ref_ptr<vsgvr::VRContext> m_ctx;
-  vsg::ref_ptr<vsg::Window> m_desktopWindow;
-  vsg::ref_ptr<vsg::Camera> m_desktopCamera;
-  std::list<std::string> vrRequiredInstanceExtensions;
-  std::list<std::string> vrRequiredDeviceExtensions;
-
-  vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
-                                                 const VkExtent2D &extent);
-  vsg::ref_ptr<vsg::RenderGraph>
-  createHmdRenderGraph(vsg::Device *device, vsg::Context &context,
-                       const VkExtent2D &extent, HMDImage &img,
-                       VkClearColorValue &clearColour);
-  void submitVRFrames();
 };
 } // namespace vsgvr
