@@ -157,7 +157,7 @@ namespace vsgvr
         0,
         "VSGVR",
         0,
-        XR_VERSION_1_0
+        XR_MAKE_VERSION(1,0,0)
       );
 
       {

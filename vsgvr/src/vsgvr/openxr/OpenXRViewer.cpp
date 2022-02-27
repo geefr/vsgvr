@@ -118,8 +118,11 @@ void OpenXRViewer::createDesktopWindow(
     vsg::ref_ptr<vsg::WindowTraits> windowTraits) {
   // Check what extensions are needed by the backend
   {
-    // TODO: Just pass the traits through -> OpenXR needs to be able to specify precisely which device should be selected
-    auto tempWindow = vsg::Window::create(windowTraits);
+    // TODO: Rework needed here - OpenXR needs to be able to specify the physical device, or directly create the vulkan instance
+    // A temporary window, just to get an instance
+    auto tempWindow = vsg::Window::create(vsg::WindowTraits::create(*windowTraits));
+
+    // TODO: Initially queried the extensions and re-initialised the window. With OpenXR performs differnet validation steps.
     auto vrRequiredInstanceExtensions = m_ctx->instanceExtensionsRequired(
       tempWindow->getOrCreateInstance()->apiVersion);
     auto vrRequiredDeviceExtensions = m_ctx->deviceExtensionsRequired(
