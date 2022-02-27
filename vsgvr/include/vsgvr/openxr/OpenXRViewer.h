@@ -46,8 +46,10 @@ public:
 
 private:
   void addWindow(vsg::ref_ptr<vsg::Window>) override;
-  // void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
+  void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
 
   vsg::ref_ptr<vsgvr::VRContext> m_ctx;
+
+  vsg::ref_ptr<vsg::Window> m_desktopWindow;
 };
 } // namespace vsgvr

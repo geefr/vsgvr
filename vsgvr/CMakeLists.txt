@@ -15,7 +15,8 @@ if(VR_RUNTIME STREQUAL "openxr")
     include/vsgvr/openxr/OpenXRViewer.h
     src/vsgvr/openxr/OpenXRViewer.cpp
     include/vsgvr/openxr/OpenXRContext.h
-    src/vsgvr/openxr/OpenXRContext.cpp)
+    src/vsgvr/openxr/OpenXRContext.cpp
+  )
 endif()
 
 add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )

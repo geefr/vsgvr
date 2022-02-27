@@ -24,6 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/VRDevice.h>
 #include <vsgvr/VRController.h>
 #include <vsg/core/ref_ptr.h>
+#include <vsg/vk/Instance.h>
+#include <vsg/vk/PhysicalDevice.h>
 
 #include <list>
 #include <string>
@@ -63,8 +65,8 @@ namespace vsgvr
                        VkQueue queue, uint32_t queueFamIndex, uint32_t width,
                        uint32_t height, VkFormat format, int msaaSamples) = 0;
 
-    virtual std::list<std::string> instanceExtensionsRequired() const = 0;
-    virtual std::list<std::string> deviceExtensionsRequired(VkPhysicalDevice physicalDevice) const = 0;
+    virtual std::list<std::string> instanceExtensionsRequired(uint32_t vkVersion) const = 0;
+    virtual std::list<std::string> deviceExtensionsRequired(vsg::ref_ptr<vsg::Instance> instance, vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice) const = 0;
 
   protected:
     VRContext();

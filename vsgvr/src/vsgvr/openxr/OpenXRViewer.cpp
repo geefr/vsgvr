@@ -34,7 +34,7 @@ namespace vsgvr {
 OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
                    vsg::ref_ptr<vsg::WindowTraits> windowTraits)
     : m_ctx(ctx) {
-  // createDesktopWindow(windowTraits);
+  createDesktopWindow(windowTraits);
 }
 
 void OpenXRViewer::update() {
@@ -114,39 +114,35 @@ void OpenXRViewer::addWindow(vsg::ref_ptr<vsg::Window>) {
   // Not allowed - The VRViewer manages its own mirror window
 }
 
-/*
 void OpenXRViewer::createDesktopWindow(
     vsg::ref_ptr<vsg::WindowTraits> windowTraits) {
-  // Check what extensions are needed by OpenVR
-  // TODO: We need a physical device to check extensions, but also need a list
-  // of extensions before creating the window Expect this needs to move down
-  // into a specific VRWindow class? For now use a dummy window just to get a
-  // device..
+  // Check what extensions are needed by the backend
   {
-    auto tempWindow = vsg::Window::create(vsg::WindowTraits::create());
-    vrRequiredInstanceExtensions = m_ctx->instanceExtensionsRequired();
-    vrRequiredDeviceExtensions = m_ctx->deviceExtensionsRequired(
-        *tempWindow->getOrCreatePhysicalDevice());
+    // TODO: Just pass the traits through -> OpenXR needs to be able to specify precisely which device should be selected
+    auto tempWindow = vsg::Window::create(windowTraits);
+    auto vrRequiredInstanceExtensions = m_ctx->instanceExtensionsRequired(
+      tempWindow->getOrCreateInstance()->apiVersion);
+    auto vrRequiredDeviceExtensions = m_ctx->deviceExtensionsRequired(
+        tempWindow->getOrCreateInstance(),
+        tempWindow->getOrCreatePhysicalDevice());
     for (auto &ext : vrRequiredInstanceExtensions)
       windowTraits->instanceExtensionNames.push_back(ext.c_str());
     for (auto &ext : vrRequiredDeviceExtensions)
       windowTraits->deviceExtensionNames.push_back(ext.c_str());
   }
 
-  // As this example renders the HMD images as part of the main desktop viewer
-  // it's important that vsync be disabled. Otherwise the HMD's maximum
-  // framerate will be the same as the desktop monitor. Other desktop-related
-  // settings may have an impact on headset output with this setup..
+  // This viewer renders HMD output as part of the desktop render graph
+  // As such, vsync must be disabled, to avoid the headset being limited
+  // to the desktop monitor's refresh rate.
+  // TODO: In OpenXR see XR_KHR_vulkan_enable2, but that would need the opposite setup for desktop window.
   windowTraits->swapchainPreferences.presentMode =
       VK_PRESENT_MODE_IMMEDIATE_KHR;
-
   m_desktopWindow = vsg::Window::create(windowTraits);
   if (!m_desktopWindow) {
     throw vsg::Exception{"Failed to create desktop mirror window"};
   }
-
   vsg::Viewer::addWindow(m_desktopWindow);
-}*/
+}
 
 /*
 std::vector<vsg::ref_ptr<vsg::CommandGraph>>
