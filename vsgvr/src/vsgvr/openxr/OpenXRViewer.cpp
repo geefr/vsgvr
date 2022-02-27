@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsgvr/UpdateVRVisitor.h>
-#include <vsgvr/OpenXRViewer.h>
+#include <vsgvr/openxr/OpenXRViewer.h>
 
 #include <vsgvr/VRProjectionMatrix.h>
 #include <vsgvr/VRViewMatrix.h>
@@ -34,11 +34,14 @@ namespace vsgvr {
 OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
                    vsg::ref_ptr<vsg::WindowTraits> windowTraits)
     : m_ctx(ctx) {
-  createDesktopWindow(windowTraits);
+  // createDesktopWindow(windowTraits);
 }
 
 void OpenXRViewer::update() {
   vsg::Viewer::update();
+  return;
+
+  /*
 
   // Update all tracked devices
   m_ctx->update();
@@ -88,12 +91,14 @@ void OpenXRViewer::update() {
     auto viewMat = viewAxesMat * m * vsgWorldToOVRWorld;
     m_desktopCamera->viewMatrix = vsgvr::VRViewMatrix::create(viewMat);
   }
+  */
 }
 
 void OpenXRViewer::present() {
   // Call to base class (Desktop window presentation)
   vsg::Viewer::present();
 
+/*
   // VR Presentation
   submitVRFrames();
 
@@ -102,12 +107,14 @@ void OpenXRViewer::present() {
   // https://github.com/ValveSoftware/openvr/wiki/Vulkan#explicit-timing
   // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
   m_ctx->waitGetPoses();
+*/
 }
 
 void OpenXRViewer::addWindow(vsg::ref_ptr<vsg::Window>) {
   // Not allowed - The VRViewer manages its own mirror window
 }
 
+/*
 void OpenXRViewer::createDesktopWindow(
     vsg::ref_ptr<vsg::WindowTraits> windowTraits) {
   // Check what extensions are needed by OpenVR
@@ -139,8 +146,9 @@ void OpenXRViewer::createDesktopWindow(
   }
 
   vsg::Viewer::addWindow(m_desktopWindow);
-}
+}*/
 
+/*
 std::vector<vsg::ref_ptr<vsg::CommandGraph>>
 OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   // Create the framebuffers and command graph for HMD view
@@ -178,8 +186,9 @@ OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   desktopCommandGraph->addChild(desktopRenderGraph);
 
   return {desktopCommandGraph, hmdCommandGraph};
-}
+}*/
 
+/*
 vsg::ref_ptr<vsg::Camera>
 OpenXRViewer::createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
                                const VkExtent2D &extent) {
@@ -355,4 +364,5 @@ void OpenXRViewer::submitVRFrames() {
                       hmdImages.front().height, hmdImageFormat,
                       VK_SAMPLE_COUNT_1_BIT);
 }
+*/
 } // namespace vsgvr

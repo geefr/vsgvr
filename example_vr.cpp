@@ -1,15 +1,7 @@
 #include <vsg/all.h>
 
-#ifdef VR_RUNTIME_OPENVR
-# include <vsgvr/openvr/OpenVRContext.h>
-# include <vsgvr/openvr/VRViewer.h>
-#endif
-
-#ifdef VR_RUNTIME_OPENXR
-# include <vsgvr/openxr/OpenXRContext.h>
-# include <vsgvr/openxr/OpenXRViewer.h>
-#endif
-
+#include <vsgvr/openxr/OpenXRContext.h>
+#include <vsgvr/openxr/OpenXRViewer.h>
 
 int main(int argc, char **argv) {
   try
@@ -36,12 +28,7 @@ int main(int argc, char **argv) {
 
     // Initialise vr, and add nodes to the scene graph for each tracked device
     // TODO: If controllers are off when program starts they won't be added later
-
-#ifdef VR_RUNTIME_OPENXR
     auto vr = vsgvr::OpenXRContext::create();
-#elif defined(VR_RUNTIME_OPENVR)
-    auto vr = vsgvr::OpenVRContext::create();
-#endif
 
     auto controllerNodeLeft = vsg::read_cast<vsg::Node>("controller.vsgt");
     auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
@@ -61,22 +48,16 @@ int main(int argc, char **argv) {
       windowTraits->fullscreen = false;
     }
 
-
-#ifdef VR_RUNTIME_OPENXR
-    auto viewer = vsgvr::XRViewer::create(vr, windowTraits);
-#elif defined(VR_RUNTIME_OPENVR)
-    auto viewer = vsgvr::VRViewer::create(vr, windowTraits);
-#endif
+    auto viewer = vsgvr::OpenXRViewer::create(vr, windowTraits);
 
     // add close handler to respond the close window button and pressing escape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
     // add the CommandGraph to render the scene
-    auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
-    viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+    // auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
+    // viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
-    // compile all Vulkan objects and transfer image, vertex and primitive data to
-    // GPU
+    // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
     viewer->compile();
 
     // Render loop

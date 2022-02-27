@@ -1,5 +1,3 @@
-#pragma once
-
 /*
 Copyright(c) 2022 Gareth Francis
 
@@ -21,33 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsg/viewer/Viewer.h>
-
-#include <vsgvr/VR.h>
-
 namespace vsgvr {
-class VSG_DECLSPEC OpenXRViewer final : public vsg::Inherit<vsg::Viewer, OpenXRViewer> {
-public:
-  OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
-           vsg::ref_ptr<vsg::WindowTraits> windowTraits);
-  OpenXRViewer(const OpenXRViewer &) = delete;
-  Viewer &operator=(const OpenXRViewer &) = delete;
-
-  // TODO: Could make base poll virtual, or use a Window subclass for events?
-  // bool pollVREvents(bool dicardPreviewEvents = true);
-  // void handleEvents() override;
-
-  void update() override;
-  void present() override;
-/*
-  std::vector<vsg::ref_ptr<vsg::CommandGraph>>
-  createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
-*/
-
-private:
-  void addWindow(vsg::ref_ptr<vsg::Window>) override;
-  // void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
-
-  vsg::ref_ptr<vsgvr::VRContext> m_ctx;
-};
-} // namespace vsgvr
+    
+}
