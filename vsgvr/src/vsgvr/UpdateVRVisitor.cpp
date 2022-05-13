@@ -35,7 +35,10 @@ void UpdateVRVisitor::apply(vsg::Group &o) {
         return d.second->serial == val;
       });
 
-      txf->matrix = it->second->deviceToAbsoluteMatrix;
+      if( it != devices.end() )
+      {
+        txf->matrix = it->second->deviceToAbsoluteMatrix;
+      }
     }
   }
 
