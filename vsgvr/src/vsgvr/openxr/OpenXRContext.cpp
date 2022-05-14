@@ -24,6 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/openxr/OpenXRVkInstance.h>
 #include <vsgvr/openxr/OpenXRVkPhysicalDevice.h>
 #include <vsgvr/openxr/OpenXRVkDevice.h>
+#include <vsgvr/openxr/OpenXRWindow.h>
 
 #include <vsg/core/Exception.h>
 #include <vsg/vk/Instance.h>
@@ -157,8 +158,8 @@ namespace {
     return extensions;
   }
   XrSession createSession(XrInstance instance, XrSystemId system, VkInstance vulkanInstance, VkPhysicalDevice vulkanPhysicalDevice, VkDevice vulkanDevice, uint32_t qFamilyIndex, uint32_t qIndex) {
-    XrGraphicsBindingVulkanKHR binding;
-    binding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR;
+    XrGraphicsBindingVulkan2KHR binding;
+    binding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN2_KHR;
     binding.next = nullptr;
     binding.instance = vulkanInstance;
     binding.physicalDevice = vulkanPhysicalDevice;
@@ -171,22 +172,6 @@ namespace {
     info.type = XR_TYPE_SESSION_CREATE_INFO;
     info.next = &binding;
     info.systemId = system;
-
-    /*
-        // HAX HAX HAX
-        VkCommandPoolCreateInfo cmd_pool_info = {
-          .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-          .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-          .queueFamilyIndex = qFamilyIndex
-        };
-
-        VkCommandPool cmd_pool;
-        if( VK_SUCCESS != vkCreateCommandPool(vulkanDevice, &cmd_pool_info, nullptr, &cmd_pool))
-        {
-          throw vsg::Exception("HAX FAILED :(");
-        }
-        // HAX HAX HAX
-    */
 
     XrSession session;
     xr_check(xrCreateSession(instance, &info, &session), "Failed to create OpenXR session");
@@ -309,9 +294,9 @@ namespace {
     return vsgInstance;
   }
 
-  vsg::ref_ptr<vsg::Device> getVulkanDevice(XrInstance instance, XrSystemId system, vsg::ref_ptr<vsg::Instance> vsgInstance, vsg::ref_ptr<vsg::PhysicalDevice> vsgPhysicalDevice) {
+  vsg::ref_ptr<vsg::Device> getVulkanDevice(XrInstance instance, XrSystemId system, vsg::ref_ptr<vsg::Instance> vsgInstance, vsg::ref_ptr<vsg::PhysicalDevice> vsgPhysicalDevice, int& qFamily) {
 
-    auto qFamily = vsgPhysicalDevice->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+    qFamily = vsgPhysicalDevice->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
     if (qFamily < 0)
     {
       throw vsg::Exception({"Failed to locate graphics queue"});
@@ -374,6 +359,7 @@ namespace {
     vsgDevice->getQueue(qFamily, 0); // To populate Device::_queues
     return vsgDevice;
   }
+
 }
 
 namespace vsgvr
@@ -413,13 +399,7 @@ namespace vsgvr
       }
     }
 
-    vsg::ref_ptr<vsg::Window> createVSGWindow(vsg::ref_ptr<vsg::WindowTraits> traits) {
-
-      // TODO:
-      // - Need preVulkanInit to have been called
-      // - Need to create a vulkan instance through OpenXR
-      // - Need to create a vsg::Window instance, with those bits
-
+    vsg::ref_ptr<vsgvr::OpenXRWindow> createVSGWindow(vsg::ref_ptr<vsgvr::OpenXRContext> self, vsg::ref_ptr<vsg::WindowTraits> traits) {
       auto vsgInstance = getVulkanInstance(
         instance, systemID, traits->vulkanVersion, traits->instanceExtensionNames,
         sApplicationName, sApplicationVersion, sEngineName, sEngineVersion
@@ -427,14 +407,37 @@ namespace vsgvr
 
       auto vsgPhysicalDevice = vsgInstance->getPhysicalDevices().front();
 
-      auto vsgDevice = getVulkanDevice(instance, systemID, vsgInstance, vsgPhysicalDevice);
+      int qFamily = -1;
+      auto vsgDevice = getVulkanDevice(instance, systemID, vsgInstance, vsgPhysicalDevice, qFamily);
 
-      auto window = vsg::Window::create(traits);
+      session = createSession(instance, systemID,
+        vsgInstance->getInstance(),
+        vsgPhysicalDevice->getPhysicalDevice(),
+        vsgDevice->getDevice(),
+        qFamily,
+        0
+      );
+
+      auto window = vsgvr::OpenXRWindow::create(traits);
+      window->setOpenXRContext(self);
       window->setInstance(vsgInstance);
       window->setPhysicalDevice(vsgPhysicalDevice);
       window->setDevice(vsgDevice);
+
       return window;
     }
+
+    std::vector<VkFormat> enumerateSwapchainFormats() {
+      uint32_t formatCount = 0;
+      xr_check(xrEnumerateSwapchainFormats(session, 0, &formatCount, nullptr), "Failed to enumerate swapchain formats");
+      auto f = new int64_t[formatCount];
+      xr_check(xrEnumerateSwapchainFormats(session, formatCount, &formatCount, f), "Failed to enumerate swapchain formats");
+      std::vector<VkFormat> formats;
+      for (auto i = 0; i < formatCount; ++i) formats.push_back(static_cast<VkFormat>(f[i]));
+      delete[] f;
+      return formats;
+    }
+
     /*
     void init(vsg::ref_ptr<vsg::Window> renderWindow) {
       if( intialised ) return;
@@ -501,15 +504,19 @@ namespace vsgvr
     m->deinit();
   }
 
-  vsg::ref_ptr<vsg::Window> OpenXRContext::createVSGWindow(vsg::ref_ptr<vsg::WindowTraits> traits)
+  vsg::ref_ptr<vsg::Window> OpenXRContext::createVSGWindow(vsg::ref_ptr<vsgvr::OpenXRContext> self, vsg::ref_ptr<vsg::WindowTraits> traits)
   {
-    return m->createVSGWindow(traits);
+    return m->createVSGWindow(self, traits);
   }
 
   //void OpenXRContext::init(vsg::ref_ptr<vsg::Window> renderWindow)
   //{
   //  m->init(renderWindow);
   //}
+
+  std::vector<VkFormat> OpenXRContext::enumerateSwapchainFormats() {
+    return m->enumerateSwapchainFormats();
+  }
 
   void OpenXRContext::update()
   {

@@ -33,9 +33,11 @@ namespace vsgvr
     virtual ~OpenXRContext();
 
     // TODO: This is backwards from the base class
-    vsg::ref_ptr<vsg::Window> createVSGWindow(vsg::ref_ptr<vsg::WindowTraits> traits);
+    vsg::ref_ptr<vsg::Window> createVSGWindow(vsg::ref_ptr<vsgvr::OpenXRContext> self, vsg::ref_ptr<vsg::WindowTraits> traits);
 
     void init(vsg::ref_ptr<vsg::Window> renderWindow) override final { }
+
+    std::vector<VkFormat> enumerateSwapchainFormats();
 
     void update() override final;
     void waitGetPoses() override final;

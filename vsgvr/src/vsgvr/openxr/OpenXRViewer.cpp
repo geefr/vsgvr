@@ -35,7 +35,8 @@ OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::OpenXRContext> ctx,
                    vsg::ref_ptr<vsg::WindowTraits> windowTraits)
     : m_ctx(ctx) {
   
-  vsg::Viewer::addWindow(m_ctx->createVSGWindow(windowTraits));
+  auto hmdWindow = m_ctx->createVSGWindow(m_ctx, windowTraits);
+  Viewer::addWindow( hmdWindow );
 
   // createDesktopWindow(windowTraits);
   // createHmdWindow(windowTraits);

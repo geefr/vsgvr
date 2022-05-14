@@ -24,6 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/Viewer.h>
 
 #include <vsgvr/VR.h>
+#include <vsgvr/openxr/OpenXRWindow.h>
 #include <vsgvr/openxr/OpenXRContext.h>
 
 namespace vsgvr {
@@ -58,6 +59,6 @@ private:
   vsg::ref_ptr<vsgvr::OpenXRContext> m_ctx;
 
   // vsg::ref_ptr<vsg::Window> m_desktopWindow;
-  // vsg::ref_ptr<vsg::Window> m_hmdWindow;
+  vsg::ref_ptr<vsgvr::OpenXRWindow> m_hmdWindow;
 };
 } // namespace vsgvr
