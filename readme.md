@@ -65,5 +65,5 @@ Export from blender to gltf:
 * +Y up
 
 Convert to vsg via `vsgconv model.glb model.vsgt`
-* Ensure vsgXchange is built with assimp support
+* Ensure vsgXchange is built with assimp support (For assimp itself I used vcpkg)
 * Ensure a recent build is used for correct lighting (fd35cc2 or newer)#
