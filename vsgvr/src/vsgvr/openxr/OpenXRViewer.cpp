@@ -31,24 +31,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/View.h>
 
 namespace vsgvr {
-OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
+OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::OpenXRContext> ctx,
                    vsg::ref_ptr<vsg::WindowTraits> windowTraits)
     : m_ctx(ctx) {
-  createDesktopWindow(windowTraits);
+  
+  vsg::Viewer::addWindow(m_ctx->createVSGWindow(windowTraits));
+
+  // createDesktopWindow(windowTraits);
+  // createHmdWindow(windowTraits);
 }
 
 void OpenXRViewer::update() {
   vsg::Viewer::update();
 
-  if(--m_initDelay == 0)
-  {
-    m_ctx->init(m_desktopWindow);
-  }
-
-  return;
-
   /*
-
   // Update all tracked devices
   m_ctx->update();
   vsg::ref_ptr<vsg::Visitor> v(new vsgvr::UpdateVRVisitor(m_ctx));
@@ -101,7 +97,7 @@ void OpenXRViewer::update() {
 }
 
 void OpenXRViewer::present() {
-  // Call to base class (Desktop window presentation)
+  // TODO: Likely not needed with OpenXR
   vsg::Viewer::present();
 
 /*
@@ -117,9 +113,28 @@ void OpenXRViewer::present() {
 }
 
 void OpenXRViewer::addWindow(vsg::ref_ptr<vsg::Window>) {
-  // Not allowed - The VRViewer manages its own mirror window
+  // TODO: Not allowed - The VRViewer manages its own windows, additional not allowed for now
 }
 
+bool OpenXRViewer::advanceToNextFrame() {
+  // TODO
+  return Viewer::advanceToNextFrame();
+}
+
+void OpenXRViewer::handleEvents() {
+  // TODO
+}
+
+void OpenXRViewer::compile(vsg::ref_ptr<vsg::ResourceHints> hints) {
+  Viewer::compile(hints);
+}
+
+bool OpenXRViewer::acquireNextFrame() {
+  // TODO: Likely different for OpenXR?
+  return Viewer::acquireNextFrame();
+}
+
+/*
 void OpenXRViewer::createDesktopWindow(
     vsg::ref_ptr<vsg::WindowTraits> windowTraits) {
   // Check what extensions are needed by the backend
@@ -152,14 +167,51 @@ void OpenXRViewer::createDesktopWindow(
     throw vsg::Exception{"Failed to create desktop mirror window"};
   }
   vsg::Viewer::addWindow(m_desktopWindow);
+}*/
+
+/*
+void OpenXRViewer::createHmdWindow(
+  vsg::ref_ptr<vsg::WindowTraits> windowTraits) {
+  // Check what extensions are needed by the backend
+  {
+    // TODO: At the moment, creating a temporary context in vsg, and then testing if the created version is compatible with OpenXR
+    //       Should be checking OpenXR requirements first, then creating an apropriate Vulkan context based on that
+    // TODO: Doing the same for physical device - Let VSG choose, then verify that it's the same one OpenXR requires
+    auto tempWindow = vsg::Window::create(windowTraits);
+    auto tempVkInstance = tempWindow->getOrCreateInstance();
+    // auto tempPhysDevice = tempVkInstance->getPhysicalDevice(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT, {VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU});
+    auto tempPhysDevice = tempWindow->getOrCreatePhysicalDevice();
+
+    // TODO: Initially queried the extensions and re-initialised the window. With OpenXR performs differnet validation steps.
+    auto xrRequiredInstanceExtensions = m_ctx->instanceExtensionsRequired(tempVkInstance->apiVersion);
+    auto xrRequiredDeviceExtensions = m_ctx->deviceExtensionsRequired(tempVkInstance, tempPhysDevice);
+
+    for (auto& ext : xrRequiredInstanceExtensions)
+      windowTraits->instanceExtensionNames.push_back(ext.c_str());
+    for (auto& ext : xrRequiredDeviceExtensions)
+      windowTraits->deviceExtensionNames.push_back(ext.c_str());
+  }
+
+  // Create the 'window' for the HMD
+  // TODO: perhaps Window is a poor name here, but it's the class that handles the render loop, once command graphs/etc have been setup
+  //
+  // This viewer renders HMD output as part of the desktop render graph
+  // As such, vsync must be disabled, to avoid the headset being limited
+  // to the desktop monitor's refresh rate.
+  // TODO: In OpenXR see XR_KHR_vulkan_enable2, but that would need the opposite setup for desktop window.
+  //       For now leaving the setup as it was for OpenVR - Turning off vsync is a good idea regardless, for HMD rendering?
+  windowTraits->swapchainPreferences.presentMode =
+    VK_PRESENT_MODE_IMMEDIATE_KHR;
+
+  m_hmdWindow = vsg::Window::create(windowTraits);
+  vsg::Viewer::addWindow(m_hmdWindow);
 }
+*/
 
-std::vector<vsg::ref_ptr<vsg::CommandGraph>>
-OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
+
+std::vector<vsg::ref_ptr<vsg::CommandGraph>> OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   
-
-  // HAX HAX HAX
-
+  // TODO: needs cleanup, copied from OpenVR approach
   // Create an initial camera - Both the desktop and hmd cameras are intialised
   // like this but their parameters will be updated each frame based on the
   // hmd's pose/matrices
@@ -184,46 +236,7 @@ OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   auto cam = vsg::Camera::create(perspective, lookAt,
                              vsg::ViewportState::create(extent));
 
-  return {vsg::createCommandGraphForView(m_desktopWindow, cam, vsg_scene)};
-
-  // HAX HAX HAX
-
-  /*
-  // Create the framebuffers and command graph for HMD view
-  // HMD is rendered through one or more cameras bound to each eye / input image
-  // to the vr backend
-  auto numImages = m_ctx->numberOfHmdImages();
-
-  vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(m_desktopWindow);
-  uint32_t hmdWidth = 0, hmdHeight = 0;
-  m_ctx->getRecommendedTargetSize(hmdWidth, hmdHeight);
-  VkExtent2D hmdExtent{hmdWidth, hmdHeight};
-
-  hmdCommandGraph = vsg::CommandGraph::create(m_desktopWindow);
-  auto desktopCommandGraph = vsg::CommandGraph::create(m_desktopWindow);
-
-  for (auto imgI = 0u; imgI < numImages; ++imgI) {
-    auto image = HMDImage();
-    auto camera = createCameraForScene(vsg_scene, hmdExtent);
-    m_hmdCameras.push_back(camera);
-    auto renderGraph =
-        createHmdRenderGraph(m_desktopWindow->getDevice(), *compile->contexts.front(),
-                             hmdExtent, image, m_desktopWindow->clearColor());
-    hmdImages.push_back(image);
-    auto view = vsg::View::create(camera, vsg_scene);
-    views.push_back(view);
-    renderGraph->addChild(view);
-    hmdCommandGraph->addChild(renderGraph);
-  }
-
-  // Create render graph for desktop window
-  m_desktopCamera =
-      createCameraForScene(vsg_scene, m_desktopWindow->extent2D());
-  auto desktopRenderGraph = vsg::createRenderGraphForView(
-      m_desktopWindow, m_desktopCamera, vsg_scene);
-  desktopCommandGraph->addChild(desktopRenderGraph);
-
-  return {desktopCommandGraph, hmdCommandGraph};*/
+  return { vsg::createCommandGraphForView(_windows.front(), cam, vsg_scene)};
 }
 
 /*

@@ -43,10 +43,10 @@ int main(int argc, char **argv) {
     windowTraits->windowTitle = "VSGVR Example";
     windowTraits->debugLayer = arguments.read({"--debug", "-d"});
     windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
-    if (arguments.read({"--window", "-w"}, windowTraits->width,
-                      windowTraits->height)) {
-      windowTraits->fullscreen = false;
-    }
+    // if (arguments.read({"--window", "-w"}, windowTraits->width,
+    //                   windowTraits->height)) {
+    //   windowTraits->fullscreen = false;
+    // }
 
     auto viewer = vsgvr::OpenXRViewer::create(vr, windowTraits);
 

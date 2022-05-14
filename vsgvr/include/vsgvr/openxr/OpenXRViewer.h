@@ -24,18 +24,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/Viewer.h>
 
 #include <vsgvr/VR.h>
+#include <vsgvr/openxr/OpenXRContext.h>
 
 namespace vsgvr {
 class VSG_DECLSPEC OpenXRViewer final : public vsg::Inherit<vsg::Viewer, OpenXRViewer> {
 public:
-  OpenXRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
+  OpenXRViewer(vsg::ref_ptr<vsgvr::OpenXRContext> ctx,
            vsg::ref_ptr<vsg::WindowTraits> windowTraits);
   OpenXRViewer(const OpenXRViewer &) = delete;
   Viewer &operator=(const OpenXRViewer &) = delete;
 
-  // TODO: Could make base poll virtual, or use a Window subclass for events?
-  // bool pollVREvents(bool dicardPreviewEvents = true);
-  // void handleEvents() override;
+  // TODO: Adding desktop window not supported
+  void addWindow(vsg::ref_ptr<vsg::Window> window) override;
+
+  bool advanceToNextFrame() override;
+
+  // TODO: Implement event handlers
+  void handleEvents() override;
+
+  void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {}) override;
+
+  bool acquireNextFrame() override;
 
   void update() override;
   void present() override;
@@ -43,13 +52,12 @@ public:
   std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
 
 private:
-  void addWindow(vsg::ref_ptr<vsg::Window>) override;
-  void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
+  // void createDesktopWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
+  // void createHmdWindow(vsg::ref_ptr<vsg::WindowTraits> windowTraits);
 
-  vsg::ref_ptr<vsgvr::VRContext> m_ctx;
+  vsg::ref_ptr<vsgvr::OpenXRContext> m_ctx;
 
-  vsg::ref_ptr<vsg::Window> m_desktopWindow;
-
-  uint32_t m_initDelay = 100;
+  // vsg::ref_ptr<vsg::Window> m_desktopWindow;
+  // vsg::ref_ptr<vsg::Window> m_hmdWindow;
 };
 } // namespace vsgvr
