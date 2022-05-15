@@ -35,6 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/WindowTraits.h>
 
 #include <vsgvr/openxr/OpenXRContext.h>
+#include <vsgvr/openxr/OpenXRSwapchain.h>
 
 namespace vsgvr
 {
@@ -74,7 +75,12 @@ namespace vsgvr
         void buildSwapchain() override;
 
         vsg::ref_ptr<vsgvr::OpenXRContext> _xr;
+        vsg::ref_ptr<vsgvr::OpenXRSwapchain> _xrSwapchain;
         VkFormat _xrSwapchainFormat = VK_FORMAT_UNDEFINED;
+
+        // TODO: This is a hack
+        bool _xrSwapchainImageAcquired = false;
+        uint32_t _xrSwapchainImage = 0;
     };
     // VSG_type_name(vsgvr::OpenXRWindow);
 }

@@ -23,6 +23,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/VRContext.h>
 
+#include <openxr/openxr.h>
+
 namespace vsgvr
 {
   class OpenXRContextImpl;
@@ -38,6 +40,9 @@ namespace vsgvr
     void init(vsg::ref_ptr<vsg::Window> renderWindow) override final { }
 
     std::vector<VkFormat> enumerateSwapchainFormats();
+    XrSwapchain createSwapchain(VkFormat format, uint32_t sampleCount, VkExtent2D& extent);
+    void destroySwapchain(XrSwapchain chain);
+    std::vector<VkImage> enumerateSwapchainImages(XrSwapchain chain);
 
     void update() override final;
     void waitGetPoses() override final;

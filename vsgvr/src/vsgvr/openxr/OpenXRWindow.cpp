@@ -48,6 +48,7 @@ namespace vsgvr
     {
         _frames.clear();
         _swapchain = 0;
+        _xrSwapchain = 0;
 
         _depthImage = 0;
         _depthImageView = 0;
@@ -89,6 +90,9 @@ namespace vsgvr
           throw Exception({"Failed to select XR swapchain format"});
         }
 
+        // TODO: Won't be submitting depth to Xr, so choose sensible / from traits
+        _depthFormat = VK_FORMAT_D32_SFLOAT;
+
         // compute the sample bits to use
         if (_traits->samples != VK_SAMPLE_COUNT_1_BIT)
         {
@@ -128,7 +132,7 @@ namespace vsgvr
 
     void OpenXRWindow::buildSwapchain()
     {
-        if (_swapchain)
+        if (_xrSwapchain)
         {
             // make sure all operations on the device have stopped before we go deleting associated resources
             vkDeviceWaitIdle(*_device);
@@ -144,14 +148,8 @@ namespace vsgvr
             _multisampleImageView = 0;
         }
 
-        // TODO: Get swapchain from OpenXR
-        // TODO: Either use existing swapchain class, or fork to OpenXRSwapchain. More likely fork as acquiring images is different
-/*
-        // is width and height even required here as the surface appear to control it.
-        _swapchain = Swapchain::create(_physicalDevice, _device, _surface, _extent2D.width, _extent2D.height, _traits->swapchainPreferences, _swapchain);
-
-        // pass back the extents used by the swap chain.
-        _extent2D = _swapchain->getExtent();
+        _xrSwapchain = OpenXRSwapchain::create(_xr, _physicalDevice, _device, _xrSwapchainFormat, _framebufferSamples);
+        _extent2D = _xrSwapchain->getExtent();
 
         bool multisampling = _framebufferSamples != VK_SAMPLE_COUNT_1_BIT;
         if (multisampling)
@@ -230,10 +228,10 @@ namespace vsgvr
         }
 
         int graphicsFamily = -1;
-        std::tie(graphicsFamily, std::ignore) = _physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT, _surface);
+        graphicsFamily = _physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT);
 
         // set up framebuffer and associated resources
-        auto &imageViews = _swapchain->getImageViews();
+        auto &imageViews = _xrSwapchain->getImageViews();
 
         _availableSemaphore = vsg::Semaphore::create(_device, _traits->imageAvailableSemaphoreWaitFlag);
 
@@ -293,40 +291,47 @@ namespace vsgvr
                 msPipelineBarrier->record(commandBuffer);
             } });
         }
-        */
     }
 
     VkResult OpenXRWindow::acquireNextImage(uint64_t timeout)
     {
-        if (!_swapchain)
+        if (!_xrSwapchain)
             _initSwapchain();
 
         if (!_availableSemaphore)
             _availableSemaphore = vsg::Semaphore::create(_device, _traits->imageAvailableSemaphoreWaitFlag);
 
-        uint32_t imageIndex;
-        VkResult result = _swapchain->acquireNextImage(timeout, _availableSemaphore, {}, imageIndex);
-
-        if (result == VK_SUCCESS)
+        // TODO: Hack
+        if (_xrSwapchainImageAcquired)
         {
-            // the acquired image's semaphore must be available now so make it the new _availableSemaphore and set it's entry to the one to use of the next frame by swapping ref_ptr<>'s
-            _availableSemaphore.swap(_frames[imageIndex].imageAvailableSemaphore);
+          _xrSwapchain->releaseImage(_xrSwapchainImage);
+          _xrSwapchainImageAcquired = false;
+        }
 
-            // shift up previous frame indices
-            for (size_t i = _indices.size() - 1; i > 0; --i)
-            {
-                _indices[i] = _indices[i - 1];
-            }
+        if (_xrSwapchain->acquireNextImage(_xrSwapchainImage) && _xrSwapchain->waitImage(timeout, _xrSwapchainImage))
+        {
+          _xrSwapchainImageAcquired = true;
+          // TODO: The semaphores won't be used by the xr swapchain.
 
-            // update head of _indices to the new frames imageIndex
-            _indices[0] = imageIndex;
+          // the acquired image's semaphore must be available now so make it the new _availableSemaphore and set it's entry to the one to use of the next frame by swapping ref_ptr<>'s
+          _availableSemaphore.swap(_frames[_xrSwapchainImage].imageAvailableSemaphore);
+
+          // shift up previous frame indices
+          for (size_t i = _indices.size() - 1; i > 0; --i)
+          {
+            _indices[i] = _indices[i - 1];
+          }
+
+          // update head of _indices to the new frames imageIndex
+          _indices[0] = _xrSwapchainImage;
         }
         else
         {
-            // TODO: Need to think about what should happen on failure
+          // TODO: Need to think about what should happen on failure
+          return VK_ERROR_UNKNOWN;
         }
 
-        return result;
+        return VK_SUCCESS;
     }
 
     // bool OpenXRWindow::pollEvents(vsg::UIEvents &events)

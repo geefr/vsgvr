@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
     // The provided window traits are a template - The viewer will configure
     // any additional settings as needed (such as disabling v-sync)
     auto windowTraits = vsg::WindowTraits::create();
+
     windowTraits->windowTitle = "VSGVR Example";
     windowTraits->debugLayer = arguments.read({"--debug", "-d"});
     windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});

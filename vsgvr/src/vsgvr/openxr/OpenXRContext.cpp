@@ -438,6 +438,53 @@ namespace vsgvr
       return formats;
     }
 
+    XrSwapchain createSwapchain(VkFormat format, uint32_t sampleCount, VkExtent2D& extent) {
+      XrSwapchainCreateInfo info;
+      info.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
+      info.next = nullptr;
+      info.createFlags = 0; // Protected content, static image
+      info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
+      info.format = format;
+      info.sampleCount = sampleCount;
+      info.width = systemProperties.graphicsProperties.maxSwapchainImageWidth;
+      info.height = systemProperties.graphicsProperties.maxSwapchainImageHeight;
+      info.faceCount = 1;
+      info.arraySize = 1;
+      info.mipCount = 1;
+
+      XrSwapchain chain = nullptr;
+      xr_check(xrCreateSwapchain(session, &info, &chain), "Failed to create swapchain");
+
+      // TODO: Flexibility
+      extent.width = systemProperties.graphicsProperties.maxSwapchainImageWidth;
+      extent.height = systemProperties.graphicsProperties.maxSwapchainImageHeight;
+
+      return chain;
+    }
+
+    void destroySwapchain(XrSwapchain chain) {
+      xr_check(xrDestroySwapchain(chain), "Failed to destroy swapchain");
+    }
+
+    std::vector<VkImage> enumerateSwapchainImages(XrSwapchain chain) {
+      uint32_t imageCount = 0;
+      xr_check(xrEnumerateSwapchainImages(chain, 0, &imageCount, nullptr), "Failed to enumerate swapchain images");
+      auto images = new XrSwapchainImageVulkan2KHR[imageCount];
+      xr_check(xrEnumerateSwapchainImages(chain, imageCount, &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(images)), "Failed to enumerate swapchain images");
+      std::vector<VkImage> vkImages;
+      for( auto i = 0; i < imageCount; ++i) 
+      {
+        if (images[i].type != XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR)
+        {
+          continue;
+        }
+        // auto vkSwapchainImage = reinterpret_cast<XrSwapchainImageVulkan2KHR*>(&images[i]);
+        vkImages.push_back(images[i].image);
+      }
+      delete images;
+      return vkImages;
+    }
+
     /*
     void init(vsg::ref_ptr<vsg::Window> renderWindow) {
       if( intialised ) return;
@@ -516,6 +563,20 @@ namespace vsgvr
 
   std::vector<VkFormat> OpenXRContext::enumerateSwapchainFormats() {
     return m->enumerateSwapchainFormats();
+  }
+
+
+
+  XrSwapchain OpenXRContext::createSwapchain(VkFormat format, uint32_t sampleCount, VkExtent2D& extent) {
+    return m->createSwapchain(format, sampleCount, extent);
+  }
+
+  void OpenXRContext::destroySwapchain(XrSwapchain chain) {
+    m->destroySwapchain(chain);
+  }
+
+  std::vector<VkImage> OpenXRContext::enumerateSwapchainImages(XrSwapchain chain) {
+    return m->enumerateSwapchainImages(chain);
   }
 
   void OpenXRContext::update()
