@@ -12,20 +12,20 @@ set( SOURCES
 
 if(VR_RUNTIME STREQUAL "openxr")
   list(APPEND SOURCES 
-    include/vsgvr/openxr/OpenXRViewer.h
-    src/vsgvr/openxr/OpenXRViewer.cpp
-    include/vsgvr/openxr/OpenXRContext.h
-    src/vsgvr/openxr/OpenXRContext.cpp
+    include/vsgvr/openxr/OpenXRTraits.h
+    src/vsgvr/openxr/OpenXRTraits.cpp
+    include/vsgvr/openxr/OpenXRInstance.h
+    src/vsgvr/openxr/OpenXRInstance.cpp
+    include/vsgvr/openxr/OpenXRGraphicsBindingVulkan2.h
+    src/vsgvr/openxr/OpenXRGraphicsBindingVulkan2.cpp
+    include/vsgvr/openxr/OpenXRSession.h
+    src/vsgvr/openxr/OpenXRSession.cpp
     include/vsgvr/openxr/OpenXRVkInstance.h
     src/vsgvr/openxr/OpenXRVkInstance.cpp
-    include/vsgvr/openxr/OpenXRVkPhysicalDevice.h
-    src/vsgvr/openxr/OpenXRVkPhysicalDevice.cpp
-    include/vsgvr/openxr/OpenXRVkDevice.h
-    src/vsgvr/openxr/OpenXRVkDevice.cpp
-    include/vsgvr/openxr/OpenXRWindow.h
-    src/vsgvr/openxr/OpenXRWindow.cpp
-    include/vsgvr/openxr/OpenXRSwapchain.h
-    src/vsgvr/openxr/OpenXRSwapchain.cpp
+    include/vsgvr/openxr/OpenXrVkPhysicalDevice.h
+    src/vsgvr/openxr/OpenXrVkPhysicalDevice.cpp
+    include/vsgvr/openxr/OpenXrVkDevice.h
+    src/vsgvr/openxr/OpenXrVkDevice.cpp
   )
 endif()
 

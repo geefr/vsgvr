@@ -30,13 +30,40 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/RenderGraph.h>
 #include <vsg/viewer/View.h>
 
+#include <openxr/openxr_reflection.h>
+
+#include <iostream>
+
+namespace {
+  const char* to_string(XrResult result) {
+    switch (result) {
+#define RESULT_CASE(V, _) \
+      case V: return #V;
+      XR_LIST_ENUM_XrResult(RESULT_CASE);
+    default: return "Unknown";
+    }
+  }
+  void xr_check(XrResult result, std::string msg) {
+    if (XR_SUCCEEDED(result)) return;
+    vsg::Exception e;
+    e.message = msg + " (" + to_string(result) + ")";
+    throw e;
+  }
+  PFN_xrVoidFunction xr_pfn(XrInstance instance, std::string name) {
+    PFN_xrVoidFunction fn = nullptr;
+    xr_check(xrGetInstanceProcAddr(instance, name.c_str(), &fn),
+      "Failed to look up function: " + name);
+    return fn;
+  }
+}
+
 namespace vsgvr {
 OpenXRViewer::OpenXRViewer(vsg::ref_ptr<vsgvr::OpenXRContext> ctx,
-                   vsg::ref_ptr<vsg::WindowTraits> windowTraits)
-    : m_ctx(ctx) {
-  
+vsg::ref_ptr<vsg::WindowTraits> windowTraits)
+  : m_ctx(ctx) {
+
   auto hmdWindow = m_ctx->createVSGWindow(m_ctx, windowTraits);
-  Viewer::addWindow( hmdWindow );
+  Viewer::addWindow(hmdWindow);
 
   // createDesktopWindow(windowTraits);
   // createHmdWindow(windowTraits);
@@ -98,19 +125,100 @@ void OpenXRViewer::update() {
 }
 
 void OpenXRViewer::present() {
-  // TODO: Likely not needed with OpenXR
+  // Base viewer forwards to queue / swapchain presentation as normal
+  // TODO: Needed for any desktop windows? Or will just have 2 separate Viewers since the workflow is different..
   vsg::Viewer::present();
 
-/*
-  // VR Presentation
-  submitVRFrames();
+  // m_hmdWindow->present();
+}
 
-  // TODO: The pose updates here aren't perfect. This should be updated
-  // to be async, using 'explicit timings'
-  // https://github.com/ValveSoftware/openvr/wiki/Vulkan#explicit-timing
-  // https://github.com/ValveSoftware/openvr/wiki/IVRSystem::GetDeviceToAbsoluteTrackingPose
-  m_ctx->waitGetPoses();
-*/
+void OpenXRViewer::renderXR() {
+  auto session = m_ctx->session();
+
+  // TODO: Space should be configured elsewhere
+  XrSpace sceneSpace;
+  {
+    XrPosef ident;
+    ident.orientation.x = 0.0f;
+    ident.orientation.y = 0.0f;
+    ident.orientation.z = 0.0f;
+    ident.orientation.w = 1.0f;
+    ident.position.x = 0.0f;
+    ident.position.y = 0.0f;
+    ident.position.z = 0.0f;
+
+    XrReferenceSpaceCreateInfo info;
+    info.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+    info.next = nullptr;
+    info.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+    info.poseInReferenceSpace = ident;
+    xr_check(xrCreateReferenceSpace(session, &info, &sceneSpace), "Render hack create space");
+  }
+
+  // Wait for a new frame.
+  XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
+  XrFrameState frameState{ XR_TYPE_FRAME_STATE };
+  auto waitRes = xrWaitFrame(session, &frameWaitInfo, &frameState);
+  if (!XR_SUCCEEDED(waitRes))
+  {
+    xrDestroySpace(sceneSpace);
+    // TODO: Will happen if the session isn't active / etc. Session lifecycle management needed..
+
+    std::cerr << "xrWaitFrame: " << to_string(waitRes) << std::endl;
+    return;
+  }
+
+  // Begin frame immediately before GPU work
+  XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
+  xr_check(xrBeginFrame(session, &frameBeginInfo), "xrBeginFrame");
+
+  std::vector<XrCompositionLayerBaseHeader*> layers;
+  XrCompositionLayerProjectionView projViews[2];
+  projViews[0].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+  projViews[0].subImage.swapchain = m_hmdWindow->xrSwapchain();
+  fdsjkfdsjklfdsaljk;fdsajl;k
+
+  // Okay so this is more complex than you thought, again. Will basically need to build a non-vsg openxr application, but
+  // around the vsg concepts. Then port into the vsg class hierarchy..
+  // Not exactly starting again, but you need a fresh perspective.
+
+  XrCompositionLayerProjection layerProj{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+
+  if (frameState.shouldRender) {
+
+    XrViewLocateInfo viewLocateInfo{ XR_TYPE_VIEW_LOCATE_INFO };
+    viewLocateInfo.displayTime = frameState.predictedDisplayTime;
+    viewLocateInfo.space = sceneSpace;
+
+    /*XrViewState viewState{ XR_TYPE_VIEW_STATE };
+    XrView views[2] = { {XR_TYPE_VIEW}, {XR_TYPE_VIEW} };
+    uint32_t viewCountOutput;
+    CHK_XR(xrLocateViews(session, &viewLocateInfo, &viewState, configViews.size(), &viewCountOutput, views));*/
+    
+    // ...
+    // Use viewState and frameState for scene render, and fill in projViews[2]
+    Viewer::recordAndSubmit();
+    // ...
+
+    // Assemble composition layers structure
+    layerProj.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+    layerProj.space = sceneSpace;
+    layerProj.viewCount = 2;
+    layerProj.views = projViews;
+    layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layerProj));
+  }
+
+  // End frame and submit layers, even if layers is empty due to shouldRender = false
+  XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
+  frameEndInfo.displayTime = frameState.predictedDisplayTime;
+  frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+  frameEndInfo.layerCount = (uint32_t)layers.size();
+  frameEndInfo.layers = layers.data();
+  xr_check(xrEndFrame(session, &frameEndInfo), "xrEndFrame");
+
+  {
+    xrDestroySpace(sceneSpace);
+  }
 }
 
 void OpenXRViewer::addWindow(vsg::ref_ptr<vsg::Window>) {

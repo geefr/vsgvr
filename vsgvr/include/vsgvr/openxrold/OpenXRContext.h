@@ -60,6 +60,9 @@ namespace vsgvr
 
     std::list<std::string> instanceExtensionsRequired(uint32_t vkVersion) const override final;
     std::list<std::string> deviceExtensionsRequired(vsg::ref_ptr<vsg::Instance> instance, vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice) const override final;
+
+    XrSession session() const;
+
   private:
     OpenXRContextImpl* m = nullptr;
   };

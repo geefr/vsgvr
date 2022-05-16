@@ -61,6 +61,7 @@ namespace vsgvr
         VkResult acquireNextImage(uint64_t timeout = std::numeric_limits<uint64_t>::max()) override;
 
         void setOpenXRContext(vsg::ref_ptr<vsgvr::OpenXRContext> ctx) { _xr = ctx; }
+        XrSwapchain xrSwapchain() const;
 
     protected:
         virtual ~OpenXRWindow();

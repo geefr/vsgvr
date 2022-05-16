@@ -50,6 +50,8 @@ public:
   void update() override;
   void present() override;
 
+  void renderXR();
+
   std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
 
 private:

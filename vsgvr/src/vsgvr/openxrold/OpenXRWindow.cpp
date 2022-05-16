@@ -345,4 +345,9 @@ namespace vsgvr
 
     //     return false;
     // }
+
+    XrSwapchain OpenXRWindow::xrSwapchain() const {
+      if( _xrSwapchain ) return (XrSwapchain)*_xrSwapchain;
+      else return XrSwapchain();
+    }
 }

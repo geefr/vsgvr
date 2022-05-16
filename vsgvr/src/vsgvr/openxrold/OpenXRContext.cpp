@@ -175,6 +175,14 @@ namespace {
 
     XrSession session;
     xr_check(xrCreateSession(instance, &info, &session), "Failed to create OpenXR session");
+
+    // TODO: Enumerate view configs, do this properly
+    XrSessionBeginInfo beginInfo;
+    beginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
+    beginInfo.next = nullptr;
+    beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+    xr_check(xrBeginSession(session, &beginInfo), "beginSession");
+
     return session;
   }
 
@@ -538,6 +546,7 @@ namespace vsgvr
       getVulkanDeviceExtensionsRequired(instance, systemID, vulkanInstance, vulkanPhysicalDevice);
       return {};
     }
+
   };
 
   OpenXRContext::OpenXRContext(vsgvr::VRContext::TrackingOrigin origin)
@@ -630,4 +639,7 @@ namespace vsgvr
   {
     return m->deviceExtensionsRequired(instance, physicalDevice);
   }
+
+  XrSession OpenXRContext::session() const { return m->session; }
+
 }
