@@ -23,45 +23,56 @@ namespace vsgvr
 
     OpenXRInstance::~OpenXRInstance()
     {
-        if( _session ) destroySession();
+      shutdownAll();
+    }
 
-        destroyGraphicsBinding();
+    void OpenXRInstance::shutdownAll()
+    {
+        if( _session ) destroySession();
+        if( _graphicsBinding ) destroyGraphicsBinding();
         _system = 0;
         _systemProperties = XrSystemProperties();
-        destroyInstance();
+        if( _instance ) destroyInstance();
     }
 
     auto OpenXRInstance::pollEvents() -> PollEventsResult
     {
-        if( !_instance ) return PollEventsResult::NotReady;
+        if( !_instance ) return PollEventsResult::NotRunning;
 
         _eventHandler.pollEvents(this, _session);
 
-        if( !_session ) return PollEventsResult::NotReady;
+        if( !_session ) return PollEventsResult::NotRunning;
 
         switch(_session->getSessionState())
         {
             case XR_SESSION_STATE_IDLE:
                 return PollEventsResult::RuntimeIdle;
             case XR_SESSION_STATE_READY:
-                std::cerr << "Beginning Session" << std::endl;
-                _session->beginSession();
-                return PollEventsResult::NotReady;
+                if( !_session->getSessionRunning() )
+                {
+                  // Begin session. Transition to synchronised after a few begin/end frames
+                  _session->beginSession(_xrTraits.viewConfigurationType);
+                }
+                return PollEventsResult::RunningDontRender;
             case XR_SESSION_STATE_SYNCHRONIZED:
-                return PollEventsResult::ReadyDontRender;
+                return PollEventsResult::RunningDontRender;
             case XR_SESSION_STATE_VISIBLE:
             case XR_SESSION_STATE_FOCUSED:
-                return PollEventsResult::ReadyRender;
+                return PollEventsResult::RunningDoRender;
             case XR_SESSION_STATE_STOPPING:
                 std::cerr << "Ending Session" << std::endl;
                 _session->endSession();
-                return PollEventsResult::NotReady;
+                return PollEventsResult::NotRunning;
             case XR_SESSION_STATE_LOSS_PENDING:
                 std::cerr << "State Loss" << std::endl;
                 // TODO: Display connection lost. Re-init may be possible later
+                [[fallthrough]];
             case XR_SESSION_STATE_EXITING:
-                std::cerr << "Exit" << std::endl;
-                _session->endSession();
+                if( _session->getSessionRunning() )
+                {
+                  _session->endSession();
+                }
+                shutdownAll();
                 return PollEventsResult::Exit;
             case XR_SESSION_STATE_UNKNOWN:
             default:
@@ -69,14 +80,30 @@ namespace vsgvr
         }
     }
 
-    void OpenXRInstance::acquireFrame()
+    auto OpenXRInstance::acquireFrame() -> FrameState
     {
+       _frameState = XrFrameState();
+       _frameState.type = XR_TYPE_FRAME_STATE;
+       _frameState.next = nullptr;
 
+       // TODO: Return statuses - session/instance loss fairly likely here
+       xr_check(xrWaitFrame(_session->getSession(), nullptr, &_frameState));
+       xr_check(xrBeginFrame(_session->getSession(), nullptr));
+
+       return FrameState{ static_cast<bool>(_frameState.shouldRender) };
     }
 
     void OpenXRInstance::releaseFrame()
     {
-        
+        auto info = XrFrameEndInfo();
+        info.type = XR_TYPE_FRAME_END_INFO;
+        info.next = nullptr;
+        info.displayTime = _frameState.predictedDisplayTime; // TODO: Predicted, or 'now'?
+        info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+        info.layerCount = 0;
+        info.layers = nullptr; // TODO
+
+        xr_check(xrEndFrame(_session->getSession(), &info));
     }
 
     void OpenXRInstance::onEventInstanceLossPending(const XrEventDataInstanceLossPending& event)

@@ -18,10 +18,11 @@ namespace vsgvr {
 
             XrSession getSession() const { return _session; }
             XrSessionState getSessionState() const { return _sessionState; }
+            bool getSessionRunning() const { return _sessionRunning; }
 
             void onEventStateChanged(const XrEventDataSessionStateChanged& event);
 
-            void beginSession();
+            void beginSession(XrViewConfigurationType viewConfigurationType);
             void endSession();
 
         private:
@@ -31,5 +32,6 @@ namespace vsgvr {
             vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> _graphicsBinding;
             XrSession _session = nullptr;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
+            bool _sessionRunning = false;
     };
 }

@@ -59,14 +59,32 @@ int main(int argc, char **argv) {
         break;
       }
 
-      if( pol == vsgvr::OpenXRInstance::PollEventsResult::NotReady)
+      if( pol == vsgvr::OpenXRInstance::PollEventsResult::NotRunning)
       {
         continue;
       }
+      else if (pol == vsgvr::OpenXRInstance::PollEventsResult::RuntimeIdle)
+      {
+        // Reduce power usage, wait for XR to wake
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        continue;
+      }
 
-      // Idle: Reduce power usage, wait for XR to wake up
+      // The session is running, and a frame must be processed
+      auto frameState = vr->acquireFrame();
 
-      // TODO: Render
+      if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender ||
+          frameState.shouldRender == false)
+      {
+        // Application is awaiting session synchronisation, or otherwise should
+        // not render anything. Frames must still be acquired and released.
+      }
+      else if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDoRender)
+      {
+        // TODO: Render code here
+      }
+
+      vr->releaseFrame();
     }
 
     //while (viewer->advanceToNextFrame()) {

@@ -57,19 +57,27 @@ namespace vsgvr {
             enum class PollEventsResult {
                 Success,
                 RuntimeIdle,
-                NotReady,
-                ReadyDontRender,
-                ReadyRender,
+                NotRunning,
+                RunningDontRender,
+                RunningDoRender,
                 Exit,
             };
             /// Must be called regularly, within the render loop
             /// The application must handle the returned values accordingly,
             /// to avoid exceptions being thrown on subsequence calls
             auto pollEvents() -> PollEventsResult;
-            void acquireFrame();
+
+            struct FrameState
+            {
+              bool shouldRender;
+              // TODO: predicted display time / period
+            };
+
+            auto acquireFrame() -> FrameState;
             void releaseFrame();
 
         private:
+            void shutdownAll();
             void createInstance();
             void destroyInstance();
             void getSystem();
@@ -104,5 +112,8 @@ namespace vsgvr {
             void createSession();
             void destroySession();
             vsg::ref_ptr<OpenXRSession> _session;
+
+            // Per-frame
+            XrFrameState _frameState;
     };
 }

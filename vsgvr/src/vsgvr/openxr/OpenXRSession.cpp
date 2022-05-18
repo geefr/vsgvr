@@ -7,22 +7,22 @@
 
 namespace vsgvr {
 
-OpenXRSession::OpenXRSession(XrInstance instance, XrSystemId system, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
+  OpenXRSession::OpenXRSession(XrInstance instance, XrSystemId system, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
     : _graphicsBinding(graphicsBinding)
-{
+  {
     createSession(instance, system);
-}
+  }
 
-OpenXRSession::~OpenXRSession()
-{
+  OpenXRSession::~OpenXRSession()
+  {
     destroySession();
-}
+  }
 
-// TODO: A regular session update is needed - should handle the session lifecycle and such
-// void update(XrInstance instance, XrSystemId system);
+  // TODO: A regular session update is needed - should handle the session lifecycle and such
+  // void update(XrInstance instance, XrSystemId system);
 
-void OpenXRSession::createSession(XrInstance instance, XrSystemId system)
-{
+  void OpenXRSession::createSession(XrInstance instance, XrSystemId system)
+  {
     auto info = XrSessionCreateInfo();
     info.type = XR_TYPE_SESSION_CREATE_INFO;
     info.next = &_graphicsBinding->getBinding();
@@ -30,43 +30,37 @@ void OpenXRSession::createSession(XrInstance instance, XrSystemId system)
 
     xr_check(xrCreateSession(instance, &info, &_session), "Failed to create OpenXR session");
     _sessionState = XR_SESSION_STATE_IDLE;
-}
-void OpenXRSession::destroySession()
-{
-    // TODO, of course :)
+  }
+  void OpenXRSession::destroySession()
+  {
+    xr_check(xrDestroySession(_session));
     _session = nullptr;
-}
+  }
 
-void OpenXRSession::beginSession()
-{
+  void OpenXRSession::beginSession(XrViewConfigurationType viewConfigurationType)
+  {
+    if (_sessionRunning) return;
+    auto info = XrSessionBeginInfo();
+    info.type = XR_TYPE_SESSION_BEGIN_INFO;
+    info.next = nullptr;
+    info.primaryViewConfigurationType = viewConfigurationType;
+    xr_check(xrBeginSession(_session, &info));
+    _sessionRunning = true;
+  }
 
-  // blabla this bit is tricky
-  // You need to go read up on the session stuff, as the session includes the view and coordinate spaces etc.
-  // Functions for begin and end are needed
-  // The update function is after that
-  // Ideally, calls through xr_check need to convert an impending session loss to an exception, which
-  // then gets forwarded to a graceful Session::end call
+  void OpenXRSession::endSession()
+  {
+    if (!_sessionRunning) return;
+    xr_check(xrEndSession(_session));
+    _sessionRunning = false;
+  }
 
-  // TODO: Enumerate view configs, do this properly
-
-  /*XrSessionBeginInfo beginInfo;
-  beginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
-  beginInfo.next = nullptr;
-  beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-  xr_check(xrBeginSession(session, &beginInfo), "beginSession");*/
-}
-
-void OpenXRSession::endSession()
-{
-
-}
-
-void OpenXRSession::onEventStateChanged(const XrEventDataSessionStateChanged& event)
-{
+  void OpenXRSession::onEventStateChanged(const XrEventDataSessionStateChanged& event)
+  {
     // TODO: Update _sessionState, handle the state change properly (Will be polled for in update?)
     //       Should the session trasition logic be here, or out in Instance? (Should Instance be renamed? It's more like a Viewer)
     _sessionState = event.state;
     std::cerr << "Session state changed: " << to_string(_sessionState) << std::endl;
-}
+  }
 
 }
