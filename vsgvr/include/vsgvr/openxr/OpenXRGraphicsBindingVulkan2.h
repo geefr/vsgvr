@@ -16,6 +16,8 @@ namespace vsgvr {
             OpenXRGraphicsBindingVulkan2() = delete;
             OpenXRGraphicsBindingVulkan2(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
             ~OpenXRGraphicsBindingVulkan2();
+
+            XrGraphicsBindingVulkan2KHR getBinding() const { return _binding; }
         private:
             void createVulkanInstance(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
             void createVulkanPhysicalDevice(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);

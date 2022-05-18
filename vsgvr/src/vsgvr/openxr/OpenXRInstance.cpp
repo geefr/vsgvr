@@ -5,6 +5,8 @@
 #include <openxr/openxr_reflection.h>
 #include "OpenXRMacros.cpp"
 
+#include <iostream>
+
 using namespace vsg;
 
 namespace vsgvr
@@ -15,7 +17,6 @@ namespace vsgvr
         getSystem();
         validateTraits();
         getViewConfiguration();
-        // TODO: Action Set
         createGraphicsBinding();
         createSession();
     }
@@ -30,11 +31,68 @@ namespace vsgvr
         destroyInstance();
     }
 
+    auto OpenXRInstance::pollEvents() -> PollEventsResult
+    {
+        if( !_instance ) return PollEventsResult::NotReady;
+
+        _eventHandler.pollEvents(this, _session);
+
+        if( !_session ) return PollEventsResult::NotReady;
+
+        switch(_session->getSessionState())
+        {
+            case XR_SESSION_STATE_IDLE:
+                return PollEventsResult::RuntimeIdle;
+            case XR_SESSION_STATE_READY:
+                std::cerr << "Beginning Session" << std::endl;
+                _session->beginSession();
+                return PollEventsResult::NotReady;
+            case XR_SESSION_STATE_SYNCHRONIZED:
+                return PollEventsResult::ReadyDontRender;
+            case XR_SESSION_STATE_VISIBLE:
+            case XR_SESSION_STATE_FOCUSED:
+                return PollEventsResult::ReadyRender;
+            case XR_SESSION_STATE_STOPPING:
+                std::cerr << "Ending Session" << std::endl;
+                _session->endSession();
+                return PollEventsResult::NotReady;
+            case XR_SESSION_STATE_LOSS_PENDING:
+                std::cerr << "State Loss" << std::endl;
+                // TODO: Display connection lost. Re-init may be possible later
+            case XR_SESSION_STATE_EXITING:
+                std::cerr << "Exit" << std::endl;
+                _session->endSession();
+                return PollEventsResult::Exit;
+            case XR_SESSION_STATE_UNKNOWN:
+            default:
+                break;
+        }
+    }
+
+    void OpenXRInstance::acquireFrame()
+    {
+
+    }
+
+    void OpenXRInstance::releaseFrame()
+    {
+        
+    }
+
+    void OpenXRInstance::onEventInstanceLossPending(const XrEventDataInstanceLossPending& event)
+    {
+      // https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#XrEventDataInstanceLossPending
+      // TODO: This indicates the overall runtime is about to become unavailable. Given that encountering
+      //       the subsequent XR_ERROR_RUNTIME_UNAVAILABLE when re-creating the instance isn't handled, 
+      //       just throw an exception.
+      throw Exception({"OpenXR: Instance loss pending"});
+    }
+
     void OpenXRInstance::createInstance()
     {
         if (_instance)
         {
-            throw Exception({"OpenXRInstance: Instannce already initialised"});
+            throw Exception({"OpenXRInstance: Instance already initialised"});
         }
         std::vector<const char *> extensions = {
             "XR_KHR_vulkan_enable",
@@ -150,6 +208,7 @@ namespace vsgvr
             throw Exception({"openXRInstance: Session already initialised"});
         }
         
+        _session = OpenXRSession::create(_instance, _system, _graphicsBinding);
     }
 
     void OpenXRInstance::destroySession() {

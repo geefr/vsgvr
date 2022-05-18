@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     // TODO: If controllers are off when program starts they won't be added later
     auto xrTraits = vsgvr::OpenXrTraits();
     auto vkTraits = vsgvr::OpenXrVulkanTraits();
-    auto vr = vsgvr::OpenXRInstance(xrTraits, vkTraits);
+    auto vr = vsgvr::OpenXRInstance::create(xrTraits, vkTraits);
 
     auto controllerNodeLeft = vsg::read_cast<vsg::Node>("controller.vsgt");
     auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
@@ -51,6 +51,24 @@ int main(int argc, char **argv) {
     //viewer->compile();
 
     // Render loop
+    for(;;)
+    {
+      auto pol = vr->pollEvents();
+      if( pol == vsgvr::OpenXRInstance::PollEventsResult::Exit)
+      {
+        break;
+      }
+
+      if( pol == vsgvr::OpenXRInstance::PollEventsResult::NotReady)
+      {
+        continue;
+      }
+
+      // Idle: Reduce power usage, wait for XR to wake up
+
+      // TODO: Render
+    }
+
     //while (viewer->advanceToNextFrame()) {
     //  viewer->handleEvents();
     //  viewer->update();

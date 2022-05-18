@@ -1,10 +1,18 @@
 
 namespace {
-    const char* to_string(XrResult result) {
+  const char* to_string(XrResult result) {
     switch (result) {
 #define RESULT_CASE(V, _) \
       case V: return #V;
       XR_LIST_ENUM_XrResult(RESULT_CASE);
+    default: return "Unknown";
+    }
+  }
+  const char* to_string(XrSessionState result) {
+    switch (result) {
+#define RESULT_CASE(V, _) \
+      case V: return #V;
+      XR_LIST_ENUM_XrSessionState(RESULT_CASE);
     default: return "Unknown";
     }
   }

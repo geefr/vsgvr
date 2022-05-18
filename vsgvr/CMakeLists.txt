@@ -12,6 +12,9 @@ set( SOURCES
 
 if(VR_RUNTIME STREQUAL "openxr")
   list(APPEND SOURCES 
+    include/vsgvr/openxr/OpenXR.h
+    include/vsgvr/openxr/OpenXREventHandler.h
+    src/vsgvr/openxr/OpenXREventHandler.cpp
     include/vsgvr/openxr/OpenXRTraits.h
     src/vsgvr/openxr/OpenXRTraits.cpp
     include/vsgvr/openxr/OpenXRInstance.h

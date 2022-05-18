@@ -25,6 +25,7 @@
 
 #include <vsgvr/openxr/OpenXR.h>
 #include <vsgvr/openxr/OpenXRTraits.h>
+#include <vsgvr/openxr/OpenXREventHandler.h>
 #include <vsgvr/openxr/OpenXRGraphicsBindingVulkan2.h>
 #include <vsgvr/openxr/OpenXRSession.h>
 
@@ -39,12 +40,34 @@ namespace vsgvr {
             OpenXRInstance(OpenXrTraits xrTraits, OpenXrVulkanTraits vkTraits);
             ~OpenXRInstance();
 
+            XrInstance getInstance() const { return _instance; }
+
             // TODO: Greater control over view configuration - At the moment traits
             // are specified, and if invalid init fails. Between system init and
             // session init there should be a point where view config can be chosen
             // such as choosing whether multisampling should be on, the size of
             // view images and such (based on _viewConfigurationViews)
             // TODO: Choices in traits should be a preference list?
+            
+            void onEventInstanceLossPending(const XrEventDataInstanceLossPending& event);
+
+            // TODO: Update this - Summary level of what to do, based on the event updates.
+            //       Simple things don't need any input from app, so it might just reduce
+            //       to a boolean good/exit status.
+            enum class PollEventsResult {
+                Success,
+                RuntimeIdle,
+                NotReady,
+                ReadyDontRender,
+                ReadyRender,
+                Exit,
+            };
+            /// Must be called regularly, within the render loop
+            /// The application must handle the returned values accordingly,
+            /// to avoid exceptions being thrown on subsequence calls
+            auto pollEvents() -> PollEventsResult;
+            void acquireFrame();
+            void releaseFrame();
 
         private:
             void createInstance();
@@ -56,6 +79,8 @@ namespace vsgvr {
 
             OpenXrTraits _xrTraits;
             OpenXrVulkanTraits _vkTraits;
+
+            OpenXREventHandler _eventHandler;
 
             XrInstance _instance = nullptr;
             XrInstanceProperties _instanceProperties;
@@ -78,6 +103,6 @@ namespace vsgvr {
             // Session
             void createSession();
             void destroySession();
-            vsg::ref_ptr<OpenXRSession> _session;            
+            vsg::ref_ptr<OpenXRSession> _session;
     };
 }

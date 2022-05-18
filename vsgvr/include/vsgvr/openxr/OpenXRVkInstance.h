@@ -30,6 +30,7 @@ namespace vsgvr {
             /// Vulkan instance from OpenXR vulkan_enable2, with the physical device that must be used
             OpenXRVkInstance(VkInstance instance,vsg::AllocationCallbacks* allocator = nullptr);
             void setPhysicalDevice(vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice);
+
         protected:
             virtual ~OpenXRVkInstance();
     };
