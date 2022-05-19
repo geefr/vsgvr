@@ -5,16 +5,21 @@
 #include <vsg/core/Exception.h>
 #include "OpenXRMacros.cpp"
 
+using namespace vsg;
+
 namespace vsgvr {
 
-  OpenXRSession::OpenXRSession(XrInstance instance, XrSystemId system, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
+  OpenXRSession::OpenXRSession(XrInstance instance, XrSystemId system, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
+                               VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
     : _graphicsBinding(graphicsBinding)
   {
     createSession(instance, system);
+    createSwapchain(swapchainFormat, viewConfigs);
   }
 
   OpenXRSession::~OpenXRSession()
   {
+    destroySwapchain();
     destroySession();
   }
 
@@ -31,6 +36,19 @@ namespace vsgvr {
     xr_check(xrCreateSession(instance, &info, &_session), "Failed to create OpenXR session");
     _sessionState = XR_SESSION_STATE_IDLE;
   }
+
+  void OpenXRSession::createSwapchain(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
+  {
+    if( _swapchain ) throw Exception({"Swapchain already initialised"});
+    if( !_session ) throw Exception({"Unable to create swapchain without session"});
+    _swapchain = OpenXRSwapchain::create(_session, swapchainFormat, viewConfigs);
+  }
+
+  void OpenXRSession::destroySwapchain()
+  {
+    _swapchain = nullptr;
+  }
+
   void OpenXRSession::destroySession()
   {
     xr_check(xrDestroySession(_session));
@@ -44,14 +62,14 @@ namespace vsgvr {
     info.type = XR_TYPE_SESSION_BEGIN_INFO;
     info.next = nullptr;
     info.primaryViewConfigurationType = viewConfigurationType;
-    xr_check(xrBeginSession(_session, &info));
+    xr_check(xrBeginSession(_session, &info), "Failed to begin session");
     _sessionRunning = true;
   }
 
   void OpenXRSession::endSession()
   {
     if (!_sessionRunning) return;
-    xr_check(xrEndSession(_session));
+    xr_check(xrEndSession(_session), "Failed to end session");
     _sessionRunning = false;
   }
 

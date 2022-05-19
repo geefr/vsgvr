@@ -23,6 +23,8 @@ if(VR_RUNTIME STREQUAL "openxr")
     src/vsgvr/openxr/OpenXRGraphicsBindingVulkan2.cpp
     include/vsgvr/openxr/OpenXRSession.h
     src/vsgvr/openxr/OpenXRSession.cpp
+    include/vsgvr/openxr/OpenXRSwapchain.h
+    src/vsgvr/openxr/OpenXRSwapchain.cpp
     include/vsgvr/openxr/OpenXRVkInstance.h
     src/vsgvr/openxr/OpenXRVkInstance.cpp
     include/vsgvr/openxr/OpenXrVkPhysicalDevice.h

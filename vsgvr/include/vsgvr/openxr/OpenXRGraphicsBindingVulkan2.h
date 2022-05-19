@@ -18,6 +18,11 @@ namespace vsgvr {
             ~OpenXRGraphicsBindingVulkan2();
 
             XrGraphicsBindingVulkan2KHR getBinding() const { return _binding; }
+
+            vsg::ref_ptr<vsg::Instance> getVkInstance() const { return _vkInstance; }
+            vsg::ref_ptr<vsg::PhysicalDevice> getVkPhysicalDevice() const { return _vkPhysicalDevice; }
+            vsg::ref_ptr<vsg::Device> getVkDevice() const { return _vkDevice; }
+
         private:
             void createVulkanInstance(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
             void createVulkanPhysicalDevice(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);

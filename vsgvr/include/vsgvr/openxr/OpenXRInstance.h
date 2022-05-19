@@ -67,14 +67,15 @@ namespace vsgvr {
             /// to avoid exceptions being thrown on subsequence calls
             auto pollEvents() -> PollEventsResult;
 
-            struct FrameState
+            struct RenderStatus
             {
               bool shouldRender;
+              bool waitSuccess;
               // TODO: predicted display time / period
             };
 
-            auto acquireFrame() -> FrameState;
-            void releaseFrame();
+            auto acquireFrame() -> RenderStatus;
+            void releaseFrame(RenderStatus s);
 
         private:
             void shutdownAll();

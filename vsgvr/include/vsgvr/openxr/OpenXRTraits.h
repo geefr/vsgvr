@@ -20,12 +20,14 @@ namespace vsgvr {
     void setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch);
     void setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch);
 
-    /// Overall mode selection
-    /// TODO: For now, application chooses one mode, which is validated. Abstracting
-    ///       this to a more general set of view preferences may be useful.
+    /// Mode and format selections
+    /// TODO: For now, applications chose a single option, which is validated. Abstracting
+    ///       this to a more general set of view preferences would be better.
     XrFormFactor formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     XrViewConfigurationType viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     XrEnvironmentBlendMode environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+    VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_SRGB; // Runtimes _should_ support this, as a preferred option
+    uint32_t swapchainSampleCount = 4;
   };
 
   class OpenXrVulkanTraits {

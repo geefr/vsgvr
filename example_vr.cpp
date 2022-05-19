@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
         // TODO: Render code here
       }
 
-      vr->releaseFrame();
+      vr->releaseFrame(frameState);
     }
 
     //while (viewer->advanceToNextFrame()) {
