@@ -1,5 +1,6 @@
 #include <vsg/all.h>
 
+#include <vsgvr/vsgvr.h>
 #include <vsgvr/openxr/OpenXRInstance.h>
 // #include <vsgvr/openxr/OpenXRViewer.h>
 
@@ -30,25 +31,26 @@ int main(int argc, char **argv) {
     // TODO: If controllers are off when program starts they won't be added later
     auto xrTraits = vsgvr::OpenXrTraits();
     auto vkTraits = vsgvr::OpenXrVulkanTraits();
-    auto vr = vsgvr::OpenXRInstance::create(xrTraits, vkTraits);
-
+    
     auto controllerNodeLeft = vsg::read_cast<vsg::Node>("controller.vsgt");
     auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
 
-    // TODO: Instantiate devices and nodes in scene - Need a new system for this, more generic, nicer, etc?
+    // TODO: Instantiate devices and nodes in scene
+    // - This needs a better interface for controller poses - Ideally common between vr/xr apis, but xr does actions/spaces differently
     // vsgvr::createDeviceNodes(vr, vsg_scene, controllerNodeLeft, controllerNodeRight);
 
-    // auto viewer = vsgvr::OpenXRViewer::create(vr, windowTraits);
+    // The connection to OpenXR, equivalent to a vsg::Viewer
+    auto vr = vsgvr::OpenXRInstance::create(xrTraits, vkTraits);
 
     // add close handler to respond the close window button and pressing escape
     // viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
     // add the CommandGraph to render the scene
-    //auto commandGraphs = viewer->createCommandGraphsForView(vsg_scene);
-    //viewer->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
+    vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
-    //// compile all Vulkan objects and transfer image, vertex and primitive data to GPU
-    //viewer->compile();
+    // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
+    vr->compile();
 
     // Render loop
     for(;;)
@@ -71,7 +73,7 @@ int main(int argc, char **argv) {
       }
 
       // The session is running, and a frame must be processed
-      auto frameState = vr->acquireFrame();
+      auto frameState = vr->advanceToNextFrame();
 
       if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender ||
           frameState.shouldRender == false)
@@ -81,9 +83,11 @@ int main(int argc, char **argv) {
       }
       else if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDoRender)
       {
-        // TODO: Render code here
+        vr->update();
+        vr->recordAndSubmit();
       }
 
+      // (Viewer::present())
       vr->releaseFrame(frameState);
     }
 

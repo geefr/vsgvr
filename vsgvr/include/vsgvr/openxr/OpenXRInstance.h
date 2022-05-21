@@ -29,6 +29,11 @@
 #include <vsgvr/openxr/OpenXRGraphicsBindingVulkan2.h>
 #include <vsgvr/openxr/OpenXRSession.h>
 
+#include <vsg/viewer/CommandGraph.h>
+#include <vsg/viewer/RecordAndSubmitTask.h>
+#include <vsg/viewer/RenderGraph.h>
+#include <vsg/ui/FrameStamp.h>
+
 #include <string>
 #include <vector>
 
@@ -74,8 +79,19 @@ namespace vsgvr {
               // TODO: predicted display time / period
             };
 
-            auto acquireFrame() -> RenderStatus;
+            auto advanceToNextFrame() -> RenderStatus;
             void releaseFrame(RenderStatus s);
+
+            // TODO: The 'Viewer' implementation, avoid this duplication
+            vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
+            std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
+            void assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
+            // Manage the work to do each frame using RecordAndSubmitTasks. those that need to present results to be wired up to respective Presentation object
+            using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
+            RecordAndSubmitTasks recordAndSubmitTasks;
+            void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
+            void update();
+            void recordAndSubmit();
 
         private:
             void shutdownAll();
@@ -116,5 +132,6 @@ namespace vsgvr {
 
             // Per-frame
             XrFrameState _frameState;
+            vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
     };
 }

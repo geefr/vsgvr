@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsg/core/Visitor.h>
-#include <vsgvr/VR.h>
+#include <vsgvr/vsgvr.h>
 
 namespace vsgvr {
 class VSG_DECLSPEC UpdateVRVisitor
