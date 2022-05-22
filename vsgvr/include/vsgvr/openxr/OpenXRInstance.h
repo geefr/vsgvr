@@ -132,6 +132,7 @@ namespace vsgvr {
 
             // Per-frame
             XrFrameState _frameState;
+            uint32_t _frameImageIndexHACK = 0;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
     };
 }

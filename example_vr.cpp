@@ -45,12 +45,14 @@ int main(int argc, char **argv) {
     // add close handler to respond the close window button and pressing escape
     // viewer->addEventHandler(vsg::CloseHandler::create(viewer));
 
+    /*
     // add the CommandGraph to render the scene
     auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
     vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
     // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
     vr->compile();
+    */
 
     // Render loop
     for(;;)
@@ -75,14 +77,28 @@ int main(int argc, char **argv) {
       // The session is running, and a frame must be processed
       auto frameState = vr->advanceToNextFrame();
 
-      if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender ||
+      if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender &&
           frameState.shouldRender == false)
       {
+        // TODO: Used && above, as the SteamVR nullHMD seems to enter synchronised,
+        // but also ask for render, without transitioning to Visible or Focused.
+        // Not sure if that's inline with spec but xrWaitFrame does ask for render
+        // all the same.
+
         // Application is awaiting session synchronisation, or otherwise should
         // not render anything. Frames must still be acquired and released.
       }
-      else if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDoRender)
+      else // if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDoRender)
       {
+        // HACK HACK HACK
+        // add the CommandGraph to render the scene
+        auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
+        vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+
+        // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
+        vr->compile();
+        // HACK HACK HACK
+
         vr->update();
         vr->recordAndSubmit();
       }

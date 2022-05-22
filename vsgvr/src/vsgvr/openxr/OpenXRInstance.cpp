@@ -99,7 +99,7 @@ namespace vsgvr
     xr_check(xrWaitFrame(_session->getSession(), nullptr, &_frameState));
     xr_check(xrBeginFrame(_session->getSession(), nullptr));
     
-    auto image = _session->getSwapchain()->acquireImage();
+    auto image = _session->getSwapchain()->acquireImage(_frameImageIndexHACK);
 
     XrDuration timeoutNs = 20000000;
     auto waitSuccess = _session->getSwapchain()->waitImage(timeoutNs);
@@ -235,11 +235,24 @@ namespace vsgvr
       if (vsg_scene) view->addChild(vsg_scene);
 
       // set up the render graph
-      auto renderGraph = RenderGraph::create(window, view);
-      renderGraph->contents = contents;
+      // TODO: RenderGraph can either render to a single framebuffer, or will query the correct
+      // framebuffer from the Window, based on Window::ImageIndex.
+      // This is very wrong, but just set framebuffer 0 for now to get something to compile.
+      // Expect RenderGraph will need updating to support multi-image framebuffers, or need
+      // to rework the Window class to allow an OpenXR version to exist
+      // (Split the VkSurface specific parts out to a graphics attachment setup, similar to OpenXR's graphicsBinding)
+      auto renderGraph = RenderGraph::create();
 
-      return renderGraph;
-
+      // HACK HACK HACK
+      // Example app recreates command graph each frame, to do this..
+      if (_session)
+      {
+        renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
+      }
+      // HACK HACK HACK
+      
+      // renderGraph->contents = contents;
+      
 
       hmdCommandGraph->addChild(renderGraph);
     }

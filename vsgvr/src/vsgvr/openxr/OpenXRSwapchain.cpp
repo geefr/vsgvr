@@ -8,12 +8,25 @@
 using namespace vsg;
 
 namespace vsgvr {
+  SwapchainImage::SwapchainImage(VkImage image, Device* device) :
+    Inherit(image, device)
+  {
+  }
 
-  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
+  SwapchainImage::~SwapchainImage()
+  {
+    for (auto& vd : _vulkanData)
+    {
+      vd.deviceMemory = nullptr;
+      vd.image = VK_NULL_HANDLE;
+    }
+  }
+
+  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
     validateFormat(session);
-    createSwapchain(session, viewConfigs);
+    createSwapchain(session, viewConfigs, graphicsBinding);
   }
 
   OpenXRSwapchain::~OpenXRSwapchain()
@@ -21,9 +34,8 @@ namespace vsgvr {
     destroySwapchain();
   }
 
-  VkImage OpenXRSwapchain::acquireImage()
+  VkImage OpenXRSwapchain::acquireImage(uint32_t& index)
   {
-    uint32_t index = 0;
     xr_check(xrAcquireSwapchainImage(_swapchain, nullptr, &index), "Failed to acquire image");
     return _swapchainImages[index];
   }
@@ -65,10 +77,13 @@ namespace vsgvr {
     }
   }
 
-  void OpenXRSwapchain::createSwapchain(XrSession session, std::vector<XrViewConfigurationView> viewConfigs)
+  void OpenXRSwapchain::createSwapchain(XrSession session, std::vector<XrViewConfigurationView> viewConfigs, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
   {
     XrSwapchainUsageFlags usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
     XrSwapchainCreateFlags createFlags = 0;
+
+    _extent.width = viewConfigs[0].recommendedImageRectWidth;
+    _extent.height = viewConfigs[1].recommendedImageRectHeight;
 
     auto info = XrSwapchainCreateInfo();
     info.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
@@ -97,6 +112,22 @@ namespace vsgvr {
     for (auto& i : images)
     {
       _swapchainImages.push_back(i.image);
+    }
+
+    // vsg::Swapchain constructor - Creat image views, used by OpenXRSession::creatSwapchain
+    for (std::size_t i = 0; i < _swapchainImages.size(); ++i)
+    {
+      auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVkDevice()));
+      imageView->viewType = VK_IMAGE_VIEW_TYPE_2D;
+      imageView->format = _swapchainFormat;
+      imageView->subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      imageView->subresourceRange.baseMipLevel = 0;
+      imageView->subresourceRange.levelCount = 1;
+      imageView->subresourceRange.baseArrayLayer = 0;
+      imageView->subresourceRange.layerCount = 1;
+      imageView->compile(graphicsBinding->getVkDevice());
+
+      _imageViews.push_back(imageView);
     }
   }
 
