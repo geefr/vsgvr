@@ -31,6 +31,9 @@ int main(int argc, char **argv) {
     // TODO: If controllers are off when program starts they won't be added later
     auto xrTraits = vsgvr::OpenXrTraits();
     auto vkTraits = vsgvr::OpenXrVulkanTraits();
+
+    vkTraits.vulkanDebugLayer = arguments.read({ "--debug", "-d" });
+    vkTraits.vulkanApiDumpLayer = arguments.read({ "--api", "-a" });
     
     auto controllerNodeLeft = vsg::read_cast<vsg::Node>("controller.vsgt");
     auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
@@ -54,6 +57,19 @@ int main(int argc, char **argv) {
     vr->compile();
     */
 
+    // HACK HACK HACK
+    // This is being done every frame, mainly because RenderGraph -> Framebuffer can only handle a single framebuffer (not a swapchain)
+    // To fix this the RenderGraph would need to fetch the appropriate Framebuffer, currently that's done through the Window class,
+    // but for other reasons the OpenXR implementation doesn't have an implementation of Window!
+    // 
+    // add the CommandGraph to render the scene
+    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
+    vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+
+    // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
+    vr->compile();
+    // HACK HACK HACK
+    
     // Render loop
     for(;;)
     {
@@ -73,19 +89,6 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
-
-      // HACK HACK HACK
-      // This is being done every frame, mainly because RenderGraph -> Framebuffer can only handle a single framebuffer (not a swapchain)
-      // To fix this the RenderGraph would need to fetch the appropriate Framebuffer, currently that's done through the Window class,
-      // but for other reasons the OpenXR implementation doesn't have an implementation of Window!
-      // 
-      // add the CommandGraph to render the scene
-      auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
-      vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
-
-      // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
-      vr->compile();
-      // HACK HACK HACK
 
       // The session is running, and a frame must be processed
       auto frameState = vr->advanceToNextFrame();

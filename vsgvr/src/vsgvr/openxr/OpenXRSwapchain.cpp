@@ -105,7 +105,12 @@ namespace vsgvr {
     uint32_t imageCount = 0;
     xr_check(xrEnumerateSwapchainImages(_swapchain, 0, &imageCount, nullptr));
 
-    std::vector<XrSwapchainImageVulkan2KHR> images(imageCount);
+    std::vector<XrSwapchainImageVulkan2KHR> images(imageCount, XrSwapchainImageVulkan2KHR());
+    for (auto& i : images)
+    {
+      i.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR;
+      i.next = nullptr;
+    }
     xr_check(xrEnumerateSwapchainImages(_swapchain, images.size(), &imageCount,
       reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data())));
 

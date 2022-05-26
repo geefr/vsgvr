@@ -90,7 +90,7 @@ namespace vsgvr {
       applicationInfo.apiVersion = vkTraits.vulkanVersion;
 
       std::vector<const char*> tmpInstanceExtensions;
-      for (auto x : vkInstanceExtensions) tmpInstanceExtensions.push_back(x.data());
+      for (auto& x : vkInstanceExtensions) tmpInstanceExtensions.push_back(x.data());
 
       auto instanceInfo = VkInstanceCreateInfo();
       instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -115,6 +115,7 @@ namespace vsgvr {
       auto CreateVulkanInstanceKHR = (PFN_xrCreateVulkanInstanceKHR)xr_pfn(instance, "xrCreateVulkanInstanceKHR");
       VkResult vkResult;
       VkInstance vkInstance;
+      // TODO: Log vulkan error as well
       xr_check(CreateVulkanInstanceKHR(instance, &xrVulkanCreateInfo, &vkInstance, &vkResult), "Failed to create Vulkan Instance");
 
       _vkInstance = vsgvr::OpenXRVkInstance::create(vkInstance);

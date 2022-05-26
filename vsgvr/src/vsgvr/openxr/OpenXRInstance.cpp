@@ -86,6 +86,7 @@ namespace vsgvr
     default:
       break;
     }
+    return PollEventsResult::RunningDontRender;
   }
 
   auto OpenXRInstance::advanceToNextFrame() -> RenderStatus
@@ -247,7 +248,8 @@ namespace vsgvr
       // Example app recreates command graph each frame, to do this..
       if (_session)
       {
-        renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
+        // renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
+        renderGraph->framebuffer = _session->frames()[0].framebuffer;
         renderGraph->previous_extent = _session->getSwapchain()->getExtent();
         renderGraph->renderArea.offset = {0, 0};
         renderGraph->renderArea.extent = _session->getSwapchain()->getExtent();
@@ -506,6 +508,10 @@ namespace vsgvr
     info.applicationInfo.apiVersion = _xrTraits.apiVersion;
     info.applicationInfo.engineVersion = _xrTraits.engineVersion;
 
+    _instanceProperties = XrInstanceProperties();
+    _instanceProperties.type = XR_TYPE_INSTANCE_PROPERTIES;
+    _instanceProperties.next = nullptr;
+
     xr_check(xrCreateInstance(&info, &_instance), "Failed to create XR Instance");
     xr_check(xrGetInstanceProperties(_instance, &_instanceProperties), "Failed to get XR Instance properties");
   }
@@ -567,10 +573,18 @@ namespace vsgvr
     }
   }
   void OpenXRInstance::getViewConfiguration() {
+    _viewConfigurationProperties = XrViewConfigurationProperties();
+    _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
+    _viewConfigurationProperties.next = nullptr;
+
     xr_check(xrGetViewConfigurationProperties(_instance, _system, _xrTraits.viewConfigurationType, &_viewConfigurationProperties));
     uint32_t count = 0;
     xr_check(xrEnumerateViewConfigurationViews(_instance, _system, _xrTraits.viewConfigurationType, 0, &count, nullptr));
-    _viewConfigurationViews.resize(count);
+    _viewConfigurationViews.resize(count, XrViewConfigurationView());
+    for (auto& v : _viewConfigurationViews) {
+      v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
+      v.next = nullptr;
+    }
     xr_check(xrEnumerateViewConfigurationViews(_instance, _system, _xrTraits.viewConfigurationType, _viewConfigurationViews.size(), &count, _viewConfigurationViews.data()));
   }
 

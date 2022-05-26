@@ -9,8 +9,12 @@ namespace vsgvr {
   class OpenXrTraits {
   public:
     OpenXrTraits();
-    std::vector<std::string> xrExtensions;
-    std::vector<std::string> xrLayers;
+    std::vector<std::string> xrExtensions = {
+      "XR_EXT_debug_utils"
+    };
+    std::vector<std::string> xrLayers = {
+      // "XR_APILAYER_LUNARG_core_validation"
+    };
     XrVersion apiVersion = XR_MAKE_VERSION(1, 0, 0);
     std::string applicationName = "VSGVR Application";
     std::string engineName = "VSGVR";
@@ -32,9 +36,12 @@ namespace vsgvr {
 
   class OpenXrVulkanTraits {
   public:
-    std::vector<std::string> vulkanInstanceExtensions;
+    std::vector<std::string> vulkanInstanceExtensions = {
+      "VK_EXT_debug_report"
+    };
     std::vector<std::string> vulkanLayers;
     uint32_t vulkanVersion = VK_API_VERSION_1_0;
+    // TODO: These do nothing at the moment
     bool vulkanDebugLayer = false;
     bool vulkanApiDumpLayer = false;
   };
