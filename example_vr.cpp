@@ -74,6 +74,19 @@ int main(int argc, char **argv) {
         continue;
       }
 
+      // HACK HACK HACK
+      // This is being done every frame, mainly because RenderGraph -> Framebuffer can only handle a single framebuffer (not a swapchain)
+      // To fix this the RenderGraph would need to fetch the appropriate Framebuffer, currently that's done through the Window class,
+      // but for other reasons the OpenXR implementation doesn't have an implementation of Window!
+      // 
+      // add the CommandGraph to render the scene
+      auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
+      vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
+
+      // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
+      vr->compile();
+      // HACK HACK HACK
+
       // The session is running, and a frame must be processed
       auto frameState = vr->advanceToNextFrame();
 
@@ -90,15 +103,6 @@ int main(int argc, char **argv) {
       }
       else // if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDoRender)
       {
-        // HACK HACK HACK
-        // add the CommandGraph to render the scene
-        auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
-        vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
-
-        // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
-        vr->compile();
-        // HACK HACK HACK
-
         vr->update();
         vr->recordAndSubmit();
       }

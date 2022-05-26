@@ -248,6 +248,12 @@ namespace vsgvr
       if (_session)
       {
         renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
+        renderGraph->previous_extent = _session->getSwapchain()->getExtent();
+        renderGraph->renderArea.offset = {0, 0};
+        renderGraph->renderArea.extent = _session->getSwapchain()->getExtent();
+
+        // TODO: Will need to pass correct values, assume it comes from the window traits / equivalent?
+        renderGraph->setClearValues();
       }
       // HACK HACK HACK
       
@@ -304,12 +310,12 @@ namespace vsgvr
         commandGraphs.insert(commandGraphs.end(), primary_commandGraphs.begin(), primary_commandGraphs.end());
       }
 
-      uint32_t numBuffers = 3;
+      uint32_t numBuffers = 3; // TODO: Needs to relate to OpenXR swapchain surely
 
       auto device = deviceQueueFamily.device;
       // with don't have a presentFamily so this set of commandGraphs aren't associated with a window
       // set up Submission with CommandBuffer and signals
-      auto recordAndSubmitTask = vsg::RecordAndSubmitTask::create(device, numBuffers);
+      auto recordAndSubmitTask = vsg::RecordAndSubmitTask::create(device, numBuffers); 
       recordAndSubmitTask->commandGraphs = commandGraphs;
       recordAndSubmitTask->queue = device->getQueue(deviceQueueFamily.queueFamily);
       recordAndSubmitTasks.emplace_back(recordAndSubmitTask);
