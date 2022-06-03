@@ -243,6 +243,7 @@ namespace vsgvr
       // to rework the Window class to allow an OpenXR version to exist
       // (Split the VkSurface specific parts out to a graphics attachment setup, similar to OpenXR's graphicsBinding)
       auto renderGraph = RenderGraph::create();
+      renderGraph->addChild(view);
 
       // HACK HACK HACK
       // Example app recreates command graph each frame, to do this..
@@ -260,8 +261,6 @@ namespace vsgvr
       // HACK HACK HACK
       
       // renderGraph->contents = contents;
-      
-
       hmdCommandGraph->addChild(renderGraph);
     }
 
@@ -354,7 +353,7 @@ namespace vsgvr
       if (task->databasePager && !databasePager) databasePager = task->databasePager;
     }
 
-    // allocate DescriptorPool for each Device
+    // allocate DescriptorPool for each Device 
     ResourceRequirements::Views views;
     for (auto& [device, deviceResource] : deviceResourceMap)
     {
