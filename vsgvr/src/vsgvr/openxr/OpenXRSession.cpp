@@ -38,6 +38,15 @@ namespace vsgvr {
 
     xr_check(xrCreateSession(instance, &info, &_session), "Failed to create OpenXR session");
     _sessionState = XR_SESSION_STATE_IDLE;
+
+    auto spaceCreateInfo = XrReferenceSpaceCreateInfo();
+    spaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+    spaceCreateInfo.next = nullptr;
+    spaceCreateInfo.poseInReferenceSpace.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
+    spaceCreateInfo.poseInReferenceSpace.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
+    spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+
+    xr_check(xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space), "Failed to create Session reference space");
   }
 
   void OpenXRSession::createSwapchain(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
@@ -256,6 +265,8 @@ namespace vsgvr {
 
   void OpenXRSession::destroySession()
   {
+    xr_check(xrDestroySpace(_space));
+    _space = nullptr;
     xr_check(xrDestroySession(_session));
     _session = nullptr;
   }

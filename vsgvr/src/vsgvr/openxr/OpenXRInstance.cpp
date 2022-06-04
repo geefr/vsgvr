@@ -148,12 +148,59 @@ namespace vsgvr
 
   void OpenXRInstance::recordAndSubmit()
   {
+    // TODO: Think this is required in order to locate views / assign composition layers
+    // TODO: Read about these, don't understand them
+    auto leftProjView = XrCompositionLayerProjectionView();
+    leftProjView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+    leftProjView.next = nullptr;
+    leftProjView.fov.angleDown = -15.0f;
+    leftProjView.fov.angleUp = 15.0f;
+    leftProjView.fov.angleLeft = -15.0f;
+    leftProjView.fov.angleRight = 15.0f;
+    leftProjView.pose.orientation = XrQuaternionf{0.0f, 0.0f, 0.0f, 1.0f};
+    leftProjView.pose.position = XrVector3f{0.0f, 0.0f, 0.0f};
+    leftProjView.subImage.swapchain = _session->getSwapchain()->getSwapchain(); // IMPORTANT! - TODO: Examples have multiple swapchains here, one for each view / eye
+    leftProjView.subImage.imageRect = XrRect2Di{0, 0, (int)_viewConfigurationViews[0].recommendedImageRectWidth, (int)_viewConfigurationViews[0].recommendedImageRectHeight}; // IMPORTANT! - Looks like this is the Vulkan image area to blit. rect is graphics api specific.
+    leftProjView.subImage.imageArrayIndex = 0;
+
+    auto rightProjView = XrCompositionLayerProjectionView();
+    rightProjView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+    rightProjView.next = nullptr;
+    rightProjView.fov.angleDown = -15.0f;
+    rightProjView.fov.angleUp = 15.0f;
+    rightProjView.fov.angleLeft = -15.0f;
+    rightProjView.fov.angleRight = 15.0f;
+    rightProjView.pose.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
+    rightProjView.pose.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
+    rightProjView.subImage.swapchain = _session->getSwapchain()->getSwapchain(); // IMPORTANT!
+    rightProjView.subImage.imageRect = XrRect2Di{ 0, 0, (int)_viewConfigurationViews[1].recommendedImageRectWidth, (int)_viewConfigurationViews[1].recommendedImageRectHeight }; // IMPORTANT! - Looks like this is the Vulkan image area to blit. rect is graphics api specific.
+    rightProjView.subImage.imageArrayIndex = 0;
+
+    _layerProjectionViews.clear();
+    _layerProjectionViews.push_back(leftProjView);
+    _layerProjectionViews.push_back(rightProjView);
+    _layerProjection = XrCompositionLayerProjection();
+    _layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+    _layerProjection.next = nullptr;
+
+    // TODO: Locate views -> Get view parameters for rendering, update the scene (The bit above should probably happen in acquire/release image from the app's perspective..)
+
+
     // reset connected ExecuteCommands
     for (auto& recordAndSubmitTask : recordAndSubmitTasks)
     {
       for (auto& commandGraph : recordAndSubmitTask->commandGraphs)
       {
         commandGraph->reset();
+        if (!commandGraph->children.empty() )
+        {
+          // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
+          if (auto renderGraph = commandGraph->children[0].cast<RenderGraph>())
+          {
+            renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
+          }
+        }
+        
       }
     }
 
@@ -161,6 +208,12 @@ namespace vsgvr
     {
       recordAndSubmitTask->submit(_frameStamp);
     }
+
+    _layerProjection.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+    _layerProjection.space = _session->getSpace();
+    _layerProjection.viewCount = _layerProjectionViews.size();
+    _layerProjection.views = _layerProjectionViews.data();
+    _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&_layerProjection));
   }
 
   void OpenXRInstance::releaseFrame(RenderStatus s)
@@ -175,10 +228,12 @@ namespace vsgvr
     info.next = nullptr;
     info.displayTime = _frameState.predictedDisplayTime; // TODO: Predicted, or 'now'?
     info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-    info.layerCount = 0;
-    info.layers = nullptr; // TODO
+    info.layerCount = _layers.size();
+    info.layers = _layers.data();
 
     xr_check(xrEndFrame(_session->getSession(), &info));
+
+    _layers.clear();
   }
 
   vsg::ref_ptr<vsg::Camera>
@@ -211,7 +266,7 @@ namespace vsgvr
   std::vector<vsg::ref_ptr<vsg::CommandGraph>>
     OpenXRInstance::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
     
-    auto numImages = _viewConfigurationViews.size();
+    auto numViews = _viewConfigurationViews.size();
 
     vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(_graphicsBinding->getVkDevice());
 
@@ -311,7 +366,7 @@ namespace vsgvr
         commandGraphs.insert(commandGraphs.end(), primary_commandGraphs.begin(), primary_commandGraphs.end());
       }
 
-      uint32_t numBuffers = 3; // TODO: Needs to relate to OpenXR swapchain surely
+      uint32_t numBuffers = 1; // TODO: Needs to relate to OpenXR swapchain surely
 
       auto device = deviceQueueFamily.device;
       // with don't have a presentFamily so this set of commandGraphs aren't associated with a window
@@ -607,7 +662,6 @@ namespace vsgvr
     if (_session) {
       throw Exception({ "openXRInstance: Session already initialised" });
     }
-
     _session = OpenXRSession::create(_instance, _system, _graphicsBinding, _xrTraits.swapchainFormat, _viewConfigurationViews);
   }
 
@@ -615,7 +669,6 @@ namespace vsgvr
     if (!_session) {
       throw Exception({ "openXRInstance: Session not initialised" });
     }
-
     _session = 0;
   }
 }

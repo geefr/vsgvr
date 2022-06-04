@@ -134,5 +134,9 @@ namespace vsgvr {
             XrFrameState _frameState;
             uint32_t _frameImageIndexHACK = 0;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
+
+            std::vector<XrCompositionLayerBaseHeader*> _layers;
+            XrCompositionLayerProjection _layerProjection;
+            std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
 }

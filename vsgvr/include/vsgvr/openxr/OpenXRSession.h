@@ -31,6 +31,8 @@ namespace vsgvr {
 
             vsg::ref_ptr<OpenXRSwapchain> getSwapchain() const { return _swapchain; }
 
+            XrSpace getSpace() const { return _space; }
+
             // TODO: Similarity to vsg::Swapchain and vsg::Window here
             // for attachments / framebuffers
             struct Frame
@@ -55,6 +57,8 @@ namespace vsgvr {
             bool _sessionRunning = false;
 
             vsg::ref_ptr<OpenXRSwapchain> _swapchain;
+
+            XrSpace _space;
 
             vsg::ref_ptr<vsg::Image> _depthImage;
             vsg::ref_ptr<vsg::ImageView> _depthImageView;
