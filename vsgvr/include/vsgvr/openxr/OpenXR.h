@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <openxr/openxr.h>
 #include <openxr/openxr_reflection.h>
 

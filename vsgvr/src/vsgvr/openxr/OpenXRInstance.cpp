@@ -1,5 +1,7 @@
 
 #include <vsgvr/openxr/OpenXRInstance.h>
+#include <vsgvr/openxr/OpenXRViewMatrix.h>
+
 #include <vsg/core/Exception.h>
 
 #include <openxr/openxr_reflection.h>
@@ -167,10 +169,33 @@ namespace vsgvr
     _layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
     _layerProjection.next = nullptr;
 
-      // TODO: Locate views -> Get view parameters for rendering, update the scene (The bit above should probably happen in acquire/release image from the app's perspective..)
-      // TODO: Connects to created cameras, update them before the render and such
+    // Locate the views (at predicted frame time), to extract view/proj matrices
+    std::vector<XrView> locatedViews(_viewConfigurationViews.size(), XrView());
+    auto viewsValid = false;
+    for (auto& v : locatedViews)
+    {
+      v.type = XR_TYPE_VIEW;
+      v.next = nullptr;
+    }
+    {
+      auto viewLocateInfo = XrViewLocateInfo();
+      viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
+      viewLocateInfo.next = nullptr;
+      viewLocateInfo.space = _session->getSpace();
+      viewLocateInfo.viewConfigurationType = _xrTraits.viewConfigurationType;
+      viewLocateInfo.displayTime = _frameState.predictedDisplayTime;
 
-      // Render the scene
+      auto viewState = XrViewState();
+      viewState.type = XR_TYPE_VIEW_STATE;
+      viewState.next = nullptr;
+      uint32_t numViews = 0;
+      xr_check(xrLocateViews(_session->getSession(), &viewLocateInfo, &viewState, locatedViews.size(), &numViews, locatedViews.data()), "Failed to locate views");
+      if( numViews != locatedViews.size() ) throw Exception({"Failed to locate views (Incorrect numViews)"});
+
+      viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
+    }
+
+    // Render the scene
     for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
     {
       auto swapchain = _session->getSwapchain(i);
@@ -180,7 +205,7 @@ namespace vsgvr
       XrDuration timeoutNs = 20000000;
       auto waitSuccess = swapchain->waitImage(timeoutNs);
 
-      if( waitSuccess )
+      if( waitSuccess && viewsValid )
       {
         // reset connected ExecuteCommands
         for (auto& recordAndSubmitTask : recordAndSubmitTasks)
@@ -194,6 +219,13 @@ namespace vsgvr
               if (auto renderGraph = commandGraph->children[0].cast<RenderGraph>())
               {
                 renderGraph->framebuffer = _session->frames(i)[swapChainImageIndex].framebuffer;
+                if (auto vsgView = renderGraph->children[0].cast<View>())
+                {
+                  vsgView->camera->viewMatrix = OpenXRViewMatrix::create(locatedViews[i].pose);
+
+                  // TODO: Actually set up a projection matrix. See also projection layer setup - Requires fov parameters
+                  // vsgView->camera->projectionMatrix = bloo;
+                }
               }
             }
         
