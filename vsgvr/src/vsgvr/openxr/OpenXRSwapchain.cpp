@@ -22,11 +22,11 @@ namespace vsgvr {
     }
   }
 
-  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
+  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
     validateFormat(session);
-    createSwapchain(session, viewConfigs, graphicsBinding);
+    createSwapchain(session, viewConfig, graphicsBinding);
   }
 
   OpenXRSwapchain::~OpenXRSwapchain()
@@ -77,13 +77,13 @@ namespace vsgvr {
     }
   }
 
-  void OpenXRSwapchain::createSwapchain(XrSession session, std::vector<XrViewConfigurationView> viewConfigs, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
+  void OpenXRSwapchain::createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
   {
     XrSwapchainUsageFlags usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
     XrSwapchainCreateFlags createFlags = 0;
 
-    _extent.width = viewConfigs[0].recommendedImageRectWidth;
-    _extent.height = viewConfigs[1].recommendedImageRectHeight;
+    _extent.width = viewConfig.recommendedImageRectWidth;
+    _extent.height = viewConfig.recommendedImageRectHeight;
 
     auto info = XrSwapchainCreateInfo();
     info.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
@@ -91,11 +91,9 @@ namespace vsgvr {
     info.createFlags = createFlags;
     info.usageFlags = usageFlags;
     info.format = _swapchainFormat;
-    // TODO TODO
-    info.sampleCount = viewConfigs[0].recommendedSwapchainSampleCount;
-    info.width = viewConfigs[0].recommendedImageRectWidth;
-    info.height = viewConfigs[1].recommendedImageRectHeight;
-    // TODO TODO
+    info.sampleCount = viewConfig.recommendedSwapchainSampleCount;
+    info.width = viewConfig.recommendedImageRectWidth;
+    info.height = viewConfig.recommendedImageRectHeight;
     info.faceCount = 1;
     info.arraySize = 1;
     info.mipCount = 1;
@@ -119,7 +117,7 @@ namespace vsgvr {
       _swapchainImages.push_back(i.image);
     }
 
-    // vsg::Swapchain constructor - Creat image views, used by OpenXRSession::creatSwapchain
+    // Create image views, used by OpenXRSession::creatSwapchain to bind to vsg::Framebuffer
     for (std::size_t i = 0; i < _swapchainImages.size(); ++i)
     {
       auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVkDevice()));

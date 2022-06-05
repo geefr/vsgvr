@@ -21,7 +21,7 @@ namespace vsgvr {
     {
         public:
             OpenXRSwapchain() = delete;
-            OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding);
+            OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding);
             ~OpenXRSwapchain();
 
             VkImage acquireImage(uint32_t& index);
@@ -35,7 +35,7 @@ namespace vsgvr {
             vsg::ImageViews getImageViews() const { return _imageViews; }
         private:
             void validateFormat(XrSession session);
-            void createSwapchain(XrSession session, std::vector<XrViewConfigurationView> viewConfigs, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding);
+            void createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding);
             void destroySwapchain();
 
             VkFormat _swapchainFormat = VK_FORMAT_UNDEFINED;

@@ -75,7 +75,6 @@ namespace vsgvr {
             struct RenderStatus
             {
               bool shouldRender;
-              bool waitSuccess;
               // TODO: predicted display time / period
             };
 
@@ -86,7 +85,7 @@ namespace vsgvr {
             vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
             std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene);
             void assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
-            // Manage the work to do each frame using RecordAndSubmitTasks. those that need to present results to be wired up to respective Presentation object
+            // Manage the work to do each frame using RecordAndSubmitTasks.
             using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
             RecordAndSubmitTasks recordAndSubmitTasks;
             void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
@@ -132,7 +131,6 @@ namespace vsgvr {
 
             // Per-frame
             XrFrameState _frameState;
-            uint32_t _frameImageIndexHACK = 0;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
 
             std::vector<XrCompositionLayerBaseHeader*> _layers;

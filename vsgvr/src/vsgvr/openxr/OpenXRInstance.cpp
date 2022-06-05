@@ -99,11 +99,6 @@ namespace vsgvr
     // TODO: Return statuses - session/instance loss fairly likely here
     xr_check(xrWaitFrame(_session->getSession(), nullptr, &_frameState));
     xr_check(xrBeginFrame(_session->getSession(), nullptr));
-    
-    auto image = _session->getSwapchain()->acquireImage(_frameImageIndexHACK);
-
-    XrDuration timeoutNs = 20000000;
-    auto waitSuccess = _session->getSwapchain()->waitImage(timeoutNs);
 
     // Viewer::advanceToNextFrame
     // create FrameStamp for frame
@@ -132,7 +127,7 @@ namespace vsgvr
 
     // Inform the application whether it should actually render
     // The frame must be completed regardless to remain synchronised with OpenXR
-    return RenderStatus{ waitSuccess ? static_cast<bool>(_frameState.shouldRender) : false, waitSuccess };
+    return RenderStatus{ static_cast<bool>(_frameState.shouldRender) };
   }
 
   void OpenXRInstance::update()
@@ -148,65 +143,70 @@ namespace vsgvr
 
   void OpenXRInstance::recordAndSubmit()
   {
-    // TODO: Think this is required in order to locate views / assign composition layers
-    // TODO: Read about these, don't understand them
-    auto leftProjView = XrCompositionLayerProjectionView();
-    leftProjView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-    leftProjView.next = nullptr;
-    leftProjView.fov.angleDown = -15.0f;
-    leftProjView.fov.angleUp = 15.0f;
-    leftProjView.fov.angleLeft = -15.0f;
-    leftProjView.fov.angleRight = 15.0f;
-    leftProjView.pose.orientation = XrQuaternionf{0.0f, 0.0f, 0.0f, 1.0f};
-    leftProjView.pose.position = XrVector3f{0.0f, 0.0f, 0.0f};
-    leftProjView.subImage.swapchain = _session->getSwapchain()->getSwapchain(); // IMPORTANT! - TODO: Examples have multiple swapchains here, one for each view / eye
-    leftProjView.subImage.imageRect = XrRect2Di{0, 0, (int)_viewConfigurationViews[0].recommendedImageRectWidth, (int)_viewConfigurationViews[0].recommendedImageRectHeight}; // IMPORTANT! - Looks like this is the Vulkan image area to blit. rect is graphics api specific.
-    leftProjView.subImage.imageArrayIndex = 0;
-
-    auto rightProjView = XrCompositionLayerProjectionView();
-    rightProjView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-    rightProjView.next = nullptr;
-    rightProjView.fov.angleDown = -15.0f;
-    rightProjView.fov.angleUp = 15.0f;
-    rightProjView.fov.angleLeft = -15.0f;
-    rightProjView.fov.angleRight = 15.0f;
-    rightProjView.pose.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
-    rightProjView.pose.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
-    rightProjView.subImage.swapchain = _session->getSwapchain()->getSwapchain(); // IMPORTANT!
-    rightProjView.subImage.imageRect = XrRect2Di{ 0, 0, (int)_viewConfigurationViews[1].recommendedImageRectWidth, (int)_viewConfigurationViews[1].recommendedImageRectHeight }; // IMPORTANT! - Looks like this is the Vulkan image area to blit. rect is graphics api specific.
-    rightProjView.subImage.imageArrayIndex = 0;
-
     _layerProjectionViews.clear();
-    _layerProjectionViews.push_back(leftProjView);
-    _layerProjectionViews.push_back(rightProjView);
+
+    for( auto i = 0u; i < _viewConfigurationViews.size(); ++i )
+    {
+      auto projectionView = XrCompositionLayerProjectionView();
+      projectionView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+      projectionView.next = nullptr;
+      projectionView.fov.angleDown = -15.0f; // TODO
+      projectionView.fov.angleUp = 15.0f;
+      projectionView.fov.angleLeft = -15.0f;
+      projectionView.fov.angleRight = 15.0f;
+      projectionView.pose.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
+      projectionView.pose.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
+      projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
+      auto& extent = _session->getSwapchain(i)->getExtent();
+      projectionView.subImage.imageRect = XrRect2Di{ 0, 0, static_cast<int>(extent.width), static_cast<int>(extent.height) };
+      projectionView.subImage.imageArrayIndex = 0;
+      _layerProjectionViews.push_back(projectionView);
+    }
+
     _layerProjection = XrCompositionLayerProjection();
     _layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
     _layerProjection.next = nullptr;
 
-    // TODO: Locate views -> Get view parameters for rendering, update the scene (The bit above should probably happen in acquire/release image from the app's perspective..)
+      // TODO: Locate views -> Get view parameters for rendering, update the scene (The bit above should probably happen in acquire/release image from the app's perspective..)
+      // TODO: Connects to created cameras, update them before the render and such
 
-
-    // reset connected ExecuteCommands
-    for (auto& recordAndSubmitTask : recordAndSubmitTasks)
+      // Render the scene
+    for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
     {
-      for (auto& commandGraph : recordAndSubmitTask->commandGraphs)
+      auto swapchain = _session->getSwapchain(i);
+      uint32_t swapChainImageIndex = 0;
+      
+      auto image = swapchain->acquireImage(swapChainImageIndex);
+      XrDuration timeoutNs = 20000000;
+      auto waitSuccess = swapchain->waitImage(timeoutNs);
+
+      if( waitSuccess )
       {
-        commandGraph->reset();
-        if (!commandGraph->children.empty() )
+        // reset connected ExecuteCommands
+        for (auto& recordAndSubmitTask : recordAndSubmitTasks)
         {
-          // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
-          if (auto renderGraph = commandGraph->children[0].cast<RenderGraph>())
+          for (auto& commandGraph : recordAndSubmitTask->commandGraphs)
           {
-            renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
+            commandGraph->reset();
+            if (!commandGraph->children.empty() )
+            {
+              // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
+              if (auto renderGraph = commandGraph->children[0].cast<RenderGraph>())
+              {
+                renderGraph->framebuffer = _session->frames(i)[swapChainImageIndex].framebuffer;
+              }
+            }
+        
           }
         }
-        
-      }
-    }
 
-    for (auto& recordAndSubmitTask : recordAndSubmitTasks)
-    {
-      recordAndSubmitTask->submit(_frameStamp);
+        for (auto& recordAndSubmitTask : recordAndSubmitTasks)
+        {
+          recordAndSubmitTask->submit(_frameStamp);
+        }
+
+        swapchain->releaseImage();
+      }
     }
 
     _layerProjection.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
@@ -218,15 +218,10 @@ namespace vsgvr
 
   void OpenXRInstance::releaseFrame(RenderStatus s)
   {
-    if (s.waitSuccess)
-    {
-      _session->getSwapchain()->releaseImage();
-    }
-
     auto info = XrFrameEndInfo();
     info.type = XR_TYPE_FRAME_END_INFO;
     info.next = nullptr;
-    info.displayTime = _frameState.predictedDisplayTime; // TODO: Predicted, or 'now'?
+    info.displayTime = _frameState.predictedDisplayTime; // TODO: Predicted, or 'now'? -> This is complex in OpenXR - Event polling also has difference between now/predicted
     info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
     info.layerCount = _layers.size();
     info.layers = _layers.data();
@@ -267,59 +262,50 @@ namespace vsgvr
     OpenXRInstance::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
     
     auto numViews = _viewConfigurationViews.size();
-
+    std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
     vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(_graphicsBinding->getVkDevice());
 
-    // TODO: Multi-view, better size selection - To match size used in swapchain
-    VkExtent2D hmdExtent{
-      _viewConfigurationViews[0].recommendedImageRectWidth,
-      _viewConfigurationViews[0].recommendedImageRectHeight,
-    };
-
-    // vsg::createCommandGraphForView
-    auto hmdCommandGraph = CommandGraph::create(_graphicsBinding->getVkDevice(), 
-                            _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
-
-    // for (auto imgI = 0u; imgI < numImages; ++imgI) {
-    auto imgI = 0;
+    // TODO: Arguably the camera is per-view, but the render graph itself is otherwise identical. For now have a single render graph, and modify the camera as needed for each eye/view.
+    // TODO: To separate the view-specific data, would need multiple recordAndSubmitTasks? - When rendering, need to associate tasks with each view, if duplicated.
+    // for( auto i = 0u; i < _viewConfigurationViews.size(); ++i )
+    auto i = 0u;
     {
+      // TODO: Flexibility on render resolution - For now hardcoded to recommended throughout
+      VkExtent2D hmdExtent{
+        _viewConfigurationViews[i].recommendedImageRectWidth,
+        _viewConfigurationViews[i].recommendedImageRectHeight,
+      };
+
+      // vsg::createCommandGraphForView
+      auto hmdCommandGraph = CommandGraph::create(_graphicsBinding->getVkDevice(), 
+                              _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
+
       auto camera = createCameraForScene(vsg_scene, hmdExtent);
-      // auto renderGraph = vsg::createRenderGraphForView({}, camera, vsg_scene);
-      // set up the view
       auto view = View::create(camera);
       // if (assignHeadlight) view->addChild(createHeadlight());
       if (vsg_scene) view->addChild(vsg_scene);
 
-      // set up the render graph
-      // TODO: RenderGraph can either render to a single framebuffer, or will query the correct
-      // framebuffer from the Window, based on Window::ImageIndex.
-      // This is very wrong, but just set framebuffer 0 for now to get something to compile.
-      // Expect RenderGraph will need updating to support multi-image framebuffers, or need
-      // to rework the Window class to allow an OpenXR version to exist
-      // (Split the VkSurface specific parts out to a graphics attachment setup, similar to OpenXR's graphicsBinding)
+      // Set up the render graph
+      // TODO: For now the first framebuffer is set, and updated later during rendering
+      //       Ideally this would be handled inside Rendergraph.
       auto renderGraph = RenderGraph::create();
       renderGraph->addChild(view);
 
-      // HACK HACK HACK
-      // Example app recreates command graph each frame, to do this..
       if (_session)
       {
-        // renderGraph->framebuffer = _session->frames()[_frameImageIndexHACK].framebuffer;
-        renderGraph->framebuffer = _session->frames()[0].framebuffer;
-        renderGraph->previous_extent = _session->getSwapchain()->getExtent();
+        renderGraph->framebuffer = _session->frames(i)[0].framebuffer;
+        renderGraph->previous_extent = _session->getSwapchain(i)->getExtent();
         renderGraph->renderArea.offset = {0, 0};
-        renderGraph->renderArea.extent = _session->getSwapchain()->getExtent();
+        renderGraph->renderArea.extent = _session->getSwapchain(i)->getExtent();
 
         // TODO: Will need to pass correct values, assume it comes from the window traits / equivalent?
         renderGraph->setClearValues();
       }
-      // HACK HACK HACK
-      
-      // renderGraph->contents = contents;
       hmdCommandGraph->addChild(renderGraph);
+      commandGraphs.push_back(std::move(hmdCommandGraph));
     }
 
-    return { hmdCommandGraph };
+    return commandGraphs;
   }
 
   void OpenXRInstance::assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)

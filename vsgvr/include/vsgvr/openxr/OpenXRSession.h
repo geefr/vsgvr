@@ -17,9 +17,6 @@ namespace vsgvr {
                           VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
             ~OpenXRSession();
 
-            // TODO: A regular session update is needed - should handle the session lifecycle and such
-            // void update(XrInstance instance, XrSystemID system);
-
             XrSession getSession() const { return _session; }
             XrSessionState getSessionState() const { return _sessionState; }
             bool getSessionRunning() const { return _sessionRunning; }
@@ -29,46 +26,45 @@ namespace vsgvr {
             void beginSession(XrViewConfigurationType viewConfigurationType);
             void endSession();
 
-            vsg::ref_ptr<OpenXRSwapchain> getSwapchain() const { return _swapchain; }
+            vsg::ref_ptr<OpenXRSwapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
 
             XrSpace getSpace() const { return _space; }
 
-            // TODO: Similarity to vsg::Swapchain and vsg::Window here
-            // for attachments / framebuffers
             struct Frame
             {
               vsg::ref_ptr<vsg::ImageView> imageView;
               vsg::ref_ptr<vsg::Framebuffer> framebuffer;
             };
-
             using Frames = std::vector<Frame>;
 
-            Frame& frame(size_t i) { return _frames[i]; }
-            Frames& frames() { return _frames; }
+            Frame& frame(size_t view, size_t i) { return _viewData[view].frames[i]; }
+            Frames& frames(size_t view) { return _viewData[view].frames; }
         private:
             void createSession(XrInstance instance, XrSystemId system);
-            void createSwapchain(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
-            void destroySwapchain();
+            void createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
+            void destroySwapchains();
             void destroySession();
 
             vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> _graphicsBinding;
             XrSession _session = nullptr;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;
-
-            vsg::ref_ptr<OpenXRSwapchain> _swapchain;
-
             XrSpace _space;
 
-            vsg::ref_ptr<vsg::Image> _depthImage;
-            vsg::ref_ptr<vsg::ImageView> _depthImageView;
-            // only used when multisampling is required
-            vsg::ref_ptr<vsg::Image> _multisampleImage;
-            vsg::ref_ptr<vsg::ImageView> _multisampleImageView;
-            // only used when multisampling and with Traits::requiresDepthRead == true
-            vsg::ref_ptr<vsg::Image> _multisampleDepthImage;
-            vsg::ref_ptr<vsg::ImageView> _multisampleDepthImageView;
-            Frames _frames;
-            vsg::ref_ptr<vsg::RenderPass> _renderPass;
+            struct PerViewData
+            {
+              vsg::ref_ptr<OpenXRSwapchain> swapchain;
+              vsg::ref_ptr<vsg::Image> depthImage;
+              vsg::ref_ptr<vsg::ImageView> depthImageView;
+              // only used when multisampling is required
+              vsg::ref_ptr<vsg::Image> multisampleImage;
+              vsg::ref_ptr<vsg::ImageView> multisampleImageView;
+              // only used when multisampling and with Traits::requiresDepthRead == true
+              vsg::ref_ptr<vsg::Image> multisampleDepthImage;
+              vsg::ref_ptr<vsg::ImageView> multisampleDepthImageView;
+              Frames frames;
+              vsg::ref_ptr<vsg::RenderPass> renderPass;
+            };
+            std::vector<PerViewData> _viewData;
     };
 }
