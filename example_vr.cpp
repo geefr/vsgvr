@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     // but for other reasons the OpenXR implementation doesn't have an implementation of Window!
     // 
     // add the CommandGraph to render the scene
-    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
+    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, true);
     vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
     // compile all Vulkan objects and transfer image, vertex and primitive data to GPU

@@ -21,6 +21,7 @@ namespace vsgvr {
       // https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp _create_view_from_pose
       // Convert pose to matrix, then invert into the view matrix
       // TODO: Axis mapping here was done by experimentation, and based on OpenVR setup. This needs review later.
+      // See also https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/main/src/common/xr_linear.h
       auto q = vsg::dquat(
         pose.orientation.x,
         pose.orientation.y * -1.0,

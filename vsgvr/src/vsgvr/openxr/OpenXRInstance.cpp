@@ -287,7 +287,7 @@ namespace vsgvr
   }
 
   std::vector<vsg::ref_ptr<vsg::CommandGraph>>
-    OpenXRInstance::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
+    OpenXRInstance::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, bool assignHeadlight) {
     
     auto numViews = _viewConfigurationViews.size();
     std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
@@ -310,7 +310,9 @@ namespace vsgvr
 
       auto camera = createCameraForScene(vsg_scene, hmdExtent);
       auto view = View::create(camera);
-      // if (assignHeadlight) view->addChild(createHeadlight());
+      // TODO: Need to check how this interacts with the multi-view rendering. Does this mean that each eye views the scene with
+      //       a different light source? As that may look odd..
+      if (assignHeadlight) view->addChild(createHeadlight());
       if (vsg_scene) view->addChild(vsg_scene);
 
       // Set up the render graph
@@ -450,7 +452,7 @@ namespace vsgvr
       {
         context->commandPool = vsg::CommandPool::create(device, queueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
         context->graphicsQueue = device->getQueue(queueFamily);
-        if (descriptorPoolSizes.size() > 0) context->descriptorPool = vsg::DescriptorPool::create(device, maxSets, descriptorPoolSizes);
+        context->reserve(resourceRequirements);
       }
     }
 

@@ -21,7 +21,10 @@ namespace vsgvr
         OpenXRProjectionMatrix(const XrFovf& pose, double near, double far)
         {
             // https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp _create_projection_from_fov
+            // See also https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/main/src/common/xr_linear.h
+
             // TODO: Added to resolve inside-out objects, should be reviewed properly
+            // TODO: Pretty sure this is related to vsg being reverse-depth by default. Should be fixed to work for both.
             std::swap(near, far);
 
             auto tanL = std::tan(pose.angleLeft);
