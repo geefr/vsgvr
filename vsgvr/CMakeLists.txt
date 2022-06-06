@@ -32,6 +32,7 @@ if(VR_RUNTIME STREQUAL "openxr")
     include/vsgvr/openxr/OpenXrVkDevice.h
     src/vsgvr/openxr/OpenXrVkDevice.cpp
     include/vsgvr/openxr/OpenXRViewMatrix.h
+    include/vsgvr/openxr/OpenXRProjectionMatrix.h
   )
 endif()
 

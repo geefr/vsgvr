@@ -18,19 +18,29 @@ namespace vsgvr {
 
     OpenXRViewMatrix(const XrPosef& pose)
     {
-      // TODO: Validate this. Based on https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp
-      // TODO: Would it be better to pass this through as-is, and modify the base reference space?
+      // https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp _create_view_from_pose
+      // Convert pose to matrix, then invert into the view matrix
+      // TODO: Axis mapping here was done by experimentation, and based on OpenVR setup. This needs review later.
       auto q = vsg::dquat(
-        pose.orientation.w * -1.0,
         pose.orientation.x,
         pose.orientation.y * -1.0,
-        pose.orientation.z
+        pose.orientation.z,
+        pose.orientation.w * -1.0
       );
       auto rotateMat = vsg::rotate(q);
 
-      auto p = vsg::dvec3(pose.position.x, pose.position.y, pose.position.z);
+      auto p = vsg::dvec3(pose.position.x, pose.position.y * -1.0, pose.position.z);
       auto translateMat = vsg::translate(p);
-      matrix = vsg::inverse(translateMat * rotateMat);
+      matrix = vsg::inverse(translateMat * rotateMat );
+
+      vsg::dmat4 viewAxesMat(
+        1, 0, 0, 0,
+        0, -1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      );
+      auto worldRotateMat = vsg::rotate(-vsg::PI / 2.0, 1.0, 0.0, 0.0);
+      matrix = matrix * viewAxesMat * worldRotateMat;
     }
 
     vsg::dmat4 transform() const override { return matrix; }

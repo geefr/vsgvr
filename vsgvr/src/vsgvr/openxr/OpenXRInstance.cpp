@@ -1,6 +1,7 @@
 
 #include <vsgvr/openxr/OpenXRInstance.h>
 #include <vsgvr/openxr/OpenXRViewMatrix.h>
+#include <vsgvr/openxr/OpenXRProjectionMatrix.h>
 
 #include <vsg/core/Exception.h>
 
@@ -145,31 +146,7 @@ namespace vsgvr
 
   void OpenXRInstance::recordAndSubmit()
   {
-    _layerProjectionViews.clear();
-
-    for( auto i = 0u; i < _viewConfigurationViews.size(); ++i )
-    {
-      auto projectionView = XrCompositionLayerProjectionView();
-      projectionView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-      projectionView.next = nullptr;
-      projectionView.fov.angleDown = -15.0f; // TODO
-      projectionView.fov.angleUp = 15.0f;
-      projectionView.fov.angleLeft = -15.0f;
-      projectionView.fov.angleRight = 15.0f;
-      projectionView.pose.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
-      projectionView.pose.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
-      projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
-      auto& extent = _session->getSwapchain(i)->getExtent();
-      projectionView.subImage.imageRect = XrRect2Di{ 0, 0, static_cast<int>(extent.width), static_cast<int>(extent.height) };
-      projectionView.subImage.imageArrayIndex = 0;
-      _layerProjectionViews.push_back(projectionView);
-    }
-
-    _layerProjection = XrCompositionLayerProjection();
-    _layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-    _layerProjection.next = nullptr;
-
-    // Locate the views (at predicted frame time), to extract view/proj matrices
+    // Locate the views (at predicted frame time), to extract view/proj matrices, and fov
     std::vector<XrView> locatedViews(_viewConfigurationViews.size(), XrView());
     auto viewsValid = false;
     for (auto& v : locatedViews)
@@ -190,10 +167,31 @@ namespace vsgvr
       viewState.next = nullptr;
       uint32_t numViews = 0;
       xr_check(xrLocateViews(_session->getSession(), &viewLocateInfo, &viewState, locatedViews.size(), &numViews, locatedViews.data()), "Failed to locate views");
-      if( numViews != locatedViews.size() ) throw Exception({"Failed to locate views (Incorrect numViews)"});
+      if (numViews != locatedViews.size()) throw Exception({ "Failed to locate views (Incorrect numViews)" });
 
       viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
     }
+
+    // Set up projection views, within a composition layer
+    // TODO: For now, using a single composition layer - Elements such as a skybox could be directly passed to OpenXR if desired
+    _layerProjectionViews.clear();
+    for( auto i = 0u; i < _viewConfigurationViews.size(); ++i )
+    {
+      auto projectionView = XrCompositionLayerProjectionView();
+      projectionView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+      projectionView.next = nullptr;
+      projectionView.fov = locatedViews[i].fov;
+      projectionView.pose = locatedViews[i].pose;
+      projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
+      auto& extent = _session->getSwapchain(i)->getExtent();
+      projectionView.subImage.imageRect = XrRect2Di{ 0, 0, static_cast<int>(extent.width), static_cast<int>(extent.height) };
+      projectionView.subImage.imageArrayIndex = 0;
+      _layerProjectionViews.push_back(projectionView);
+    }
+
+    _layerProjection = XrCompositionLayerProjection();
+    _layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+    _layerProjection.next = nullptr;
 
     // Render the scene
     for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
@@ -222,9 +220,7 @@ namespace vsgvr
                 if (auto vsgView = renderGraph->children[0].cast<View>())
                 {
                   vsgView->camera->viewMatrix = OpenXRViewMatrix::create(locatedViews[i].pose);
-
-                  // TODO: Actually set up a projection matrix. See also projection layer setup - Requires fov parameters
-                  // vsgView->camera->projectionMatrix = bloo;
+                  vsgView->camera->projectionMatrix = OpenXRProjectionMatrix::create(locatedViews[i].fov, 0.05, 100.0);
                 }
               }
             }
