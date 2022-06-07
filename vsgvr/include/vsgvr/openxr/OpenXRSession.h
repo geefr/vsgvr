@@ -49,7 +49,7 @@ namespace vsgvr {
             XrSession _session = nullptr;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;
-            XrSpace _space;
+            XrSpace _space = nullptr;
 
             struct PerViewData
             {

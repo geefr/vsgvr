@@ -92,7 +92,7 @@ namespace vsgvr
     return PollEventsResult::RunningDontRender;
   }
 
-  auto OpenXRInstance::advanceToNextFrame() -> RenderStatus
+  bool OpenXRInstance::advanceToNextFrame()
   {
     // Viewer::acquireNextFrame
     _frameState = XrFrameState();
@@ -130,7 +130,7 @@ namespace vsgvr
 
     // Inform the application whether it should actually render
     // The frame must be completed regardless to remain synchronised with OpenXR
-    return RenderStatus{ static_cast<bool>(_frameState.shouldRender) };
+    return static_cast<bool>(_frameState.shouldRender);
   }
 
   void OpenXRInstance::update()
@@ -166,7 +166,7 @@ namespace vsgvr
       viewState.type = XR_TYPE_VIEW_STATE;
       viewState.next = nullptr;
       uint32_t numViews = 0;
-      xr_check(xrLocateViews(_session->getSession(), &viewLocateInfo, &viewState, locatedViews.size(), &numViews, locatedViews.data()), "Failed to locate views");
+      xr_check(xrLocateViews(_session->getSession(), &viewLocateInfo, &viewState, static_cast<uint32_t>(locatedViews.size()), &numViews, locatedViews.data()), "Failed to locate views");
       if (numViews != locatedViews.size()) throw Exception({ "Failed to locate views (Incorrect numViews)" });
 
       viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
@@ -239,19 +239,19 @@ namespace vsgvr
 
     _layerProjection.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
     _layerProjection.space = _session->getSpace();
-    _layerProjection.viewCount = _layerProjectionViews.size();
+    _layerProjection.viewCount = static_cast<uint32_t>(_layerProjectionViews.size());
     _layerProjection.views = _layerProjectionViews.data();
     _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&_layerProjection));
   }
 
-  void OpenXRInstance::releaseFrame(RenderStatus s)
+  void OpenXRInstance::releaseFrame()
   {
     auto info = XrFrameEndInfo();
     info.type = XR_TYPE_FRAME_END_INFO;
     info.next = nullptr;
-    info.displayTime = _frameState.predictedDisplayTime; // TODO: Predicted, or 'now'? -> This is complex in OpenXR - Event polling also has difference between now/predicted
+    info.displayTime = _frameState.predictedDisplayTime;
     info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-    info.layerCount = _layers.size();
+    info.layerCount = static_cast<uint32_t>(_layers.size());
     info.layers = _layers.data();
 
     xr_check(xrEndFrame(_session->getSession(), &info));
@@ -602,15 +602,14 @@ namespace vsgvr
     info.next = nullptr;
     info.formFactor = _xrTraits.formFactor;
 
-    XrSystemId system;
     xr_check(xrGetSystem(_instance, &info, &_system), "Failed to get OpenXR system");
 
-    XrSystemProperties props;
-    props.type = XR_TYPE_SYSTEM_PROPERTIES;
-    props.next = nullptr;
-    props.graphicsProperties = { 0 };
-    props.trackingProperties = { 0 };
-    xr_check(xrGetSystemProperties(_instance, _system, &props), "Failed to get OpenXR system properties");
+    _systemProperties = XrSystemProperties();
+    _systemProperties.type = XR_TYPE_SYSTEM_PROPERTIES;
+    _systemProperties.next = nullptr;
+    _systemProperties.graphicsProperties = { 0 };
+    _systemProperties.trackingProperties = { 0 };
+    xr_check(xrGetSystemProperties(_instance, _system, &_systemProperties), "Failed to get OpenXR system properties");
   }
   void OpenXRInstance::validateTraits()
   {
@@ -622,7 +621,7 @@ namespace vsgvr
       uint32_t count = 0;
       xr_check(xrEnumerateViewConfigurations(_instance, _system, 0, &count, nullptr));
       types.resize(count);
-      xr_check(xrEnumerateViewConfigurations(_instance, _system, types.size(), &count, types.data()));
+      xr_check(xrEnumerateViewConfigurations(_instance, _system, static_cast<uint32_t>(types.size()), &count, types.data()));
       if (std::find(types.begin(), types.end(), _xrTraits.viewConfigurationType) == types.end())
       {
         throw Exception({ "View configuration type not supported" });
@@ -635,7 +634,7 @@ namespace vsgvr
       uint32_t count = 0;
       xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, _xrTraits.viewConfigurationType, 0, &count, nullptr));
       modes.resize(count);
-      xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, _xrTraits.viewConfigurationType, modes.size(), &count, modes.data()));
+      xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, _xrTraits.viewConfigurationType, static_cast<uint32_t>(modes.size()), &count, modes.data()));
       if (std::find(modes.begin(), modes.end(), _xrTraits.environmentBlendMode) == modes.end())
       {
         throw Exception({ "Environment blend mode not supported" });
@@ -655,7 +654,7 @@ namespace vsgvr
       v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
       v.next = nullptr;
     }
-    xr_check(xrEnumerateViewConfigurationViews(_instance, _system, _xrTraits.viewConfigurationType, _viewConfigurationViews.size(), &count, _viewConfigurationViews.data()));
+    xr_check(xrEnumerateViewConfigurationViews(_instance, _system, _xrTraits.viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
   }
 
   void OpenXRInstance::createGraphicsBinding() {

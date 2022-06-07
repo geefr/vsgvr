@@ -26,9 +26,6 @@ namespace vsgvr {
     destroySession();
   }
 
-  // TODO: A regular session update is needed - should handle the session lifecycle and such
-  // void update(XrInstance instance, XrSystemId system);
-
   void OpenXRSession::createSession(XrInstance instance, XrSystemId system)
   {
     auto info = XrSessionCreateInfo();

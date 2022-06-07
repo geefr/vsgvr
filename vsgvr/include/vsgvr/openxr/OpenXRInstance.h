@@ -72,14 +72,8 @@ namespace vsgvr {
             /// to avoid exceptions being thrown on subsequence calls
             auto pollEvents() -> PollEventsResult;
 
-            struct RenderStatus
-            {
-              bool shouldRender;
-              // TODO: predicted display time / period
-            };
-
-            auto advanceToNextFrame() -> RenderStatus;
-            void releaseFrame(RenderStatus s);
+            bool advanceToNextFrame();
+            void releaseFrame();
 
             // TODO: The 'Viewer' implementation, avoid this duplication
             vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
