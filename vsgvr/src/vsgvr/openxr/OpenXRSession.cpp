@@ -178,7 +178,7 @@ namespace vsgvr {
       int graphicsFamily = _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VK_QUEUE_GRAPHICS_BIT);
 
       // set up framebuffer and associated resources
-      auto& imageViews = v.swapchain->getImageViews();
+      const auto& imageViews = v.swapchain->getImageViews();
 
       size_t initial_indexValue = imageViews.size();
       for (size_t i = 0; i < imageViews.size(); ++i)

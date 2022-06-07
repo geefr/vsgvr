@@ -27,10 +27,10 @@ if(VR_RUNTIME STREQUAL "openxr")
     src/vsgvr/openxr/OpenXRSwapchain.cpp
     include/vsgvr/openxr/OpenXRVkInstance.h
     src/vsgvr/openxr/OpenXRVkInstance.cpp
-    include/vsgvr/openxr/OpenXrVkPhysicalDevice.h
-    src/vsgvr/openxr/OpenXrVkPhysicalDevice.cpp
-    include/vsgvr/openxr/OpenXrVkDevice.h
-    src/vsgvr/openxr/OpenXrVkDevice.cpp
+    include/vsgvr/openxr/OpenXRVkPhysicalDevice.h
+    src/vsgvr/openxr/OpenXRVkPhysicalDevice.cpp
+    include/vsgvr/openxr/OpenXRVkDevice.h
+    src/vsgvr/openxr/OpenXRVkDevice.cpp
     include/vsgvr/openxr/OpenXRViewMatrix.h
     include/vsgvr/openxr/OpenXRProjectionMatrix.h
   )
