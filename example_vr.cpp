@@ -1,8 +1,8 @@
 #include <vsg/all.h>
 
-#include <vsgvr/vsgvr.h>
-#include <vsgvr/openxr/OpenXRInstance.h>
-// #include <vsgvr/openxr/OpenXRViewer.h>
+#include <vsgvr/OpenXRInstance.h>
+
+#include <iostream>
 
 int main(int argc, char **argv) {
   try
@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
     vsg::CommandLine arguments(&argc, argv);
 
     // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO
-    // realted options to use when reading and writing files.
+    // related options to use when reading and writing files.
     auto options = vsg::Options::create();
     arguments.read(options);
 
@@ -28,8 +28,10 @@ int main(int argc, char **argv) {
       return 0;
 
     // Initialise vr, and add nodes to the scene graph for each tracked device
-    // TODO: If controllers are off when program starts they won't be added later
+    // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
     auto xrTraits = vsgvr::OpenXrTraits();
+    xrTraits.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+    xrTraits.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     auto vkTraits = vsgvr::OpenXrVulkanTraits();
 
     vkTraits.vulkanDebugLayer = arguments.read({ "--debug", "-d" });
@@ -39,36 +41,19 @@ int main(int argc, char **argv) {
     auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
 
     // TODO: Instantiate devices and nodes in scene
+    // TODO: If controllers are off when program starts they won't be added later
     // - This needs a better interface for controller poses - Ideally common between vr/xr apis, but xr does actions/spaces differently
     // vsgvr::createDeviceNodes(vr, vsg_scene, controllerNodeLeft, controllerNodeRight);
 
     // The connection to OpenXR, equivalent to a vsg::Viewer
     auto vr = vsgvr::OpenXRInstance::create(xrTraits, vkTraits);
 
-    // add close handler to respond the close window button and pressing escape
-    // viewer->addEventHandler(vsg::CloseHandler::create(viewer));
-
-    /*
-    // add the CommandGraph to render the scene
-    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene);
-    vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
-
-    // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
-    vr->compile();
-    */
-
-    // HACK HACK HACK
-    // This is being done every frame, mainly because RenderGraph -> Framebuffer can only handle a single framebuffer (not a swapchain)
-    // To fix this the RenderGraph would need to fetch the appropriate Framebuffer, currently that's done through the Window class,
-    // but for other reasons the OpenXR implementation doesn't have an implementation of Window!
-    // 
     // add the CommandGraph to render the scene
     auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, true);
     vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
     // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
     vr->compile();
-    // HACK HACK HACK
     
     // Render loop
     for(;;)
@@ -76,6 +61,7 @@ int main(int argc, char **argv) {
       auto pol = vr->pollEvents();
       if( pol == vsgvr::OpenXRInstance::PollEventsResult::Exit)
       {
+        // User exited through VR overlay / XR runtime
         break;
       }
 
@@ -91,36 +77,23 @@ int main(int argc, char **argv) {
       }
 
       // The session is running, and a frame must be processed
-      auto frameState = vr->advanceToNextFrame();
-
-      if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender &&
-          frameState.shouldRender == false)
+      if (vr->advanceToNextFrame())
       {
-        // TODO: Used && above, as the SteamVR nullHMD seems to enter synchronised,
-        // but also ask for render, without transitioning to Visible or Focused.
-        // Not sure if that's inline with spec but xrWaitFrame does ask for render
-        // all the same.
+        if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender)
+        {
+          // XR Runtime requested that rendering is not performed (not visible to user)
+        }
+        else
+        {
+          // Render a frame
+          vr->update();
+          vr->recordAndSubmit();
+        }
 
-        // Application is awaiting session synchronisation, or otherwise should
-        // not render anything. Frames must still be acquired and released.
+        // End the frame, and present to user
+        vr->releaseFrame();
       }
-      else // if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDoRender)
-      {
-        vr->update();
-        vr->recordAndSubmit();
-      }
-
-      // (Viewer::present())
-      vr->releaseFrame(frameState);
     }
-
-    //while (viewer->advanceToNextFrame()) {
-    //  viewer->handleEvents();
-    //  viewer->update();
-
-    //  viewer->renderXR();
-    //  // viewer->present();
-    //}
 
     return EXIT_SUCCESS;
   }

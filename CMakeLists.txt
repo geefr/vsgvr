@@ -17,13 +17,7 @@ set(OpenGL_GL_PREFERENCE GLVND)
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)
 
-set( VR_RUNTIME "openxr" CACHE STRING "The VR Backend/Runtime to use")
-set_property(CACHE VR_RUNTIME PROPERTY STRINGS "openxr")
-
-if(VR_RUNTIME STREQUAL "openxr")
-  add_subdirectory( deps/openxr )
-  add_compile_definitions( VR_RUNTIME_OPENXR=1)
-endif()
+add_subdirectory( deps/openxr )
 
 add_subdirectory( vsgvr )
 
@@ -37,5 +31,3 @@ target_include_directories( example_vr PRIVATE
 configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/world.vsgt COPYONLY)
 configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller.vsgt COPYONLY)
 configure_file(models/controller/controller2.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller2.vsgt COPYONLY)
-
-add_subdirectory( tests )

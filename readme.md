@@ -1,36 +1,29 @@
-# VSG OpenVR Integration
+# VSG OpenXR Integration
 
 (prototype) VR support for [VulkanSceneGraph](https://github.com/vsg-dev/VulkanSceneGraph)
 
 Latest State: vsgvr library created, functionality encapsulated in a few functions & VRViewer class.
-Hardcoded to OpenVR for now, but structure should allow for OpenXR/other backends.
+Functionality under OpenXR has reached parity with previous openvr version, so OpenXR will be the backend going forward.
+(openvr version should be available in a branch if you want it)
 
 [![Demo Video](http://img.youtube.com/vi/ZA7syEMAIMo/0.jpg)](http://www.youtube.com/watch?v=ZA7syEMAIMo "vsgvr Demo Video")
 
-example_vr.cpp should be similar enough to a desktop 'hello world' - As long as openvr is available before it's started it should 'just work'.
-
-Rough TODO:
-* Lots of cleanups - code style isn't great
-* May need an HMDWindow class, to split out some functionality currently hardcoded into VRViewer
-* Binding new devices into the scene graph at runtime - At the moment all devices must be on and tracking when the example starts
-* Map vr input handling to vsg event system
+example_vr.cpp should be similar enough to a desktop 'hello world'.
 
 Thing                        | Status
 -----------------------------|--------
 Linux Build                  | Building
 Windows Build                | Building
 Code                         | Messy, but in roughly the right structure
-OpenVR Input                 | Present, but input not bound to vsg events (see VRController::buttonPressed)
-Controller tracking          | Working
-Controller models in scene   | Working
+OpenXR Presentation          | Present, will need cleanup but should be functional for now
+OpenXR Input                 | Not Implemented Yet
+Controller tracking          | Not Implemented Yet
+Controller models in scene   | Not Implemented Yet
 HMD tracking                 | Working
-HMD Presentation             | Working
-Desktop view                 | Broken - blank display?
+Desktop view                 | Not Implemented Yet
 
 Issue                        | Status
 -----------------------------|-------
-Lighting isn't correct       | Fixed, if the latest vsgXchange/lights_experimental work is used
-Desktop mirror window looks a little different | Will need rework, the desktop view is very basic at the moment
 
 
 ## Setup
@@ -42,8 +35,8 @@ Building requires:
 * cmake > 3.14
 * vulkan sdk
 * VulkanSceneGraph
-* OpenVR sdk (Included as a git submodule)
-* (For model creation) vsgXchange -> As of 2022/02/05 the lights_experimental branch is required
+* OpenXR loader (Included in deps/openxr)
+* (For model creation) vsgXchange
 
 ```
 git submodule update --init
