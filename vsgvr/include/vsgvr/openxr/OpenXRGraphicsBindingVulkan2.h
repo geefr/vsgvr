@@ -17,7 +17,7 @@ namespace vsgvr {
             OpenXRGraphicsBindingVulkan2(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
             ~OpenXRGraphicsBindingVulkan2();
 
-            XrGraphicsBindingVulkan2KHR getBinding() const { return _binding; }
+            const XrGraphicsBindingVulkan2KHR& getBinding() const { return _binding; }
 
             vsg::ref_ptr<vsg::Instance> getVkInstance() const { return _vkInstance; }
             vsg::ref_ptr<vsg::PhysicalDevice> getVkPhysicalDevice() const { return _vkPhysicalDevice; }

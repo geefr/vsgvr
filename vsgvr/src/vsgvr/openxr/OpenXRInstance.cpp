@@ -183,7 +183,7 @@ namespace vsgvr
       projectionView.fov = locatedViews[i].fov;
       projectionView.pose = locatedViews[i].pose;
       projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
-      auto& extent = _session->getSwapchain(i)->getExtent();
+      auto extent = _session->getSwapchain(i)->getExtent();
       projectionView.subImage.imageRect = XrRect2Di{ 0, 0, static_cast<int>(extent.width), static_cast<int>(extent.height) };
       projectionView.subImage.imageArrayIndex = 0;
       _layerProjectionViews.push_back(projectionView);
