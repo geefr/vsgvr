@@ -159,11 +159,19 @@ int main(int argc, char **argv) {
     //       Probably easiest not to worry about pose-in-action-space - vsg can handle this
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
     vr->actionSets.push_back(baseActionSet);
-    vr->activeActionSets.push_back(baseActionSet);
 
     auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
     leftHandPoseBinding->suggestInteractionBinding(xrInstance, "/interaction_profiles/khr/simple_controller", "/user/hand/left/input/aim/pose" );
     baseActionSet->actions.push_back(leftHandPoseBinding);
+
+    auto rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "right_hand", "Right Hand");
+    rightHandPoseBinding->suggestInteractionBinding(xrInstance, "/interaction_profiles/khr/simple_controller", "/user/hand/right/input/aim/pose" );
+    baseActionSet->actions.push_back(rightHandPoseBinding);
+
+    // Set the active action set(s)
+    // These will be updated during the render loop, and update the scene graph accordingly
+    // TODO: Or they would if the pose binding was bound to a transform node somehow
+    vr->activeActionSets.push_back(baseActionSet);
 
     // Render loop
     for(;;)

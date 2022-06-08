@@ -110,6 +110,9 @@ namespace vsgvr {
             void destroySession();
             vsg::ref_ptr<OpenXRSession> _session;
 
+            bool _firstUpdate = true;
+            std::vector<XrActionSet> _attachedActionSets;
+
             // Per-frame
             XrFrameState _frameState;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;

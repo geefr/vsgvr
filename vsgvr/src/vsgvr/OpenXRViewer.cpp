@@ -69,6 +69,12 @@ namespace vsgvr
 
     if (!_session) return PollEventsResult::NotRunning;
 
+    if( _firstUpdate )
+    {
+      createActionSpaces();
+      _firstUpdate = false;
+    }
+
     switch (_session->getSessionState())
     {
     case XR_SESSION_STATE_IDLE:
@@ -78,7 +84,6 @@ namespace vsgvr
       {
         // Begin session. Transition to synchronised after a few begin/end frames
         _session->beginSession(_xrTraits.viewConfigurationType);
-        createActionSpaces();
       }
       return PollEventsResult::RunningDontRender;
     case XR_SESSION_STATE_SYNCHRONIZED:
@@ -89,7 +94,6 @@ namespace vsgvr
       return PollEventsResult::RunningDoRender;
     case XR_SESSION_STATE_STOPPING:
       std::cerr << "Ending Session" << std::endl;
-      destroyActionSpaces();
       _session->endSession();
       return PollEventsResult::NotRunning;
     case XR_SESSION_STATE_LOSS_PENDING:
@@ -99,7 +103,6 @@ namespace vsgvr
     case XR_SESSION_STATE_EXITING:
       if (_session->getSessionRunning())
       {
-        destroyActionSpaces();
         _session->endSession();
       }
       shutdownAll();
@@ -590,32 +593,32 @@ namespace vsgvr
 
   void OpenXRViewer::createActionSpaces()
   {
+    if( !_attachedActionSets.empty() ) throw vsg::Exception({"Action spaces have already been attached"});
     // Attach action sets to the session
     if( !actionSets.empty() )
     {
-      std::vector<XrActionSet> d;
-      for( auto& actionSet : actionSets ) d.push_back(actionSet->getActionSet());
+      for( auto& actionSet : actionSets ) _attachedActionSets.push_back(actionSet->getActionSet());
 
       auto info = XrSessionActionSetsAttachInfo();
       info.type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO;
       info.next = nullptr;
-      info.countActionSets = d.size();
-      info.actionSets = d.data();
+      info.countActionSets = _attachedActionSets.size();
+      info.actionSets = _attachedActionSets.data();
       xr_check(xrAttachSessionActionSets(_session->getSession(), &info), "Failed to attach action sets to session");
-    }
 
-    for( auto& actionSet : actionSets )
-    {
-      for( auto& action : actionSet->actions )
+      for( auto& actionSet : actionSets )
       {
-        if( auto a = action.cast<OpenXRActionPoseBinding>() )
+        for( auto& action : actionSet->actions )
         {
-          if( !a->validBindings() )
+          if( auto a = action.cast<OpenXRActionPoseBinding>() )
           {
-            std::cerr << "Ignoring invalid action: " + a->getName() << std::endl;
-            continue;
+            if( !a->validBindings() )
+            {
+              std::cerr << "Ignoring invalid action: " + a->getName() << std::endl;
+              continue;
+            }
+            a->createActionSpace(_session);
           }
-          a->createActionSpace(_session);
         }
       }
     }
@@ -646,6 +649,7 @@ namespace vsgvr
     if (!_session) {
       throw Exception({ "openXRViewer: Session not initialised" });
     }
+    destroyActionSpaces();
     _session = 0;
   }
 }
