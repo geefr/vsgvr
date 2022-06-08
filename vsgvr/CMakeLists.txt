@@ -19,6 +19,11 @@ set( SOURCES
   src/vsgvr/OpenXRSwapchain.cpp
   include/vsgvr/OpenXRViewMatrix.h
   include/vsgvr/OpenXRProjectionMatrix.h
+
+  include/vsgvr/actions/OpenXRAction.h
+  src/vsgvr/actions/OpenXRAction.cpp
+  include/vsgvr/actions/OpenXRActionSet.h
+  src/vsgvr/actions/OpenXRActionSet.cpp
 )
 
 add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )
