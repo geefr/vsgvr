@@ -31,8 +31,8 @@ namespace vsgvr {
     class VSG_DECLSPEC OpenXRAction : public vsg::Inherit<vsg::Object, OpenXRAction>
     {
         public:
-            OpenXRAction(OpenXRActionSet* actionSet, XrActionType actionType, std::string name, std::string localisedName = {} );
-            ~OpenXRAction();
+            OpenXRAction(OpenXRActionSet* actionSet, XrActionType actionType, std::string name, std::string localisedName );
+            virtual ~OpenXRAction();
 
             XrAction getAction() const { return _action; }
             XrActionType getActionType() const { return _actionType; }
@@ -41,6 +41,8 @@ namespace vsgvr {
         private:
             void createAction(OpenXRActionSet* actionSet);
             void destroyAction();
+
+        protected:
             XrActionType _actionType;
             std::string _name;
             std::string _localisedName;

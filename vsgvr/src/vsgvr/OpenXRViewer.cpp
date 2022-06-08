@@ -23,6 +23,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/OpenXRViewMatrix.h>
 #include <vsgvr/OpenXRProjectionMatrix.h>
 
+#include <vsgvr/actions/OpenXRActionPoseBinding.h>
+
 #include <vsg/core/Exception.h>
 
 #include <openxr/openxr_reflection.h>
@@ -56,7 +58,6 @@ namespace vsgvr
   {
     // TODO: May need to wait - Can't destroy swapchain in session until idle
     // vkDeviceWaitIdle(_graphicsBinding->getVkDevice()->getDevice());
-
     if (_session) destroySession();
   }
 
@@ -77,15 +78,18 @@ namespace vsgvr
       {
         // Begin session. Transition to synchronised after a few begin/end frames
         _session->beginSession(_xrTraits.viewConfigurationType);
+        createActionSpaces();
       }
       return PollEventsResult::RunningDontRender;
     case XR_SESSION_STATE_SYNCHRONIZED:
       return PollEventsResult::RunningDontRender;
     case XR_SESSION_STATE_VISIBLE:
     case XR_SESSION_STATE_FOCUSED:
+      syncActions();
       return PollEventsResult::RunningDoRender;
     case XR_SESSION_STATE_STOPPING:
       std::cerr << "Ending Session" << std::endl;
+      destroyActionSpaces();
       _session->endSession();
       return PollEventsResult::NotRunning;
     case XR_SESSION_STATE_LOSS_PENDING:
@@ -95,6 +99,7 @@ namespace vsgvr
     case XR_SESSION_STATE_EXITING:
       if (_session->getSessionRunning())
       {
+        destroyActionSpaces();
         _session->endSession();
       }
       shutdownAll();
@@ -566,6 +571,68 @@ namespace vsgvr
       v.next = nullptr;
     }
     xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits.viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
+  }
+
+  void OpenXRViewer::syncActions()
+  {
+    if( !activeActionSets.empty() )
+    {
+      auto info = XrActionsSyncInfo();
+      info.type = XR_TYPE_ACTIONS_SYNC_INFO;
+      info.next = nullptr;
+      std::vector<XrActiveActionSet> d;
+      for( auto& actionSet : activeActionSets ) d.push_back({actionSet->getActionSet(), XR_NULL_PATH});
+      info.countActiveActionSets = d.size();
+      info.activeActionSets = d.data();
+      xr_check(xrSyncActions(_session->getSession(), &info));
+    }
+  }
+
+  void OpenXRViewer::createActionSpaces()
+  {
+    // Attach action sets to the session
+    if( !actionSets.empty() )
+    {
+      std::vector<XrActionSet> d;
+      for( auto& actionSet : actionSets ) d.push_back(actionSet->getActionSet());
+
+      auto info = XrSessionActionSetsAttachInfo();
+      info.type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO;
+      info.next = nullptr;
+      info.countActionSets = d.size();
+      info.actionSets = d.data();
+      xr_check(xrAttachSessionActionSets(_session->getSession(), &info), "Failed to attach action sets to session");
+    }
+
+    for( auto& actionSet : actionSets )
+    {
+      for( auto& action : actionSet->actions )
+      {
+        if( auto a = action.cast<OpenXRActionPoseBinding>() )
+        {
+          if( !a->validBindings() )
+          {
+            std::cerr << "Ignoring invalid action: " + a->getName() << std::endl;
+            continue;
+          }
+          a->createActionSpace(_session);
+        }
+      }
+    }
+  }
+
+  void OpenXRViewer::destroyActionSpaces()
+  {
+    for( auto& actionSet : actionSets )
+    {
+      for( auto& action : actionSet->actions )
+      {
+        if( auto a = action.cast<OpenXRActionPoseBinding>() )
+        {
+          if( a->getActionSpace() ) a->destroyActionSpace();
+        }
+      }
+    }
   }
 
   void OpenXRViewer::createSession() {

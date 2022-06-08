@@ -3,6 +3,8 @@
 #include <vsgvr/OpenXRInstance.h>
 #include <vsgvr/OpenXRGraphicsBindingVulkan.h>
 #include <vsgvr/OpenXRViewer.h>
+#include <vsgvr/actions/OpenXRActionSet.h>
+#include <vsgvr/actions/OpenXRActionPoseBinding.h>
 
 #include <iostream>
 #include <algorithm>
@@ -59,12 +61,12 @@ int main(int argc, char **argv) {
     // Validate the Vulkan instance, and re-create the instance with the required extensions
     if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
     {
-      std::cout << "Vulkan API too old for OpenXR. Minimum required is " << xrVulkanReqs.minVersionStr << std::endl;
+      std::cout << "Vulkan API too low for OpenXR. Minimum required is " << xrVulkanReqs.minVersionStr << std::endl;
       return EXIT_FAILURE;
     }
     if (windowTraits->vulkanVersion > xrVulkanReqs.maxVersion)
     {
-      std::cout << "Warning: Vulkan API newer than OpenXR. Maximum tested version is " << xrVulkanReqs.maxVersionStr << std::endl;
+      std::cout << "Warning: Vulkan API higher than OpenXR maximum. Maximum tested version is " << xrVulkanReqs.maxVersionStr << std::endl;
     }
 
     // Encountered with SteamVR: debug_marker is requested in device extensions, causing device creation to fail
@@ -153,6 +155,16 @@ int main(int argc, char **argv) {
     // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
     vr->compile();
     
+    // TODO: Quick test of action sets / poses - Should be able to locate this space each frame, then turn it into a transform node update in the scene graph right?
+    //       Probably easiest not to worry about pose-in-action-space - vsg can handle this
+    auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
+    vr->actionSets.push_back(baseActionSet);
+    vr->activeActionSets.push_back(baseActionSet);
+
+    auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
+    leftHandPoseBinding->suggestInteractionBinding(xrInstance, "/interaction_profiles/khr/simple_controller", "/user/hand/left/input/aim/pose" );
+    baseActionSet->actions.push_back(leftHandPoseBinding);
+
     // Render loop
     for(;;)
     {

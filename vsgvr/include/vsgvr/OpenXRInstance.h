@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/OpenXRCommon.h>
 #include <vsgvr/OpenXRTraits.h>
+#include <vsgvr/actions/OpenXRActionSet.h>
 
 namespace vsgvr {
     class VSG_DECLSPEC OpenXRInstance : public vsg::Inherit<vsg::Object, OpenXRInstance>
@@ -45,7 +46,6 @@ namespace vsgvr {
             // such as choosing whether multisampling should be on, the size of
             // view images and such (based on _viewConfigurationViews)
             // TODO: Choices in traits should be a preference list?
-            
             void onEventInstanceLossPending(const XrEventDataInstanceLossPending& event);
 
         private:

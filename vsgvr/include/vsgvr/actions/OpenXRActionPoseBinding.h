@@ -21,36 +21,33 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/OpenXRCommon.h>
-#include <vsgvr/actions/OpenXRAction.h>
 #include <vsg/core/Inherit.h>
 
+#include <vsgvr/OpenXRCommon.h>
+#include <vsgvr/actions/OpenXRAction.h>
+
 namespace vsgvr {
-    class OpenXRInstance;
-    class VSG_DECLSPEC OpenXRActionSet : public vsg::Inherit<vsg::Object, OpenXRActionSet>
+    class OpenXRSession;
+
+    /**
+     * An action of type XR_INPUT_ACTION_TYPE_POSE, and an associated action space
+     * The space will only be valid while a session is running
+     */
+    class VSG_DECLSPEC OpenXRActionPoseBinding : public vsg::Inherit<OpenXRAction, OpenXRActionPoseBinding>
     {
         public:
-            OpenXRActionSet(OpenXRInstance* instance, std::string name, std::string localisedName, uint32_t priority = 0);
-            ~OpenXRActionSet();
+            OpenXRActionPoseBinding(OpenXRActionSet* actionSet, std::string name, std::string localisedName);
+            virtual ~OpenXRActionPoseBinding();
 
-            XrActionSet getActionSet() const { return _actionSet; }
-            std::string getName() const { return _name; }
-            std::string getLocalisedName() const { return _localisedName; }
-            uint32_t getPriority() const { return _priority; }
+            bool suggestInteractionBinding(OpenXRInstance* instance, std::string interactionProfile, std::string posePath);
 
-            // Storage for actions in the set.
-            // Any actions within the set will be synchronised by the viewer
-            // each frame.
-            std::vector<vsg::ref_ptr<OpenXRAction>> actions;
+            bool validBindings() const { return _anySuggestionSucceeded; }
+            XrSpace getActionSpace() const { return _space; }
 
+            void createActionSpace(OpenXRSession* session);
+            void destroyActionSpace();
         private:
-            void createActionSet(OpenXRInstance* instance);
-            void destroyActionSet();
-
-            std::string _name;
-            std::string _localisedName;
-            uint32_t _priority;
-
-            XrActionSet _actionSet;
+            XrSpace _space = nullptr;
+            bool _anySuggestionSucceeded = false;
     };
 }

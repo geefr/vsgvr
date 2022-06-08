@@ -24,6 +24,8 @@ set( SOURCES
   src/vsgvr/actions/OpenXRAction.cpp
   include/vsgvr/actions/OpenXRActionSet.h
   src/vsgvr/actions/OpenXRActionSet.cpp
+  include/vsgvr/actions/OpenXRActionPoseBinding.h
+  src/vsgvr/actions/OpenXRActionPoseBinding.cpp
 )
 
 add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )

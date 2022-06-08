@@ -77,9 +77,19 @@ namespace vsgvr {
             void update();
             void recordAndSubmit();
 
+            // OpenXR action sets, which will be managed by the viewer / session
+            std::vector<vsg::ref_ptr<OpenXRActionSet>> actionSets;
+            // Active actions sets, which will be synchronised each update
+            // One or more may be active at a time, depending on user interaction mode
+            std::vector<vsg::ref_ptr<OpenXRActionSet>> activeActionSets;
+
         private:
             void shutdownAll();
             void getViewConfiguration();
+
+            void syncActions();
+            void createActionSpaces();
+            void destroyActionSpaces();
 
             OpenXrTraits _xrTraits;
 
@@ -91,8 +101,6 @@ namespace vsgvr {
             // Details of individual views - recommended size / sampling
             XrViewConfigurationProperties _viewConfigurationProperties;
             std::vector<XrViewConfigurationView> _viewConfigurationViews;
-
-            // TODO: Action sets
 
             // Graphics binding
             vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;

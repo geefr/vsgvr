@@ -25,14 +25,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Exception.h>
 #include "../OpenXRMacros.cpp"
 
+#include <iostream>
+
 namespace vsgvr
 {
 
     OpenXRAction::OpenXRAction(OpenXRActionSet *actionSet, XrActionType actionType, std::string name, std::string localisedName)
         : _actionType(actionType), _name(name), _localisedName(localisedName)
     {
-        if (localisedName.empty())
-            localisedName = name;
+        if (_localisedName.empty())
+            _localisedName = name;
         createAction(actionSet);
     }
 
