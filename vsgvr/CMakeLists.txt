@@ -11,18 +11,12 @@ set( SOURCES
   src/vsgvr/OpenXRTraits.cpp
   include/vsgvr/OpenXRViewer.h
   src/vsgvr/OpenXRViewer.cpp
-  include/vsgvr/OpenXRGraphicsBindingVulkan2.h
-  src/vsgvr/OpenXRGraphicsBindingVulkan2.cpp
+  include/vsgvr/OpenXRGraphicsBindingVulkan.h
+  src/vsgvr/OpenXRGraphicsBindingVulkan.cpp
   include/vsgvr/OpenXRSession.h
   src/vsgvr/OpenXRSession.cpp
   include/vsgvr/OpenXRSwapchain.h
   src/vsgvr/OpenXRSwapchain.cpp
-  include/vsgvr/OpenXRVkInstance.h
-  src/vsgvr/OpenXRVkInstance.cpp
-  include/vsgvr/OpenXRVkPhysicalDevice.h
-  src/vsgvr/OpenXRVkPhysicalDevice.cpp
-  include/vsgvr/OpenXRVkDevice.h
-  src/vsgvr/OpenXRVkDevice.cpp
   include/vsgvr/OpenXRViewMatrix.h
   include/vsgvr/OpenXRProjectionMatrix.h
 )

@@ -55,15 +55,15 @@ namespace vsgvr {
     uint32_t swapchainSampleCount = 4;
   };
 
-  class OpenXrVulkanTraits {
-  public:
-    std::vector<std::string> vulkanInstanceExtensions = {
-      "VK_EXT_debug_report"
-    };
-    std::vector<std::string> vulkanLayers;
-    uint32_t vulkanVersion = VK_API_VERSION_1_0;
-    // TODO: These do nothing at the moment
-    bool vulkanDebugLayer = false;
-    bool vulkanApiDumpLayer = false;
-  };
+  //class OpenXrVulkanTraits {
+  //public:
+  //  std::vector<std::string> vulkanInstanceExtensions = {
+  //    "VK_EXT_debug_report"
+  //  };
+  //  std::vector<std::string> vulkanLayers;
+  //  uint32_t vulkanVersion = VK_API_VERSION_1_0;
+  //  // TODO: These do nothing at the moment
+  //  bool vulkanDebugLayer = false;
+  //  bool vulkanApiDumpLayer = false;
+  //};
 }

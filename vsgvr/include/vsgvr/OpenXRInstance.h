@@ -48,7 +48,6 @@ namespace vsgvr {
             
             void onEventInstanceLossPending(const XrEventDataInstanceLossPending& event);
 
-
         private:
             void createInstance();
             void destroyInstance();

@@ -28,7 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/OpenXRInstance.h>
 #include <vsgvr/OpenXRTraits.h>
 #include <vsgvr/OpenXREventHandler.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan2.h>
+#include <vsgvr/OpenXRGraphicsBindingVulkan.h>
 #include <vsgvr/OpenXRSession.h>
 
 #include <vsg/viewer/CommandGraph.h>
@@ -44,7 +44,7 @@ namespace vsgvr {
     {
         public:
             OpenXRViewer() = delete;
-            OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, OpenXrVulkanTraits vkTraits);
+            OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding);
             ~OpenXRViewer();
 
             // TODO: Update this - Summary level of what to do, based on the event updates.
@@ -82,7 +82,6 @@ namespace vsgvr {
             void getViewConfiguration();
 
             OpenXrTraits _xrTraits;
-            OpenXrVulkanTraits _vkTraits;
 
             OpenXREventHandler _eventHandler;
 
@@ -96,9 +95,7 @@ namespace vsgvr {
             // TODO: Action sets
 
             // Graphics binding
-            void createGraphicsBinding();
-            void destroyGraphicsBinding();
-            vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> _graphicsBinding;
+            vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;
 
             // Session
             void createSession();

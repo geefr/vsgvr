@@ -31,7 +31,7 @@ using namespace vsg;
 
 namespace vsgvr {
 
-  OpenXRSession::OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
+  OpenXRSession::OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding,
                                VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
     : _graphicsBinding(graphicsBinding)
   {

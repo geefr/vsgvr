@@ -56,8 +56,8 @@ namespace vsgvr
             throw Exception({"OpenXRViewer: Instance already initialised"});
         }
         std::vector<const char *> extensions = {
-            "XR_KHR_vulkan_enable",
-            "XR_KHR_vulkan_enable2"};
+            "XR_KHR_vulkan_enable"
+        };
         for (auto &e : _xrTraits.xrExtensions)
             extensions.push_back(e.c_str());
 

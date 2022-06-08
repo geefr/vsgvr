@@ -39,11 +39,11 @@ using namespace vsg;
 
 namespace vsgvr
 {
-  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, OpenXrVulkanTraits vkTraits)
+  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
+    , _graphicsBinding(graphicsBinding)
   {
     getViewConfiguration();
-    createGraphicsBinding();
     createSession();
   }
 
@@ -58,7 +58,6 @@ namespace vsgvr
     // vkDeviceWaitIdle(_graphicsBinding->getVkDevice()->getDevice());
 
     if (_session) destroySession();
-    if (_graphicsBinding) destroyGraphicsBinding();
   }
 
   auto OpenXRViewer::pollEvents() -> PollEventsResult
@@ -567,22 +566,6 @@ namespace vsgvr
       v.next = nullptr;
     }
     xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits.viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
-  }
-
-  void OpenXRViewer::createGraphicsBinding() {
-    if (_graphicsBinding) {
-      throw Exception({ "openXRViewer: Graphics binding already initialised" });
-    }
-
-    _graphicsBinding = OpenXRGraphicsBindingVulkan2::create(_instance, _xrTraits, _vkTraits);
-  }
-
-  void OpenXRViewer::destroyGraphicsBinding() {
-    if (!_graphicsBinding) {
-      throw Exception({ "openXRViewer: Graphics binding not initialised" });
-    }
-
-    _graphicsBinding = 0;
   }
 
   void OpenXRViewer::createSession() {

@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/OpenXRCommon.h>
 
 #include <vsgvr/OpenXRInstance.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan2.h>
+#include <vsgvr/OpenXRGraphicsBindingVulkan.h>
 #include <vsgvr/OpenXRSwapchain.h>
 
 #include <vsg/vk/Framebuffer.h>
@@ -35,7 +35,7 @@ namespace vsgvr {
     {
         public:
             OpenXRSession() = delete;
-            OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
+            OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding,
                           VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
             ~OpenXRSession();
 
@@ -67,7 +67,8 @@ namespace vsgvr {
             void destroySwapchains();
             void destroySession();
 
-            vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> _graphicsBinding;
+            vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;
+            
             XrSession _session = nullptr;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;

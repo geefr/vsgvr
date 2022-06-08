@@ -43,7 +43,7 @@ namespace vsgvr {
     }
   }
 
-  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
+  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
     validateFormat(session);
@@ -98,7 +98,7 @@ namespace vsgvr {
     }
   }
 
-  void OpenXRSwapchain::createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding)
+  void OpenXRSwapchain::createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
   {
     XrSwapchainUsageFlags usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
     XrSwapchainCreateFlags createFlags = 0;
@@ -124,10 +124,10 @@ namespace vsgvr {
     uint32_t imageCount = 0;
     xr_check(xrEnumerateSwapchainImages(_swapchain, 0, &imageCount, nullptr));
 
-    std::vector<XrSwapchainImageVulkan2KHR> images(imageCount, XrSwapchainImageVulkan2KHR());
+    std::vector<XrSwapchainImageVulkanKHR> images(imageCount, XrSwapchainImageVulkanKHR());
     for (auto& i : images)
     {
-      i.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN2_KHR;
+      i.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
       i.next = nullptr;
     }
     xr_check(xrEnumerateSwapchainImages(_swapchain, static_cast<uint32_t>(images.size()), &imageCount,
