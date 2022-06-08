@@ -31,7 +31,7 @@ namespace vsgvr {
   public:
     OpenXrTraits();
     std::vector<std::string> xrExtensions = {
-      "XR_EXT_debug_utils"
+      // "XR_EXT_debug_utils"
     };
     std::vector<std::string> xrLayers = {
       // "XR_APILAYER_LUNARG_core_validation"

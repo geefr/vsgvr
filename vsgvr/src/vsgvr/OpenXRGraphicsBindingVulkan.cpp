@@ -83,7 +83,11 @@ namespace vsgvr {
       // Single-space delimited
       std::stringstream s(names);
       std::string name;
-      while (std::getline(s, name, static_cast<char>(0x20))) reqs.instanceExtensions.push_back(name);
+      while (std::getline(s, name, static_cast<char>(0x20)))
+      {
+        name.erase(name.find_last_not_of('\0') + 1, std::string::npos);
+        reqs.instanceExtensions.insert(name);
+      }
     }
 
     {
@@ -96,7 +100,11 @@ namespace vsgvr {
       // Single-space delimited
       std::stringstream s(names);
       std::string name;
-      while (std::getline(s, name, static_cast<char>(0x20))) reqs.deviceExtensions.push_back(name);
+      while (std::getline(s, name, static_cast<char>(0x20)))
+      {
+        name.erase(name.find_last_not_of('\0') + 1, std::string::npos);
+        reqs.deviceExtensions.insert(name);
+      }
     }
 
     return reqs;

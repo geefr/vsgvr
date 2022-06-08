@@ -5,6 +5,7 @@
 #include <vsgvr/OpenXRViewer.h>
 
 #include <iostream>
+#include <algorithm>
 
 int main(int argc, char **argv) {
   try
@@ -38,6 +39,11 @@ int main(int argc, char **argv) {
     auto xrTraits = vsgvr::OpenXrTraits();
     xrTraits.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+
+    auto windowTraits = vsg::WindowTraits::create();
+    windowTraits->windowTitle = "example_vr";
+    arguments.read("--screen", windowTraits->screenNum);
+    arguments.read("--display", windowTraits->display);
     
     // TODO: Instantiate devices and nodes in scene
     // TODO: If controllers are off when program starts they won't be added later
@@ -49,14 +55,7 @@ int main(int argc, char **argv) {
     // Use a desktop window to create the instance, and select the correct device
     auto xrInstance = vsgvr::OpenXRInstance::create(xrTraits);
     auto xrVulkanReqs = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanRequirements(xrInstance);
-
-    auto windowTraits = vsg::WindowTraits::create();
-    windowTraits->windowTitle = "example_vr";
-    arguments.read("--screen", windowTraits->screenNum);
-    arguments.read("--display", windowTraits->display);
-
-    // windowTraits->vulkanVersion = VK_MAKE_API_VERSION(0, 1, 2, 0);
-
+    
     // Validate the Vulkan instance, and re-create the instance with the required extensions
     if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
     {
@@ -68,6 +67,13 @@ int main(int argc, char **argv) {
       std::cout << "Warning: Vulkan API newer than OpenXR. Maximum tested version is " << xrVulkanReqs.maxVersionStr << std::endl;
     }
 
+    // Encountered with SteamVR: debug_marker is requested in device extensions, causing device creation to fail
+    // This doesn't actually appear to be required by SteamVR to work, so drop it if present.
+    // debug_report doesn't appear to be present, but drop it as well.
+    // SteamVR doesn't appear to need these to run, or the replacement VK_EXT_debug_utils.
+    xrVulkanReqs.deviceExtensions.erase("VK_EXT_debug_marker");
+    xrVulkanReqs.instanceExtensions.erase("VK_EXT_debug_report");
+    // Add any other requirements of OpenXR to the window traits, this mostly includes memory sharing and synchronisation extensions
     for (auto& ext : xrVulkanReqs.instanceExtensions)
     {
       if (std::find(windowTraits->instanceExtensionNames.begin(), windowTraits->instanceExtensionNames.end(), ext) == windowTraits->instanceExtensionNames.end() ) {
@@ -81,7 +87,7 @@ int main(int argc, char **argv) {
       }
     }
     
-    // TODO: For now, the window is just for instance creation, later it should also be used for mirror-window rendering
+    // TODO: For now, the window is just for instance creation, later it could also be used for mirror-window rendering
     auto desktopWindow = vsg::Window::create(windowTraits);
     auto vkInstance = desktopWindow->getOrCreateInstance();
     
@@ -103,6 +109,8 @@ int main(int argc, char **argv) {
     desktopWindow->setPhysicalDevice(physicalDevice);
 
     // Ensure the VkDevice has been initialised
+    // TODO: For now explicitly creating a device with just a graphics queue. OpenXR should be able to share the device directly from the window however,
+    //       which probably ties into rendering the mirror window as part of the XR render graph (If that doesn't affect framerates)
     /*desktopWindow->getOrCreateSurface();
     desktopWindow->getOrCreateDevice();*/
     vsg::ref_ptr<vsg::Device> vkDevice;
@@ -131,6 +139,9 @@ int main(int argc, char **argv) {
 
       graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, queueFamily, 0);
     }
+    
+    // TODO: Hide the desktop window, it doesn't render anything for now
+    desktopWindow = nullptr;
 
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
     auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);

@@ -30,7 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/vk/Device.h>
 #include <vulkan/vulkan.h>
 
-#include <list>
+#include <set>
 #include <string>
 
 namespace vsgvr {
@@ -40,8 +40,8 @@ namespace vsgvr {
       uint32_t maxVersion;
       std::string minVersionStr;
       std::string maxVersionStr;
-      std::list<std::string> instanceExtensions;
-      std::list<std::string> deviceExtensions;
+      std::set<std::string> instanceExtensions;
+      std::set<std::string> deviceExtensions;
     };
 
     struct VulkanGraphicsRequirements
