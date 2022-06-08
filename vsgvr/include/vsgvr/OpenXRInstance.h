@@ -26,27 +26,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/OpenXRCommon.h>
 #include <vsgvr/OpenXRTraits.h>
-#include <vsgvr/OpenXREventHandler.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan2.h>
-#include <vsgvr/OpenXRSession.h>
-
-#include <vsg/viewer/CommandGraph.h>
-#include <vsg/viewer/RecordAndSubmitTask.h>
-#include <vsg/viewer/RenderGraph.h>
-#include <vsg/ui/FrameStamp.h>
-
-#include <string>
-#include <vector>
 
 namespace vsgvr {
     class VSG_DECLSPEC OpenXRInstance : public vsg::Inherit<vsg::Object, OpenXRInstance>
     {
         public:
             OpenXRInstance() = delete;
-            OpenXRInstance(OpenXrTraits xrTraits, OpenXrVulkanTraits vkTraits);
+            OpenXRInstance(OpenXrTraits xrTraits);
             ~OpenXRInstance();
 
             XrInstance getInstance() const { return _instance; }
+            XrInstanceProperties getInstanceProperties() const { return _instanceProperties; }
+            XrSystemId getSystem() const { return _system; }
 
             // TODO: Greater control over view configuration - At the moment traits
             // are specified, and if invalid init fails. Between system init and
@@ -57,79 +48,20 @@ namespace vsgvr {
             
             void onEventInstanceLossPending(const XrEventDataInstanceLossPending& event);
 
-            // TODO: Update this - Summary level of what to do, based on the event updates.
-            //       Simple things don't need any input from app, so it might just reduce
-            //       to a boolean good/exit status.
-            enum class PollEventsResult {
-                Success,
-                RuntimeIdle,
-                NotRunning,
-                RunningDontRender,
-                RunningDoRender,
-                Exit,
-            };
-            /// Must be called regularly, within the render loop
-            /// The application must handle the returned values accordingly,
-            /// to avoid exceptions being thrown on subsequence calls
-            auto pollEvents() -> PollEventsResult;
-
-            bool advanceToNextFrame();
-            void releaseFrame();
-
-            // TODO: The 'Viewer' implementation, avoid this duplication
-            vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
-            std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, bool assignHeadlight = true);
-            void assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
-            // Manage the work to do each frame using RecordAndSubmitTasks.
-            using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
-            RecordAndSubmitTasks recordAndSubmitTasks;
-            void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
-            void update();
-            void recordAndSubmit();
 
         private:
-            void shutdownAll();
             void createInstance();
             void destroyInstance();
-            void getSystem();
+            void createSystem();
             // TODO: Support/validation of xr layers - Debug/validation, view type extensions
             void validateTraits();
-            void getViewConfiguration();
 
             OpenXrTraits _xrTraits;
-            OpenXrVulkanTraits _vkTraits;
-
-            OpenXREventHandler _eventHandler;
 
             XrInstance _instance = nullptr;
             XrInstanceProperties _instanceProperties;
 
             XrSystemId _system = 0;
             XrSystemProperties _systemProperties;
-
-            // Details of chosen _xrTraits.viewConfigurationType
-            // Details of individual views - recommended size / sampling
-            XrViewConfigurationProperties _viewConfigurationProperties;
-            std::vector<XrViewConfigurationView> _viewConfigurationViews;
-
-            // TODO: Action sets
-
-            // Graphics binding
-            void createGraphicsBinding();
-            void destroyGraphicsBinding();
-            vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> _graphicsBinding;
-
-            // Session
-            void createSession();
-            void destroySession();
-            vsg::ref_ptr<OpenXRSession> _session;
-
-            // Per-frame
-            XrFrameState _frameState;
-            vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
-
-            std::vector<XrCompositionLayerBaseHeader*> _layers;
-            XrCompositionLayerProjection _layerProjection;
-            std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
 }

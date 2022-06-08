@@ -31,11 +31,11 @@ using namespace vsg;
 
 namespace vsgvr {
 
-  OpenXRSession::OpenXRSession(XrInstance instance, XrSystemId system, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
+  OpenXRSession::OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
                                VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
     : _graphicsBinding(graphicsBinding)
   {
-    createSession(instance, system);
+    createSession(instance);
     createSwapchains(swapchainFormat, viewConfigs);
   }
 
@@ -45,14 +45,14 @@ namespace vsgvr {
     destroySession();
   }
 
-  void OpenXRSession::createSession(XrInstance instance, XrSystemId system)
+  void OpenXRSession::createSession(vsg::ref_ptr<OpenXRInstance> instance)
   {
     auto info = XrSessionCreateInfo();
     info.type = XR_TYPE_SESSION_CREATE_INFO;
     info.next = &_graphicsBinding->getBinding();
-    info.systemId = system;
+    info.systemId = instance->getSystem();
 
-    xr_check(xrCreateSession(instance, &info, &_session), "Failed to create OpenXR session");
+    xr_check(xrCreateSession(instance->getInstance(), &info, &_session), "Failed to create OpenXR session");
     _sessionState = XR_SESSION_STATE_IDLE;
 
     auto spaceCreateInfo = XrReferenceSpaceCreateInfo();

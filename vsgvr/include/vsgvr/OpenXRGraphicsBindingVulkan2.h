@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/OpenXRCommon.h>
 #include <vsgvr/OpenXRTraits.h>
 
+#include <vsgvr/OpenXRInstance.h>
 #include <vsgvr/OpenXRVkInstance.h>
 #include <vsgvr/OpenXRVkPhysicalDevice.h>
 #include <vsgvr/OpenXRVkDevice.h>
@@ -35,7 +36,7 @@ namespace vsgvr {
     {
         public:
             OpenXRGraphicsBindingVulkan2() = delete;
-            OpenXRGraphicsBindingVulkan2(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
+            OpenXRGraphicsBindingVulkan2(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
             ~OpenXRGraphicsBindingVulkan2();
 
             const XrGraphicsBindingVulkan2KHR& getBinding() const { return _binding; }
@@ -45,9 +46,9 @@ namespace vsgvr {
             vsg::ref_ptr<vsg::Device> getVkDevice() const { return _vkDevice; }
 
         private:
-            void createVulkanInstance(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
-            void createVulkanPhysicalDevice(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
-            void createVulkanDevice(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
+            void createVulkanInstance(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
+            void createVulkanPhysicalDevice(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
+            void createVulkanDevice(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits);
             void destroyVulkanDevice();
             void destroyVulkanPhysicalDevice();
             void destroyVulkanInstance();

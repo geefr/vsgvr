@@ -1,6 +1,7 @@
 #include <vsg/all.h>
 
 #include <vsgvr/OpenXRInstance.h>
+#include <vsgvr/OpenXRViewer.h>
 
 #include <iostream>
 
@@ -46,7 +47,8 @@ int main(int argc, char **argv) {
     // vsgvr::createDeviceNodes(vr, vsg_scene, controllerNodeLeft, controllerNodeRight);
 
     // The connection to OpenXR, equivalent to a vsg::Viewer
-    auto vr = vsgvr::OpenXRInstance::create(xrTraits, vkTraits);
+    auto xrInstance = vsgvr::OpenXRInstance::create(xrTraits);
+    auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, vkTraits);
 
     // add the CommandGraph to render the scene
     auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, true);
@@ -59,17 +61,17 @@ int main(int argc, char **argv) {
     for(;;)
     {
       auto pol = vr->pollEvents();
-      if( pol == vsgvr::OpenXRInstance::PollEventsResult::Exit)
+      if( pol == vsgvr::OpenXRViewer::PollEventsResult::Exit)
       {
         // User exited through VR overlay / XR runtime
         break;
       }
 
-      if( pol == vsgvr::OpenXRInstance::PollEventsResult::NotRunning)
+      if( pol == vsgvr::OpenXRViewer::PollEventsResult::NotRunning)
       {
         continue;
       }
-      else if (pol == vsgvr::OpenXRInstance::PollEventsResult::RuntimeIdle)
+      else if (pol == vsgvr::OpenXRViewer::PollEventsResult::RuntimeIdle)
       {
         // Reduce power usage, wait for XR to wake
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -79,7 +81,7 @@ int main(int argc, char **argv) {
       // The session is running, and a frame must be processed
       if (vr->advanceToNextFrame())
       {
-        if (pol == vsgvr::OpenXRInstance::PollEventsResult::RunningDontRender)
+        if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)
         {
           // XR Runtime requested that rendering is not performed (not visible to user)
         }

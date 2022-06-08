@@ -32,11 +32,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using namespace vsg;
 
 namespace vsgvr {
-  OpenXRGraphicsBindingVulkan2::OpenXRGraphicsBindingVulkan2(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
+  OpenXRGraphicsBindingVulkan2::OpenXRGraphicsBindingVulkan2(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
   {
-    createVulkanInstance(instance, system, traits, vkTraits);
-    createVulkanPhysicalDevice(instance, system, traits, vkTraits);
-    createVulkanDevice(instance, system, traits, vkTraits);
+    createVulkanInstance(instance, traits, vkTraits);
+    createVulkanPhysicalDevice(instance, traits, vkTraits);
+    createVulkanDevice(instance, traits, vkTraits);
 
     _binding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN2_KHR;
     _binding.next = nullptr;
@@ -54,13 +54,13 @@ namespace vsgvr {
     destroyVulkanInstance();
   }
 
-  void OpenXRGraphicsBindingVulkan2::createVulkanInstance(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
+  void OpenXRGraphicsBindingVulkan2::createVulkanInstance(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
   {
     {
       _graphicsRequirements.type = XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN2_KHR;
       _graphicsRequirements.next = nullptr;
-      auto fn = (PFN_xrGetVulkanGraphicsRequirements2KHR)xr_pfn(instance, "xrGetVulkanGraphicsRequirements2KHR");
-      xr_check(fn(instance, system, &_graphicsRequirements), "Failed to get Vulkan requirements");
+      auto fn = (PFN_xrGetVulkanGraphicsRequirements2KHR)xr_pfn(instance->getInstance(), "xrGetVulkanGraphicsRequirements2KHR");
+      xr_check(fn(instance->getInstance(), instance->getSystem(), &_graphicsRequirements), "Failed to get Vulkan requirements");
     }
     // min/max vulkan api version supported by the XR runtime (XR_MAKE_VERSION)
     auto vkMinVersion = VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(_graphicsRequirements.minApiVersionSupported), XR_VERSION_MINOR(_graphicsRequirements.minApiVersionSupported), XR_VERSION_PATCH(_graphicsRequirements.minApiVersionSupported));
@@ -71,12 +71,12 @@ namespace vsgvr {
 
     std::vector<std::string> vkInstanceExtensions;
     {
-      auto fn = (PFN_xrGetVulkanInstanceExtensionsKHR)xr_pfn(instance, "xrGetVulkanInstanceExtensionsKHR");
+      auto fn = (PFN_xrGetVulkanInstanceExtensionsKHR)xr_pfn(instance->getInstance(), "xrGetVulkanInstanceExtensionsKHR");
       uint32_t size = 0;
-      xr_check(fn(instance, system, 0, &size, nullptr), "Failed to get instance extensions (num)");
+      xr_check(fn(instance->getInstance(), instance->getSystem(), 0, &size, nullptr), "Failed to get instance extensions (num)");
       std::string names;
       names.reserve(size);
-      xr_check(fn(instance, system, size, &size, names.data()), "Failed to get instance extensions");
+      xr_check(fn(instance->getInstance(), instance->getSystem(), size, &size, names.data()), "Failed to get instance extensions");
       // Single-space delimited
       std::stringstream s(names);
       std::string name;
@@ -86,12 +86,12 @@ namespace vsgvr {
 
     std::vector<std::string> vkDeviceExtensions;
     {
-      auto GetDeviceExtensions = (PFN_xrGetVulkanDeviceExtensionsKHR)xr_pfn(instance, "xrGetVulkanDeviceExtensionsKHR");
+      auto GetDeviceExtensions = (PFN_xrGetVulkanDeviceExtensionsKHR)xr_pfn(instance->getInstance(), "xrGetVulkanDeviceExtensionsKHR");
       uint32_t size = 0;
-      xr_check(GetDeviceExtensions(instance, system, 0, &size, nullptr), "Failed to get device extensions (num)");
+      xr_check(GetDeviceExtensions(instance->getInstance(), instance->getSystem(), 0, &size, nullptr), "Failed to get device extensions (num)");
       std::string names;
       names.reserve(size);
-      xr_check(GetDeviceExtensions(instance, system, size, &size, names.data()), "Failed to get device extensions");
+      xr_check(GetDeviceExtensions(instance->getInstance(), instance->getSystem(), size, &size, names.data()), "Failed to get device extensions");
       // Single-space delimited
       std::stringstream s(names);
       std::string name;
@@ -125,42 +125,42 @@ namespace vsgvr {
       auto xrVulkanCreateInfo = XrVulkanInstanceCreateInfoKHR();
       xrVulkanCreateInfo.type = XR_TYPE_VULKAN_INSTANCE_CREATE_INFO_KHR;
       xrVulkanCreateInfo.next = NULL;
-      xrVulkanCreateInfo.systemId = system;
+      xrVulkanCreateInfo.systemId = instance->getSystem();
       xrVulkanCreateInfo.createFlags = 0;
       xrVulkanCreateInfo.pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
       xrVulkanCreateInfo.vulkanCreateInfo = &instanceInfo;
       // TODO: Support for custom allocators - vsg has those
       xrVulkanCreateInfo.vulkanAllocator = NULL;
 
-      auto CreateVulkanInstanceKHR = (PFN_xrCreateVulkanInstanceKHR)xr_pfn(instance, "xrCreateVulkanInstanceKHR");
+      auto CreateVulkanInstanceKHR = (PFN_xrCreateVulkanInstanceKHR)xr_pfn(instance->getInstance(), "xrCreateVulkanInstanceKHR");
       VkResult vkResult;
       VkInstance vkInstance;
       // TODO: Log vulkan error as well
-      xr_check(CreateVulkanInstanceKHR(instance, &xrVulkanCreateInfo, &vkInstance, &vkResult), "Failed to create Vulkan Instance");
+      xr_check(CreateVulkanInstanceKHR(instance->getInstance(), &xrVulkanCreateInfo, &vkInstance, &vkResult), "Failed to create Vulkan Instance");
 
       _vkInstance = vsgvr::OpenXRVkInstance::create(vkInstance);
     }
   }
-  void OpenXRGraphicsBindingVulkan2::createVulkanPhysicalDevice(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
+  void OpenXRGraphicsBindingVulkan2::createVulkanPhysicalDevice(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
   {
     // Now fetch the Vulkan device - OpenXR will require the specific device,
     // which is attached to the display
     {
-      auto fn = (PFN_xrGetVulkanGraphicsDevice2KHR)xr_pfn(instance, "xrGetVulkanGraphicsDevice2KHR");
+      auto fn = (PFN_xrGetVulkanGraphicsDevice2KHR)xr_pfn(instance->getInstance(), "xrGetVulkanGraphicsDevice2KHR");
 
       auto info = XrVulkanGraphicsDeviceGetInfoKHR();
       info.type = XR_TYPE_VULKAN_GRAPHICS_DEVICE_GET_INFO_KHR;
       info.next = nullptr;
-      info.systemId = system;
+      info.systemId = instance->getSystem();
       info.vulkanInstance = _vkInstance->getInstance();
 
       VkPhysicalDevice vkPhysicalDevice;
-      xr_check(fn(instance, &info, &vkPhysicalDevice), "Failed to get Vulkan physical device from OpenXR");
+      xr_check(fn(instance->getInstance(), &info, &vkPhysicalDevice), "Failed to get Vulkan physical device from OpenXR");
       _vkPhysicalDevice = vsgvr::OpenXRVkPhysicalDevice::create(_vkInstance, vkPhysicalDevice);
     }
   }
 
-  void OpenXRGraphicsBindingVulkan2::createVulkanDevice(XrInstance instance, XrSystemId system, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
+  void OpenXRGraphicsBindingVulkan2::createVulkanDevice(vsg::ref_ptr<OpenXRInstance> instance, OpenXrTraits traits, OpenXrVulkanTraits vkTraits)
   {
     auto qFamily = _vkPhysicalDevice->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
     if (qFamily < 0)
@@ -168,7 +168,7 @@ namespace vsgvr {
       throw Exception({ "Failed to locate graphics queue" });
     }
 
-    auto CreateVulkanDeviceKHR = (PFN_xrCreateVulkanDeviceKHR)xr_pfn(instance, "xrCreateVulkanDeviceKHR");
+    auto CreateVulkanDeviceKHR = (PFN_xrCreateVulkanDeviceKHR)xr_pfn(instance->getInstance(), "xrCreateVulkanDeviceKHR");
 
     // Create the Vulkan Device through OpenXR - It will add any extensions required
     float qPriorities[] = { 0.0f };
@@ -198,7 +198,7 @@ namespace vsgvr {
     auto info = XrVulkanDeviceCreateInfoKHR();
     info.type = XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR;
     info.next = nullptr;
-    info.systemId = system;
+    info.systemId = instance->getSystem();
     info.createFlags = 0;
     info.pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
     info.vulkanPhysicalDevice = _vkPhysicalDevice->getPhysicalDevice();
@@ -207,7 +207,7 @@ namespace vsgvr {
 
     VkDevice vkDevice;
     VkResult vkResult;
-    xr_check(CreateVulkanDeviceKHR(instance, &info, &vkDevice, &vkResult), "Failed to create Vulkan Device");
+    xr_check(CreateVulkanDeviceKHR(instance->getInstance(), &info, &vkDevice, &vkResult), "Failed to create Vulkan Device");
 
     _vkDevice = vsgvr::OpenXRVkDevice::create(_vkInstance, _vkPhysicalDevice, vkDevice);
     _vkDevice->getQueue(qFamily, 0); // To populate Device::_queues

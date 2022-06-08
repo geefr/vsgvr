@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/OpenXREventHandler.h>
 
-#include <vsgvr/OpenXRInstance.h>
+#include <vsgvr/OpenXRViewer.h>
 #include <vsgvr/OpenXRSession.h>
 
 #include <vsg/core/Exception.h>

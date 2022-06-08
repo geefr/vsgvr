@@ -24,6 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Inherit.h>
 #include <vsgvr/OpenXRCommon.h>
 
+#include <vsgvr/OpenXRInstance.h>
 #include <vsgvr/OpenXRGraphicsBindingVulkan2.h>
 #include <vsgvr/OpenXRSwapchain.h>
 
@@ -34,7 +35,7 @@ namespace vsgvr {
     {
         public:
             OpenXRSession() = delete;
-            OpenXRSession(XrInstance instance, XrSystemId system, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
+            OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan2> graphicsBinding,
                           VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
             ~OpenXRSession();
 
@@ -61,7 +62,7 @@ namespace vsgvr {
             Frame& frame(size_t view, size_t i) { return _viewData[view].frames[i]; }
             Frames& frames(size_t view) { return _viewData[view].frames; }
         private:
-            void createSession(XrInstance instance, XrSystemId system);
+            void createSession(vsg::ref_ptr<OpenXRInstance> instance);
             void createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
             void destroySwapchains();
             void destroySession();

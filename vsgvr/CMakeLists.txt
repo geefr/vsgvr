@@ -3,12 +3,14 @@ file(GLOB HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/vsgvr/*.h )
 
 set( SOURCES
   include/vsgvr/OpenXRCommon.h
+  include/vsgvr/OpenXRInstance.h
+  src/vsgvr/OpenXRInstance.cpp
   include/vsgvr/OpenXREventHandler.h
   src/vsgvr/OpenXREventHandler.cpp
   include/vsgvr/OpenXRTraits.h
   src/vsgvr/OpenXRTraits.cpp
-  include/vsgvr/OpenXRInstance.h
-  src/vsgvr/OpenXRInstance.cpp
+  include/vsgvr/OpenXRViewer.h
+  src/vsgvr/OpenXRViewer.cpp
   include/vsgvr/OpenXRGraphicsBindingVulkan2.h
   src/vsgvr/OpenXRGraphicsBindingVulkan2.cpp
   include/vsgvr/OpenXRSession.h
