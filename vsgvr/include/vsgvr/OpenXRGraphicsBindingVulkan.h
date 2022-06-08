@@ -56,7 +56,7 @@ namespace vsgvr {
             static VkPhysicalDevice getVulkanDeviceRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs);
 
             OpenXRGraphicsBindingVulkan() = delete;
-            OpenXRGraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice);
+            OpenXRGraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex);
             ~OpenXRGraphicsBindingVulkan();
 
             const XrGraphicsBindingVulkanKHR& getBinding() const { return _binding; }

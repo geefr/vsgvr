@@ -27,12 +27,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <vector>
 
 using namespace vsg;
 
 namespace vsgvr {
-  OpenXRGraphicsBindingVulkan::OpenXRGraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice)
+  OpenXRGraphicsBindingVulkan::OpenXRGraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex)
     : _vkInstance(vkInstance)
     , _vkPhysicalDevice(vkPhysicalDevice)
     , _vkDevice(vkDevice)
@@ -43,8 +44,8 @@ namespace vsgvr {
     _binding.instance = _vkInstance->getInstance();
     _binding.physicalDevice = _vkPhysicalDevice->getPhysicalDevice();
     _binding.device = _vkDevice->getDevice();
-    _binding.queueFamilyIndex = _vkPhysicalDevice->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-    _binding.queueIndex = 0;
+    _binding.queueFamilyIndex = queueFamilyIndex;
+    _binding.queueIndex = queueIndex;
   }
 
   OpenXRGraphicsBindingVulkan::~OpenXRGraphicsBindingVulkan() {}
@@ -74,13 +75,15 @@ namespace vsgvr {
       auto fn = (PFN_xrGetVulkanInstanceExtensionsKHR)xr_pfn(xrInstance->getInstance(), "xrGetVulkanInstanceExtensionsKHR");
       uint32_t size = 0;
       xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), 0, &size, nullptr), "Failed to get instance extensions (num)");
+
       std::string names;
-      names.reserve(size);
+      names.resize(size);
       xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), size, &size, names.data()), "Failed to get instance extensions");
+
       // Single-space delimited
       std::stringstream s(names);
       std::string name;
-      while (std::getline(s, name)) reqs.instanceExtensions.push_back(name);
+      while (std::getline(s, name, static_cast<char>(0x20))) reqs.instanceExtensions.push_back(name);
     }
 
     {
@@ -88,12 +91,12 @@ namespace vsgvr {
       uint32_t size = 0;
       xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), 0, &size, nullptr), "Failed to get device extensions (num)");
       std::string names;
-      names.reserve(size);
+      names.resize(size);
       xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), size, &size, names.data()), "Failed to get device extensions");
       // Single-space delimited
       std::stringstream s(names);
       std::string name;
-      while (std::getline(s, name)) reqs.deviceExtensions.push_back(name);
+      while (std::getline(s, name, static_cast<char>(0x20))) reqs.deviceExtensions.push_back(name);
     }
 
     return reqs;

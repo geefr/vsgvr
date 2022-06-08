@@ -106,6 +106,7 @@ int main(int argc, char **argv) {
     /*desktopWindow->getOrCreateSurface();
     desktopWindow->getOrCreateDevice();*/
     vsg::ref_ptr<vsg::Device> vkDevice;
+    vsg::ref_ptr<vsgvr::OpenXRGraphicsBindingVulkan> graphicsBinding;
     {
       vsg::Names requestedLayers;
       if (windowTraits->debugLayer)
@@ -127,10 +128,11 @@ int main(int argc, char **argv) {
       vsg::QueueSettings queueSettings{ vsg::QueueSetting{queueFamily, {1.0}} };
       vkDevice = vsg::Device::create(physicalDevice, queueSettings, validatedNames, deviceExtensions, windowTraits->deviceFeatures, vkInstance->getAllocationCallbacks());
       std::cout << "Created our own vsg::Device " << vkDevice << std::endl;
+
+      graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, queueFamily, 0);
     }
 
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
-    auto graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice);
     auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);
 
     // add the CommandGraph to render the scene
