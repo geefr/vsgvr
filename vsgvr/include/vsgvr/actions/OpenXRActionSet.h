@@ -43,6 +43,13 @@ namespace vsgvr {
             // each frame.
             std::vector<vsg::ref_ptr<OpenXRAction>> actions;
 
+            struct SuggestedInteractionBinding
+            {
+              OpenXRAction* action;
+              std::string path;
+            };
+            bool suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings);
+
         private:
             void createActionSet(OpenXRInstance* instance);
             void destroyActionSet();

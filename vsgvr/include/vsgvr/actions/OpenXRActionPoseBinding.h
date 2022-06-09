@@ -39,15 +39,19 @@ namespace vsgvr {
             OpenXRActionPoseBinding(OpenXRActionSet* actionSet, std::string name, std::string localisedName);
             virtual ~OpenXRActionPoseBinding();
 
-            bool suggestInteractionBinding(OpenXRInstance* instance, std::string interactionProfile, std::string posePath);
-
-            bool validBindings() const { return _anySuggestionSucceeded; }
             XrSpace getActionSpace() const { return _space; }
+
+            bool getTransformValid() const { return _transformValid; }
+            vsg::mat4 getTransform() const { return _transform; }
 
             void createActionSpace(OpenXRSession* session);
             void destroyActionSpace();
+
+            void setSpaceLocation(XrSpaceLocation location);
         private:
             XrSpace _space = nullptr;
-            bool _anySuggestionSucceeded = false;
+
+            bool _transformValid = false;
+            vsg::mat4 _transform;
     };
 }

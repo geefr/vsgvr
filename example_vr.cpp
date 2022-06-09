@@ -32,8 +32,14 @@ int main(int argc, char **argv) {
     if (!vsg_scene)
       return 0;
 
-    auto controllerNodeLeft = vsg::read_cast<vsg::Node>("controller.vsgt");
-    auto controllerNodeRight = vsg::read_cast<vsg::Node>("controller2.vsgt");
+    auto controllerNodeLeft = vsg::MatrixTransform::create();
+    controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt"));
+    vsg_scene->addChild(controllerNodeLeft);
+
+    auto controllerNodeRight = vsg::MatrixTransform::create();
+    controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt"));
+    vsg_scene->addChild(controllerNodeRight);
+
 
     // Initialise vr, and add nodes to the scene graph for each tracked device
     // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
@@ -158,20 +164,29 @@ int main(int argc, char **argv) {
     // TODO: Quick test of action sets / poses - Should be able to locate this space each frame, then turn it into a transform node update in the scene graph right?
     //       Probably easiest not to worry about pose-in-action-space - vsg can handle this
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
-    vr->actionSets.push_back(baseActionSet);
-
     auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
-    leftHandPoseBinding->suggestInteractionBinding(xrInstance, "/interaction_profiles/khr/simple_controller", "/user/hand/left/input/aim/pose" );
     baseActionSet->actions.push_back(leftHandPoseBinding);
-
     auto rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "right_hand", "Right Hand");
-    rightHandPoseBinding->suggestInteractionBinding(xrInstance, "/interaction_profiles/khr/simple_controller", "/user/hand/right/input/aim/pose" );
     baseActionSet->actions.push_back(rightHandPoseBinding);
+    // Ask OpenXR to bind the actions in the set
+    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
+          {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
+          {rightHandPoseBinding, "/user/hand/right/input/aim/pose"}
+       }))
+    {
+      // All action sets, which will be initialised in the viewer's session
+      vr->actionSets.push_back(baseActionSet);
 
-    // Set the active action set(s)
-    // These will be updated during the render loop, and update the scene graph accordingly
-    // TODO: Or they would if the pose binding was bound to a transform node somehow
-    vr->activeActionSets.push_back(baseActionSet);
+      // The active action set(s)
+      // These will be updated during the render loop, and update the scene graph accordingly
+      // Active action sets may be changed before calling pollEvents
+      vr->activeActionSets.push_back(baseActionSet);
+    }
+    else
+    {
+      std::cout << "Failed to configure interaction bindings for controllers" << std::endl;
+      return EXIT_FAILURE;
+    }
 
     // Render loop
     for(;;)
@@ -192,6 +207,17 @@ int main(int argc, char **argv) {
         // Reduce power usage, wait for XR to wake
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
+      }
+
+      // Scene graph updates
+      // TODO: This should be automatic, or handled by a graph traversal / node tags?
+      if (leftHandPoseBinding->getTransformValid())
+      {
+        controllerNodeLeft->matrix = leftHandPoseBinding->getTransform();
+      }
+      if (rightHandPoseBinding->getTransformValid())
+      {
+        controllerNodeRight->matrix = rightHandPoseBinding->getTransform();
       }
 
       // The session is running, and a frame must be processed

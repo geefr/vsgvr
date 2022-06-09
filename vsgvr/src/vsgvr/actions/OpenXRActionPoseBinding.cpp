@@ -25,6 +25,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Exception.h>
 #include "../OpenXRMacros.cpp"
 
+#include <vsg/maths/mat4.h>
+#include <vsg/maths/quat.h>
+#include <vsg/maths/transform.h>
+
 #include <iostream>
 
 namespace vsgvr
@@ -36,37 +40,6 @@ namespace vsgvr
     OpenXRActionPoseBinding::~OpenXRActionPoseBinding()
     {
         destroyActionSpace();
-    }
-
-    bool OpenXRActionPoseBinding::suggestInteractionBinding(OpenXRInstance* instance, std::string interactionProfile, std::string posePath)
-    {
-        // Suggest bindings for the pose
-        XrPath xrProfilePath;
-        xr_check(xrStringToPath(instance->getInstance(), interactionProfile.c_str(), &xrProfilePath));
-        XrPath xrPosePath;
-        xr_check(xrStringToPath(instance->getInstance(), posePath.c_str(), &xrPosePath));
-
-        auto actionBindings = XrActionSuggestedBinding();
-        actionBindings.action = _action;
-        actionBindings.binding = xrPosePath;
-
-        auto interactionProfileBinding = XrInteractionProfileSuggestedBinding();
-        interactionProfileBinding.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
-        interactionProfileBinding.next = nullptr;
-        interactionProfileBinding.interactionProfile = xrProfilePath;
-        interactionProfileBinding.countSuggestedBindings = 1;
-        interactionProfileBinding.suggestedBindings = &actionBindings;
-        auto result = xrSuggestInteractionProfileBindings(instance->getInstance(), &interactionProfileBinding);
-        if( XR_SUCCEEDED(result) )
-        {
-            _anySuggestionSucceeded = true;
-            return true;
-        }
-        else
-        {
-            std::cerr << "OpenXRActionPoseBinding::suggestInteractionBinding: Failed to suggest interaction binding (" << interactionProfile << " : " << posePath << "): " << to_string(result) << std::endl;
-            return false;
-        }
     }
 
     void OpenXRActionPoseBinding::createActionSpace(OpenXRSession* session)
@@ -90,5 +63,32 @@ namespace vsgvr
     {
         xr_check(xrDestroySpace(_space));
         _space = nullptr;
+    }
+
+    void OpenXRActionPoseBinding::setSpaceLocation(XrSpaceLocation location)
+    {
+      if ((location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) && 
+          (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT))
+      {
+        _transformValid = true;
+
+        auto q = vsg::dquat(
+          location.pose.orientation.x,
+          location.pose.orientation.y * -1.0,
+          location.pose.orientation.z,
+          location.pose.orientation.w * -1.0
+        );
+        auto rotateMat = vsg::rotate(q);
+
+        auto p = vsg::dvec3(location.pose.position.x, location.pose.position.y * -1.0, location.pose.position.z);
+        auto translateMat = vsg::translate(p);
+        _transform = vsg::inverse(translateMat * rotateMat);
+
+        std::cout << _name << ": " << p.x << "," << p.y << "," << p.z << std::endl;
+      }
+      else
+      {
+        _transformValid = false;
+      }
     }
 }

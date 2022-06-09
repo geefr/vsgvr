@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Exception.h>
 #include "../OpenXRMacros.cpp"
 
+#include <iostream>
+
 namespace vsgvr
 {
     OpenXRActionSet::OpenXRActionSet(OpenXRInstance *instance, std::string name, std::string localisedName, uint32_t priority)
@@ -54,5 +56,42 @@ namespace vsgvr
     void OpenXRActionSet::destroyActionSet()
     {
         xr_check(xrDestroyActionSet(_actionSet));
+    }
+
+
+    bool OpenXRActionSet::suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings)
+    {
+      XrPath xrProfilePath;
+      auto res = xrStringToPath(instance->getInstance(), interactionProfile.c_str(), &xrProfilePath);
+      if (!XR_SUCCEEDED(res))
+      {
+        std::cerr << "OpenXRActionSet::suggestInteractionBindings: xrStringToPath(" << interactionProfile << "): " << to_string(res) << std::endl;
+        return false;
+      }
+
+      std::vector<XrActionSuggestedBinding> actionBindings;
+      for( auto& b : bindings )
+      {  
+        XrPath xrPath;
+        xr_check(xrStringToPath(instance->getInstance(), b.path.c_str(), &xrPath));
+        actionBindings.push_back(XrActionSuggestedBinding{b.action->getAction(), xrPath});
+      }
+
+      auto interactionProfileBinding = XrInteractionProfileSuggestedBinding();
+      interactionProfileBinding.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
+      interactionProfileBinding.next = nullptr;
+      interactionProfileBinding.interactionProfile = xrProfilePath;
+      interactionProfileBinding.countSuggestedBindings = actionBindings.size();
+      interactionProfileBinding.suggestedBindings = actionBindings.data();
+      auto result = xrSuggestInteractionProfileBindings(instance->getInstance(), &interactionProfileBinding);
+      if (XR_SUCCEEDED(result))
+      {
+        return true;
+      }
+      else
+      {
+        std::cerr << "OpenXRActionPoseBinding::suggestInteractionBinding: Failed to suggest interaction bindings (" << interactionProfile << "): " << to_string(result) << std::endl;
+        return false;
+      }
     }
 }

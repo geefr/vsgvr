@@ -578,16 +578,32 @@ namespace vsgvr
 
   void OpenXRViewer::syncActions()
   {
-    if( !activeActionSets.empty() )
+    if( activeActionSets.empty() ) return;
+
+    // Sync the active action sets
+    auto info = XrActionsSyncInfo();
+    info.type = XR_TYPE_ACTIONS_SYNC_INFO;
+    info.next = nullptr;
+    std::vector<XrActiveActionSet> d;
+    for( auto& actionSet : activeActionSets ) d.push_back({actionSet->getActionSet(), XR_NULL_PATH});
+    info.countActiveActionSets = d.size();
+    info.activeActionSets = d.data();
+    xr_check(xrSyncActions(_session->getSession(), &info));
+
+    // Extract action and pose information
+    for (auto& actionSet : activeActionSets)
     {
-      auto info = XrActionsSyncInfo();
-      info.type = XR_TYPE_ACTIONS_SYNC_INFO;
-      info.next = nullptr;
-      std::vector<XrActiveActionSet> d;
-      for( auto& actionSet : activeActionSets ) d.push_back({actionSet->getActionSet(), XR_NULL_PATH});
-      info.countActiveActionSets = d.size();
-      info.activeActionSets = d.data();
-      xr_check(xrSyncActions(_session->getSession(), &info));
+      for (auto& action : actionSet->actions)
+      {
+        if (auto a = action.cast<OpenXRActionPoseBinding>())
+        {
+          auto location = XrSpaceLocation();
+          location.type = XR_TYPE_SPACE_LOCATION;
+          location.next = nullptr;
+          xr_check(xrLocateSpace(a->getActionSpace(), _session->getSpace(), _frameState.predictedDisplayTime, &location));
+          a->setSpaceLocation(location);
+        }
+      }
     }
   }
 
@@ -612,11 +628,6 @@ namespace vsgvr
         {
           if( auto a = action.cast<OpenXRActionPoseBinding>() )
           {
-            if( !a->validBindings() )
-            {
-              std::cerr << "Ignoring invalid action: " + a->getName() << std::endl;
-              continue;
-            }
             a->createActionSpace(_session);
           }
         }
