@@ -155,6 +155,10 @@ int main(int argc, char **argv) {
     auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);
 
     // add the CommandGraph to render the scene
+    // TODO: For now, add an ambient light - Adding a headlight works but technically results in a different light source for each eye
+    auto ambient = vsg::AmbientLight::create();
+    ambient->intensity = 0.4f;
+    vsg_scene->addChild(ambient);
     auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, false);
     vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
