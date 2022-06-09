@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
     auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);
 
     // add the CommandGraph to render the scene
-    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, true);
+    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, false);
     vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
 
     // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
@@ -211,6 +211,8 @@ int main(int argc, char **argv) {
 
       // Scene graph updates
       // TODO: This should be automatic, or handled by a graph traversal / node tags?
+      // TODO: The transforms / spaces on these need to be validated. Visually they're correct, 
+      //       but at the moment there's a rotate/invert within the display matrices.
       if (leftHandPoseBinding->getTransformValid())
       {
         controllerNodeLeft->matrix = leftHandPoseBinding->getTransform();

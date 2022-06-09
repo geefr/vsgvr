@@ -74,17 +74,17 @@ namespace vsgvr
 
         auto q = vsg::dquat(
           location.pose.orientation.x,
-          location.pose.orientation.y * -1.0,
+          location.pose.orientation.y,
           location.pose.orientation.z,
-          location.pose.orientation.w * -1.0
+          location.pose.orientation.w
         );
         auto rotateMat = vsg::rotate(q);
 
-        auto p = vsg::dvec3(location.pose.position.x, location.pose.position.y * -1.0, location.pose.position.z);
+        auto p = vsg::dvec3(location.pose.position.x, location.pose.position.y, location.pose.position.z);
         auto translateMat = vsg::translate(p);
-        _transform = vsg::inverse(translateMat * rotateMat);
+        _transform = translateMat * rotateMat;
 
-        std::cout << _name << ": " << p.x << "," << p.y << "," << p.z << std::endl;
+        // std::cout << _name << ": " << p.x << "," << p.y << "," << p.z << std::endl;
       }
       else
       {
