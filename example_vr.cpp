@@ -239,10 +239,11 @@ int main(int argc, char **argv) {
           vr->update();
           vr->recordAndSubmit();
         }
-
-        // End the frame, and present to user
-        vr->releaseFrame();
       }
+ 
+      // End the frame, and present to user
+      // Frames must be released, even if the previous advanceToNextFrame returned false (dontrender)
+      vr->releaseFrame();
     }
 
     return EXIT_SUCCESS;
