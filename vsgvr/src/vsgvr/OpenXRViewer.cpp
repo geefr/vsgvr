@@ -44,6 +44,7 @@ namespace vsgvr
   OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
     , _graphicsBinding(graphicsBinding)
+    // , updateOperations(UpdateOperations::create())
   {
     getViewConfiguration();
     createSession();
@@ -164,6 +165,8 @@ namespace vsgvr
         task->databasePager->updateSceneGraph(_frameStamp);
       }
     }
+
+    // updateOperations->run();
   }
 
   void OpenXRViewer::recordAndSubmit()
@@ -418,10 +421,15 @@ namespace vsgvr
 
   void OpenXRViewer::compile(ref_ptr<ResourceHints> hints)
   {
+    // TODO: This should be unified with the vsg Viewer::compile
+    //       there's no real need for it to be copied here
     if (recordAndSubmitTasks.empty())
     {
       return;
     }
+
+    // TODO: CompileManager requires a child class of Viewer
+    // if (!compileManager) compileManager = CompileManager::create(*this, hints);
 
     bool containsPagedLOD = false;
     ref_ptr<DatabasePager> databasePager;
@@ -505,37 +513,32 @@ namespace vsgvr
     // create the Vulkan objects
     for (auto& task : recordAndSubmitTasks)
     {
-      std::set<Device*> devices;
+        std::set<Device*> devices;
 
-      bool task_containsPagedLOD = false;
+        bool task_containsPagedLOD = false;
 
-      for (auto& commandGraph : task->commandGraphs)
-      {
-        if (commandGraph->device) devices.insert(commandGraph->device);
-
-        auto& deviceResource = deviceResourceMap[commandGraph->device];
-        auto& resourceRequirements = deviceResource.collectResources.requirements;
-        commandGraph->maxSlot = resourceRequirements.maxSlot;
-        commandGraph->accept(*deviceResource.compile);
-
-        if (resourceRequirements.containsPagedLOD) task_containsPagedLOD = true;
-      }
-
-      if (task_containsPagedLOD)
-      {
-        if (!task->databasePager) task->databasePager = databasePager;
-      }
-
-      if (task->databasePager)
-      {
-        // crude hack for taking first device as the one for the DatabasePager to compile resources for.
         for (auto& commandGraph : task->commandGraphs)
         {
-          auto& deviceResource = deviceResourceMap[commandGraph->device];
-          task->databasePager->compileTraversal = deviceResource.compile;
-          break;
+            if (commandGraph->device) devices.insert(commandGraph->device);
+
+            auto& deviceResource = deviceResourceMap[commandGraph->device];
+            auto& resourceRequirements = deviceResource.collectResources.requirements;
+            commandGraph->maxSlot = resourceRequirements.maxSlot;
+            commandGraph->accept(*deviceResource.compile);
+
+            if (resourceRequirements.containsPagedLOD) task_containsPagedLOD = true;
         }
-      }
+
+        if (task_containsPagedLOD)
+        {
+            if (!task->databasePager) task->databasePager = databasePager;
+        }
+
+        if (task->databasePager)
+        {
+          // TODO: CompileManager requires a child class of Viewer
+          // task->databasePager->compileManager = compileManager;
+        }
     }
 
     // record any transfer commands
@@ -663,4 +666,10 @@ namespace vsgvr
     destroyActionSpaces();
     _session = 0;
   }
+/*
+  void updateXRViewer(OpenXRViewer& viewer, const vsg::CompileResult& compileResult)
+  {
+    updateTasks(viewer.recordAndSubmitTasks, viewer.compileManager, compileResult);
+  }
+  */
 }

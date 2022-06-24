@@ -33,6 +33,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/viewer/CommandGraph.h>
 #include <vsg/viewer/RecordAndSubmitTask.h>
+#include <vsg/viewer/CompileManager.h>
+#include <vsg/viewer/UpdateOperations.h>
 #include <vsg/viewer/RenderGraph.h>
 #include <vsg/ui/FrameStamp.h>
 
@@ -63,6 +65,18 @@ namespace vsgvr {
             /// to avoid exceptions being thrown on subsequence calls
             auto pollEvents() -> PollEventsResult;
 
+/*
+            /// thread safe container for update operations
+            vsg::ref_ptr<vsg::UpdateOperations> updateOperations;
+
+            /// add an update operation
+            void addUpdateOperation(vsg::ref_ptr<vsg::Operation> op, vsg::UpdateOperations::RunBehavior runBehavior = vsg::UpdateOperations::ONE_TIME)
+            {
+                updateOperations->add(op, runBehavior);
+            }
+
+            vsg::ref_ptr<vsg::CompileManager> compileManager;
+*/
             bool advanceToNextFrame();
             void releaseFrame();
 
@@ -121,4 +135,7 @@ namespace vsgvr {
             XrCompositionLayerProjection _layerProjection;
             std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
+
+    /// update Viewer data structures to match the needs of newly compile subgraph
+    // extern VSG_DECLSPEC void updateXRViewer(OpenXRViewer& viewer, const vsg::CompileResult& compileResult);
 }

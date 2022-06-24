@@ -223,7 +223,7 @@ namespace vsgvr {
       {
         // ensure image attachments are setup on GPU.
         ref_ptr<CommandPool> commandPool = CommandPool::create(_graphicsBinding->getVkDevice(), graphicsFamily);
-        submitCommandsToQueue(_graphicsBinding->getVkDevice(), commandPool, _graphicsBinding->getVkDevice()->getQueue(graphicsFamily), [&](CommandBuffer& commandBuffer) {
+        submitCommandsToQueue(commandPool, _graphicsBinding->getVkDevice()->getQueue(graphicsFamily), [&](CommandBuffer& commandBuffer) {
           auto depthImageBarrier = ImageMemoryBarrier::create(
             0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
