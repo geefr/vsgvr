@@ -3,6 +3,8 @@
 #include <vsgvr/VRViewer.h>
 #include <vsgvr/openvr/OpenVRContext.h>
 
+#include <iostream>
+
 int main(int argc, char **argv) {
   try
   {
