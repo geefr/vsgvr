@@ -1,32 +1,32 @@
-#vsga 0.3.1
+#vsga 1.0.0
 Root id=1 vsg::MatrixTransform
 {
-  NumUserObjects 0
+  userObjects 0
   children 1
   vsg::Node id=2 vsg::Group
   {
-    NumUserObjects 0
+    userObjects 0
     children 8
     vsg::Node id=3 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
       vsg::Node id=4 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
         vsg::Node id=5 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
           Array id=6 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
              1 -1 -1 1 -1 -1 1 1 1 1 1 1
              1 1 1 1 -1 1 1 -1 1 1 -1 1
              -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
@@ -35,11 +35,11 @@ Root id=1 vsg::MatrixTransform
           }
           Array id=7 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
              0 0 -1 1 0 -0 0 0 1 0 1 -0
              1 0 -0 0 -1 -0 0 0 1 1 0 -0
              -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
@@ -48,28 +48,28 @@ Root id=1 vsg::MatrixTransform
           }
           Array id=8 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
              0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
              0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
              0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
           }
           Array id=9 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
           Indices id=10 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 36
-            Storage id=0
-            Data 17 13 0 17 0 4 5 2 8 5 8 11
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
              16 3 9 16 9 22 10 6 19 10 19 23
              1 20 7 1 14 20 21 18 12 21 12 15
           }
@@ -82,30 +82,30 @@ Root id=1 vsg::MatrixTransform
         stateCommands 3
         vsg::StateCommand id=11 vsg::BindGraphicsPipeline
         {
-          NumUserObjects 0
+          userObjects 0
           slot 0
           pipeline id=12 vsg::GraphicsPipeline
           {
-            NumUserObjects 0
+            userObjects 0
             layout id=13 vsg::PipelineLayout
             {
-              NumUserObjects 0
-              Flags 0
-              NumDescriptorSetLayouts 2
-              DescriptorSetLayout id=14 vsg::DescriptorSetLayout
+              userObjects 0
+              flags 0
+              setLayouts 2
+              descriptorLayout id=14 vsg::DescriptorSetLayout
               {
-                NumUserObjects 0
-                NumDescriptorSetLayoutBindings 1
+                userObjects 0
+                bindings 1
                 binding 10
                 descriptorType 6
                 descriptorCount 1
                 stageFlags 16
               }
-              DescriptorSetLayout id=15 vsg::ViewDescriptorSetLayout
+              descriptorLayout id=15 vsg::ViewDescriptorSetLayout
               {
-                NumUserObjects 0
+                userObjects 0
               }
-              NumPushConstantRanges 1
+              pushConstantRanges 1
               stageFlags 1
               offset 0
               size 128
@@ -113,96 +113,12 @@ Root id=1 vsg::MatrixTransform
             stages 2
             vsg::ShaderStage id=16 vsg::ShaderStage
             {
-              NumUserObjects 0
+              userObjects 0
               stage 1
               entryPointName "main"
               module id=17 vsg::ShaderModule
               {
-                NumUserObjects 0
-                Source "#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-#pragma import_defines (VSG_INSTANCE_POSITIONS, VSG_DISPLACEMENT_MAP)
-
-layout(push_constant) uniform PushConstants {
-    mat4 projection;
-    mat4 modelView;
-} pc;
-
-#ifdef VSG_DISPLACEMENT_MAP
-layout(binding = 6) uniform sampler2D displacementMap;
-#endif
-
-layout(location = 0) in vec3 vsg_Vertex;
-layout(location = 1) in vec3 vsg_Normal;
-layout(location = 2) in vec2 vsg_TexCoord0;
-layout(location = 3) in vec4 vsg_Color;
-
-#ifdef VSG_INSTANCE_POSITIONS
-layout(location = 4) in vec3 vsg_position;
-#endif
-
-layout(location = 0) out vec3 eyePos;
-layout(location = 1) out vec3 normalDir;
-layout(location = 2) out vec4 vertexColor;
-layout(location = 3) out vec2 texCoord0;
-
-layout(location = 5) out vec3 viewDir;
-
-out gl_PerVertex{ vec4 gl_Position; };
-
-void main()
-{
-    vec4 vertex = vec4(vsg_Vertex, 1.0);
-    vec4 normal = vec4(vsg_Normal, 0.0);
-
-#ifdef VSG_DISPLACEMENT_MAP
-    // TODO need to pass as as uniform or per instance attributes
-    vec3 scale = vec3(1.0, 1.0, 1.0);
-
-    vertex.xyz = vertex.xyz + vsg_Normal * (texture(displacementMap, vsg_TexCoord0.st).s * scale.z);
-
-    float s_delta = 0.01;
-    float width = 0.0;
-
-    float s_left = max(vsg_TexCoord0.s - s_delta, 0.0);
-    float s_right = min(vsg_TexCoord0.s + s_delta, 1.0);
-    float t_center = vsg_TexCoord0.t;
-    float delta_left_right = (s_right - s_left) * scale.x;
-    float dz_left_right = (texture(displacementMap, vec2(s_right, t_center)).s - texture(displacementMap, vec2(s_left, t_center)).s) * scale.z;
-
-    // TODO need to handle different origins of displacementMap vs diffuseMap etc,
-    float t_delta = s_delta;
-    float t_bottom = max(vsg_TexCoord0.t - t_delta, 0.0);
-    float t_top = min(vsg_TexCoord0.t + t_delta, 1.0);
-    float s_center = vsg_TexCoord0.s;
-    float delta_bottom_top = (t_top - t_bottom) * scale.y;
-    float dz_bottom_top = (texture(displacementMap, vec2(s_center, t_top)).s - texture(displacementMap, vec2(s_center, t_bottom)).s) * scale.z;
-
-    vec3 dx = normalize(vec3(delta_left_right, 0.0, dz_left_right));
-    vec3 dy = normalize(vec3(0.0, delta_bottom_top, -dz_bottom_top));
-    vec3 dz = normalize(cross(dx, dy));
-
-    normal.xyz = normalize(dx * vsg_Normal.x + dy * vsg_Normal.y + dz * vsg_Normal.z);
-#endif
-
-
-#ifdef VSG_INSTANCE_POSITIONS
-   vertex.xyz = vertex.xyz + vsg_position;
-#endif
-
-    gl_Position = (pc.projection * pc.modelView) * vertex;
-
-    eyePos = (pc.modelView * vertex).xyz;
-
-    vec4 lpos = /*vsg_LightSource.position*/ vec4(0.0, 0.0, 1.0, 0.0);
-    viewDir = - (pc.modelView * vertex).xyz;
-    normalDir = (pc.modelView * normal).xyz;
-
-    vertexColor = vsg_Color;
-    texCoord0 = vsg_TexCoord0;
-}
-"
+                userObjects 0
                 hints id=18 vsg::ShaderCompileSettings
                 {
                   vulkanVersion 4194304
@@ -211,13 +127,13 @@ void main()
                   defaultVersion 450
                   target 65536
                   forwardCompatible 0
-                  defines 3
-                  element "VSG_TWO_SIDED_LIGHTING"
-                  element "VSG_WORKFLOW_SPECGLOSS"
+                  defines 2
                   element "VSG_VIEW_LIGHT_DATA"
+                  element "VSG_WORKFLOW_SPECGLOSS"
                 }
-                SPIRVSize 583
-                SPIRV 119734787 65536 524298 79 0 131089 1 393227 1 1280527431 1685353262 808793134
+                source ""
+                code 583
+                 119734787 65536 524298 79 0 131089 1 393227 1 1280527431 1685353262 808793134
                  0 196622 0 1 983055 0 4 1852399981 0 12 20 29
                  48 56 63 69 71 75 77 196611 2 450 589828 1096764487
                  1935622738 1918988389 1600484449 1684105331 1868526181 1667590754 29556 262149 4 1852399981 0 262149
@@ -271,485 +187,28 @@ void main()
             }
             vsg::ShaderStage id=19 vsg::ShaderStage
             {
-              NumUserObjects 0
+              userObjects 0
               stage 16
               entryPointName "main"
               module id=20 vsg::ShaderModule
               {
-                NumUserObjects 0
-                Source "#version 450
-#extension GL_ARB_separate_shader_objects : enable
-#pragma import_defines (VSG_DIFFUSE_MAP, VSG_GREYSACLE_DIFFUSE_MAP, VSG_EMISSIVE_MAP, VSG_LIGHTMAP_MAP, VSG_NORMAL_MAP, VSG_METALLROUGHNESS_MAP, VSG_SPECULAR_MAP, VSG_TWO_SIDED_LIGHTING, VSG_WORKFLOW_SPECGLOSS, VSG_VIEW_LIGHT_DATA)
-
-const float PI = 3.14159265359;
-const float RECIPROCAL_PI = 0.31830988618;
-const float RECIPROCAL_PI2 = 0.15915494;
-const float EPSILON = 1e-6;
-const float c_MinRoughness = 0.04;
-
-#ifdef VSG_DIFFUSE_MAP
-layout(binding = 0) uniform sampler2D diffuseMap;
-#endif
-
-#ifdef VSG_METALLROUGHNESS_MAP
-layout(binding = 1) uniform sampler2D mrMap;
-#endif
-
-#ifdef VSG_NORMAL_MAP
-layout(binding = 2) uniform sampler2D normalMap;
-#endif
-
-#ifdef VSG_LIGHTMAP_MAP
-layout(binding = 3) uniform sampler2D aoMap;
-#endif
-
-#ifdef VSG_EMISSIVE_MAP
-layout(binding = 4) uniform sampler2D emissiveMap;
-#endif
-
-#ifdef VSG_SPECULAR_MAP
-layout(binding = 5) uniform sampler2D specularMap;
-#endif
-
-layout(binding = 10) uniform PbrData
-{
-    vec4 baseColorFactor;
-    vec4 emissiveFactor;
-    vec4 diffuseFactor;
-    vec4 specularFactor;
-    float metallicFactor;
-    float roughnessFactor;
-    float alphaMask;
-    float alphaMaskCutoff;
-} pbr;
-
-layout(set = 1, binding = 0) uniform LightData
-{
-    vec4 values[64];
-} lightData;
-
-layout(location = 0) in vec3 eyePos;
-layout(location = 1) in vec3 normalDir;
-layout(location = 2) in vec4 vertexColor;
-layout(location = 3) in vec2 texCoord0;
-layout(location = 5) in vec3 viewDir;
-
-layout(location = 0) out vec4 outColor;
-
-
-// Encapsulate the various inputs used by the various functions in the shading equation
-// We store values in this struct to simplify the integration of alternative implementations
-// of the shading terms, outlined in the Readme.MD Appendix.
-struct PBRInfo
-{
-    float NdotL;                  // cos angle between normal and light direction
-    float NdotV;                  // cos angle between normal and view direction
-    float NdotH;                  // cos angle between normal and half vector
-    float LdotH;                  // cos angle between light direction and half vector
-    float VdotH;                  // cos angle between view direction and half vector
-    float VdotL;                  // cos angle between view direction and light direction
-    float perceptualRoughness;    // roughness value, as authored by the model creator (input to shader)
-    float metalness;              // metallic value at the surface
-    vec3 reflectance0;            // full reflectance color (normal incidence angle)
-    vec3 reflectance90;           // reflectance color at grazing angle
-    float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])
-    vec3 diffuseColor;            // color contribution from diffuse lighting
-    vec3 specularColor;           // color contribution from specular lighting
-};
-
-
-vec4 SRGBtoLINEAR(vec4 srgbIn)
-{
-    vec3 linOut = pow(srgbIn.xyz, vec3(2.2));
-    return vec4(linOut,srgbIn.w);
-}
-
-vec4 LINEARtoSRGB(vec4 srgbIn)
-{
-    vec3 linOut = pow(srgbIn.xyz, vec3(1.0 / 2.2));
-    return vec4(linOut, srgbIn.w);
-}
-
-float rcp(const in float value)
-{
-    return 1.0 / value;
-}
-
-float pow5(const in float value)
-{
-    return value * value * value * value * value;
-}
-
-// Find the normal for this fragment, pulling either from a predefined normal map
-// or from the interpolated mesh normal and tangent attributes.
-vec3 getNormal()
-{
-#ifdef VSG_NORMAL_MAP
-    // Perturb normal, see http://www.thetenthplanet.de/archives/1180
-    vec3 tangentNormal = texture(normalMap, texCoord0).xyz * 2.0 - 1.0;
-
-    //tangentNormal *= vec3(2,2,1);
-
-    vec3 q1 = dFdx(eyePos);
-    vec3 q2 = dFdy(eyePos);
-    vec2 st1 = dFdx(texCoord0);
-    vec2 st2 = dFdy(texCoord0);
-
-    vec3 N = normalize(normalDir);
-    vec3 T = normalize(q1 * st2.t - q2 * st1.t);
-    vec3 B = -normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-
-    return normalize(TBN * tangentNormal);
-#else
-    return normalize(normalDir);
-#endif
-}
-
-// Basic Lambertian diffuse
-// Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog
-// See also [1], Equation 1
-vec3 BRDF_Diffuse_Lambert(PBRInfo pbrInputs)
-{
-    return pbrInputs.diffuseColor * RECIPROCAL_PI;
-}
-
-vec3 BRDF_Diffuse_Custom_Lambert(PBRInfo pbrInputs)
-{
-    return pbrInputs.diffuseColor * RECIPROCAL_PI * pow(pbrInputs.NdotV, 0.5 + 0.3 * pbrInputs.perceptualRoughness);
-}
-
-// [Gotanda 2012, \"Beyond a Simple Physically Based Blinn-Phong Model in Real-Time\"]
-vec3 BRDF_Diffuse_OrenNayar(PBRInfo pbrInputs)
-{
-    float a = pbrInputs.alphaRoughness;
-    float s = a;// / ( 1.29 + 0.5 * a );
-    float s2 = s * s;
-    float VoL = 2 * pbrInputs.VdotH * pbrInputs.VdotH - 1;		// double angle identity
-    float Cosri = pbrInputs.VdotL - pbrInputs.NdotV * pbrInputs.NdotL;
-    float C1 = 1 - 0.5 * s2 / (s2 + 0.33);
-    float C2 = 0.45 * s2 / (s2 + 0.09) * Cosri * ( Cosri >= 0 ? 1.0 / max(pbrInputs.NdotL, pbrInputs.NdotV) : 1 );
-    return pbrInputs.diffuseColor / PI * ( C1 + C2 ) * ( 1 + pbrInputs.perceptualRoughness * 0.5 );
-}
-
-// [Gotanda 2014, \"Designing Reflectance Models for New Consoles\"]
-vec3 BRDF_Diffuse_Gotanda(PBRInfo pbrInputs)
-{
-    float a = pbrInputs.alphaRoughness;
-    float a2 = a * a;
-    float F0 = 0.04;
-    float VoL = 2 * pbrInputs.VdotH * pbrInputs.VdotH - 1;		// double angle identity
-    float Cosri = VoL - pbrInputs.NdotV * pbrInputs.NdotL;
-    float a2_13 = a2 + 1.36053;
-    float Fr = ( 1 - ( 0.542026*a2 + 0.303573*a ) / a2_13 ) * ( 1 - pow( 1 - pbrInputs.NdotV, 5 - 4*a2 ) / a2_13 ) * ( ( -0.733996*a2*a + 1.50912*a2 - 1.16402*a ) * pow( 1 - pbrInputs.NdotV, 1 + rcp(39*a2*a2+1) ) + 1 );
-    //float Fr = ( 1 - 0.36 * a ) * ( 1 - pow( 1 - NoV, 5 - 4*a2 ) / a2_13 ) * ( -2.5 * Roughness * ( 1 - NoV ) + 1 );
-    float Lm = ( max( 1 - 2*a, 0 ) * ( 1 - pow5( 1 - pbrInputs.NdotL ) ) + min( 2*a, 1 ) ) * ( 1 - 0.5*a * (pbrInputs.NdotL - 1) ) * pbrInputs.NdotL;
-    float Vd = ( a2 / ( (a2 + 0.09) * (1.31072 + 0.995584 * pbrInputs.NdotV) ) ) * ( 1 - pow( 1 - pbrInputs.NdotL, ( 1 - 0.3726732 * pbrInputs.NdotV * pbrInputs.NdotV ) / ( 0.188566 + 0.38841 * pbrInputs.NdotV ) ) );
-    float Bp = Cosri < 0 ? 1.4 * pbrInputs.NdotV * pbrInputs.NdotL * Cosri : Cosri;
-    float Lr = (21.0 / 20.0) * (1 - F0) * ( Fr * Lm + Vd + Bp );
-    return pbrInputs.diffuseColor * RECIPROCAL_PI * Lr;
-}
-
-vec3 BRDF_Diffuse_Burley(PBRInfo pbrInputs)
-{
-    float energyBias = mix(pbrInputs.perceptualRoughness, 0.0, 0.5);
-    float energyFactor = mix(pbrInputs.perceptualRoughness, 1.0, 1.0 / 1.51);
-    float fd90 = energyBias + 2.0 * pbrInputs.VdotH * pbrInputs.VdotH * pbrInputs.perceptualRoughness;
-    float f0 = 1.0;
-    float lightScatter = f0 + (fd90 - f0) * pow(1.0 - pbrInputs.NdotL, 5.0);
-    float viewScatter = f0 + (fd90 - f0) * pow(1.0 - pbrInputs.NdotV, 5.0);
-
-    return pbrInputs.diffuseColor * lightScatter * viewScatter * energyFactor;
-}
-
-vec3 BRDF_Diffuse_Disney(PBRInfo pbrInputs)
-{
-	float Fd90 = 0.5 + 2.0 * pbrInputs.perceptualRoughness * pbrInputs.VdotH * pbrInputs.VdotH;
-    vec3 f0 = vec3(0.1);
-	vec3 invF0 = vec3(1.0, 1.0, 1.0) - f0;
-	float dim = min(invF0.r, min(invF0.g, invF0.b));
-	float result = ((1.0 + (Fd90 - 1.0) * pow(1.0 - pbrInputs.NdotL, 5.0 )) * (1.0 + (Fd90 - 1.0) * pow(1.0 - pbrInputs.NdotV, 5.0 ))) * dim;
-	return pbrInputs.diffuseColor * result;
-}
-
-// The following equation models the Fresnel reflectance term of the spec equation (aka F())
-// Implementation of fresnel from [4], Equation 15
-vec3 specularReflection(PBRInfo pbrInputs)
-{
-    //return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance0) * pow(clamp(1.0 - pbrInputs.VdotH, 0.0, 1.0), 5.0);
-    return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance90*pbrInputs.reflectance0) * exp2((-5.55473 * pbrInputs.VdotH - 6.98316) * pbrInputs.VdotH);
-}
-
-// This calculates the specular geometric attenuation (aka G()),
-// where rougher material will reflect less light back to the viewer.
-// This implementation is based on [1] Equation 4, and we adopt their modifications to
-// alphaRoughness as input as originally proposed in [2].
-float geometricOcclusion(PBRInfo pbrInputs)
-{
-    float NdotL = pbrInputs.NdotL;
-    float NdotV = pbrInputs.NdotV;
-    float r = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;
-
-    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r + (1.0 - r) * (NdotL * NdotL)));
-    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r + (1.0 - r) * (NdotV * NdotV)));
-    return attenuationL * attenuationV;
-}
-
-// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())
-// Implementation from \"Average Irregularity Representation of a Roughened Surface for Ray Reflection\" by T. S. Trowbridge, and K. P. Reitz
-// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.
-float microfacetDistribution(PBRInfo pbrInputs)
-{
-    float roughnessSq = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;
-    float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;
-    return roughnessSq / (PI * f * f);
-}
-
-vec3 BRDF(vec3 u_LightColor, vec3 v, vec3 n, vec3 l, vec3 h, float perceptualRoughness, float metallic, vec3 specularEnvironmentR0, vec3 specularEnvironmentR90, float alphaRoughness, vec3 diffuseColor, vec3 specularColor, float ao)
-{
-    float unclmapped_NdotL = dot(n, l);
-
-    #ifdef VSG_TWO_SIDED_LIGHTING
-    if (unclmapped_NdotL < 0.0)
-    {
-        n = -n;
-        unclmapped_NdotL = -unclmapped_NdotL;
-    }
-    #endif
-
-    vec3 reflection = -normalize(reflect(v, n));
-    reflection.y *= -1.0f;
-
-    float NdotL = clamp(unclmapped_NdotL, 0.001, 1.0);
-    float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
-    float NdotH = clamp(dot(n, h), 0.0, 1.0);
-    float LdotH = clamp(dot(l, h), 0.0, 1.0);
-    float VdotH = clamp(dot(v, h), 0.0, 1.0);
-    float VdotL = clamp(dot(v, l), 0.0, 1.0);
-
-    PBRInfo pbrInputs = PBRInfo(NdotL,
-                                NdotV,
-                                NdotH,
-                                LdotH,
-                                VdotH,
-                                VdotL,
-                                perceptualRoughness,
-                                metallic,
-                                specularEnvironmentR0,
-                                specularEnvironmentR90,
-                                alphaRoughness,
-                                diffuseColor,
-                                specularColor);
-
-    // Calculate the shading terms for the microfacet specular shading model
-    vec3 F = specularReflection(pbrInputs);
-    float G = geometricOcclusion(pbrInputs);
-    float D = microfacetDistribution(pbrInputs);
-
-    // Calculation of analytical lighting contribution
-    vec3 diffuseContrib = (1.0 - F) * BRDF_Diffuse_Disney(pbrInputs);
-    vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
-    // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-    vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);
-
-    color *= ao;
-
-#ifdef VSG_EMISSIVE_MAP
-    vec3 emissive = SRGBtoLINEAR(texture(emissiveMap, texCoord0)).rgb * pbr.emissiveFactor.rgb;
-#else
-    vec3 emissive = pbr.emissiveFactor.rgb;
-#endif
-    color += emissive;
-
-    return color;
-}
-
-float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular)
-{
-    float perceivedDiffuse = sqrt(0.299 * diffuse.r * diffuse.r + 0.587 * diffuse.g * diffuse.g + 0.114 * diffuse.b * diffuse.b);
-    float perceivedSpecular = sqrt(0.299 * specular.r * specular.r + 0.587 * specular.g * specular.g + 0.114 * specular.b * specular.b);
-
-    if (perceivedSpecular < c_MinRoughness)
-    {
-        return 0.0;
-    }
-
-    float a = c_MinRoughness;
-    float b = perceivedDiffuse * (1.0 - maxSpecular) / (1.0 - c_MinRoughness) + perceivedSpecular - 2.0 * c_MinRoughness;
-    float c = c_MinRoughness - perceivedSpecular;
-    float D = max(b * b - 4.0 * a * c, 0.0);
-    return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
-}
-
-void main()
-{
-    float perceptualRoughness = 0.0;
-    float metallic;
-    vec3 diffuseColor;
-    vec4 baseColor;
-
-    float ambientOcclusion = 1.0;
-
-    vec3 f0 = vec3(0.04);
-
-#ifdef VSG_DIFFUSE_MAP
-    #ifdef VSG_GREYSACLE_DIFFUSE_MAP
-        float v = texture(diffuseMap, texCoord0.st).s * pbr.baseColorFactor;
-        baseColor = vertexColor * vec4(v, v, v, 1.0);
-    #else
-        baseColor = vertexColor * SRGBtoLINEAR(texture(diffuseMap, texCoord0)) * pbr.baseColorFactor;
-    #endif
-#else
-    baseColor = vertexColor * pbr.baseColorFactor;
-#endif
-
-    if (pbr.alphaMask == 1.0f)
-    {
-        if (baseColor.a < pbr.alphaMaskCutoff)
-            discard;
-    }
-
-#ifdef VSG_WORKFLOW_SPECGLOSS
-    #ifdef VSG_DIFFUSE_MAP
-        vec4 diffuse = SRGBtoLINEAR(texture(diffuseMap, texCoord0));
-    #else
-        vec4 diffuse = vec4(1.0);
-    #endif
-
-    #ifdef VSG_SPECULAR_MAP
-        vec3 specular = SRGBtoLINEAR(texture(specularMap, texCoord0)).rgb;
-        perceptualRoughness = 1.0 - texture(specularMap, texCoord0).a;
-    #else
-        vec3 specular = vec3(0.0);
-        perceptualRoughness = 0.0;
-    #endif
-
-        float maxSpecular = max(max(specular.r, specular.g), specular.b);
-
-        // Convert metallic value from specular glossiness inputs
-        metallic = convertMetallic(diffuse.rgb, specular, maxSpecular);
-
-        const float epsilon = 1e-6;
-        vec3 baseColorDiffusePart = diffuse.rgb * ((1.0 - maxSpecular) / (1 - c_MinRoughness) / max(1 - metallic, epsilon)) * pbr.diffuseFactor.rgb;
-        vec3 baseColorSpecularPart = specular - (vec3(c_MinRoughness) * (1 - metallic) * (1 / max(metallic, epsilon))) * pbr.specularFactor.rgb;
-        baseColor = vec4(mix(baseColorDiffusePart, baseColorSpecularPart, metallic * metallic), diffuse.a);
-#else
-        perceptualRoughness = pbr.roughnessFactor;
-        metallic = pbr.metallicFactor;
-
-    #ifdef VSG_METALLROUGHNESS_MAP
-        vec4 mrSample = texture(mrMap, texCoord0);
-        perceptualRoughness = mrSample.g * perceptualRoughness;
-        metallic = mrSample.b * metallic;
-    #endif
-#endif
-
-#ifdef VSG_LIGHTMAP_MAP
-    ambientOcclusion = texture(aoMap, texCoord0).r;
-#endif
-
-    diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
-    diffuseColor *= 1.0 - metallic;
-
-    float alphaRoughness = perceptualRoughness * perceptualRoughness;
-
-    vec3 specularColor = mix(f0, baseColor.rgb, metallic);
-
-    // Compute reflectance.
-    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
-
-    // For typical incident reflectance range (between 4% to 100%) set the grazing reflectance to 100% for typical fresnel effect.
-    // For very low reflectance range on highly diffuse objects (below 4%), incrementally reduce grazing reflecance to 0%.
-    float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
-    vec3 specularEnvironmentR0 = specularColor.rgb;
-    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
-
-    vec3 n = getNormal();
-    vec3 v = normalize(viewDir);    // Vector from surface point to camera
-
-    float shininess = 100.0f;
-
-    vec3 color = vec3(0.0, 0.0, 0.0);
-
-    vec4 lightNums = lightData.values[0];
-    int numAmbientLights = int(lightNums[0]);
-    int numDirectionalLights = int(lightNums[1]);
-    int numPointLights = int(lightNums[2]);
-    int numSpotLights = int(lightNums[3]);
-    int index = 1;
-    if (numAmbientLights>0)
-    {
-        // ambient lights
-        for(int i = 0; i<numAmbientLights; ++i)
-        {
-            vec4 ambient_color = lightData.values[index++];
-            color += (baseColor.rgb * ambient_color.rgb) * (ambient_color.a * ambientOcclusion);
-        }
-    }
-
-    if (numDirectionalLights>0)
-    {
-        // directional lights
-        for(int i = 0; i<numDirectionalLights; ++i)
-        {
-            vec4 lightColor = lightData.values[index++];
-            vec3 direction = -lightData.values[index++].xyz;
-
-            vec3 l = direction;         // Vector from surface point to light
-            vec3 h = normalize(l+v);    // Half vector between both l and v
-            float scale = lightColor.a;
-
-            color.rgb += BRDF(lightColor.rgb * scale, v, n, l, h, perceptualRoughness, metallic, specularEnvironmentR0, specularEnvironmentR90, alphaRoughness, diffuseColor, specularColor, ambientOcclusion);
-        }
-    }
-
-    if (numPointLights>0)
-    {
-        // point light
-        for(int i = 0; i<numPointLights; ++i)
-        {
-            vec4 lightColor = lightData.values[index++];
-            vec3 position = lightData.values[index++].xyz;
-            vec3 delta = position - eyePos;
-            float distance2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
-            vec3 direction = delta / sqrt(distance2);
-
-            vec3 l = direction;         // Vector from surface point to light
-            vec3 h = normalize(l+v);    // Half vector between both l and v
-            float scale = lightColor.a / distance2;
-
-            color.rgb += BRDF(lightColor.rgb * scale, v, n, l, h, perceptualRoughness, metallic, specularEnvironmentR0, specularEnvironmentR90, alphaRoughness, diffuseColor, specularColor, ambientOcclusion);
-        }
-    }
-
-    if (numSpotLights>0)
-    {
-        // spot light
-        for(int i = 0; i<numSpotLights; ++i)
-        {
-            vec4 lightColor = lightData.values[index++];
-            vec4 position_cosInnerAngle = lightData.values[index++];
-            vec4 lightDirection_cosOuterAngle = lightData.values[index++];
-
-            vec3 delta = position_cosInnerAngle.xyz - eyePos;
-            float distance2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
-            vec3 direction = delta / sqrt(distance2);
-            float dot_lightdirection = -dot(lightDirection_cosOuterAngle.xyz, direction);
-
-            vec3 l = direction;        // Vector from surface point to light
-            vec3 h = normalize(l+v);    // Half vector between both l and v
-            float scale = (lightColor.a * smoothstep(lightDirection_cosOuterAngle.w, position_cosInnerAngle.w, dot_lightdirection)) / distance2;
-
-            color.rgb += BRDF(lightColor.rgb * scale, v, n, l, h, perceptualRoughness, metallic, specularEnvironmentR0, specularEnvironmentR90, alphaRoughness, diffuseColor, specularColor, ambientOcclusion);
-        }
-    }
-
-    outColor = LINEARtoSRGB(vec4(color, baseColor.a));
-}
-"
-                hints id=18
-                SPIRVSize 6068
-                SPIRV 119734787 65536 524298 964 0 131089 1 393227 1 1280527431 1685353262 808793134
+                userObjects 0
+                hints id=21 vsg::ShaderCompileSettings
+                {
+                  vulkanVersion 4194304
+                  clientInputVersion 100
+                  language 0
+                  defaultVersion 450
+                  target 65536
+                  forwardCompatible 0
+                  defines 3
+                  element "VSG_TWO_SIDED_LIGHTING"
+                  element "VSG_VIEW_LIGHT_DATA"
+                  element "VSG_WORKFLOW_SPECGLOSS"
+                }
+                source ""
+                code 6068
+                 119734787 65536 524298 964 0 131089 1 393227 1 1280527431 1685353262 808793134
                  0 196622 0 1 720911 4 4 1852399981 0 75 471 600
                  759 949 963 196624 4 7 196611 2 450 589828 1096764487 1935622738
                  1918988389 1600484449 1684105331 1868526181 1667590754 29556 262149 4 1852399981 0 458757 11
@@ -1259,12 +718,12 @@ void main()
               NumSpecializationConstants 0
             }
             pipelineStates 6
-            vsg::GraphicsPipelineState id=21 vsg::ColorBlendState
+            vsg::GraphicsPipelineState id=22 vsg::ColorBlendState
             {
-              NumUserObjects 0
+              userObjects 0
               logicOp 3
               logicOpEnable 0
-              NumColorBlendAttachments 1
+              attachments 1
               blendEnable 0
               srcColorBlendFactor 0
               dstColorBlendFactor 0
@@ -1275,9 +734,9 @@ void main()
               colorWriteMask 15
               blendConstants 0 0 0 0
             }
-            vsg::GraphicsPipelineState id=22 vsg::DepthStencilState
+            vsg::GraphicsPipelineState id=23 vsg::DepthStencilState
             {
-              NumUserObjects 0
+              userObjects 0
               depthTestEnable 1
               depthWriteEnable 1
               depthCompareOp 4
@@ -1300,25 +759,25 @@ void main()
               minDepthBounds 0
               maxDepthBounds 1
             }
-            vsg::GraphicsPipelineState id=23 vsg::InputAssemblyState
+            vsg::GraphicsPipelineState id=24 vsg::InputAssemblyState
             {
-              NumUserObjects 0
+              userObjects 0
               topology 3
               primitiveRestartEnable 0
             }
-            vsg::GraphicsPipelineState id=24 vsg::MultisampleState
+            vsg::GraphicsPipelineState id=25 vsg::MultisampleState
             {
-              NumUserObjects 0
+              userObjects 0
               rasterizationSamples 1
               sampleShadingEnable 0
               minSampleShading 0
-              NumSampleMask 0
+              sampleMasks 0
               alphaToCoverageEnable 0
               alphaToOneEnable 0
             }
-            vsg::GraphicsPipelineState id=25 vsg::RasterizationState
+            vsg::GraphicsPipelineState id=26 vsg::RasterizationState
             {
-              NumUserObjects 0
+              userObjects 0
               depthClampEnable 0
               rasterizerDiscardEnable 0
               polygonMode 0
@@ -1330,9 +789,9 @@ void main()
               depthBiasSlopeFactor 1
               lineWidth 1
             }
-            vsg::GraphicsPipelineState id=26 vsg::VertexInputState
+            vsg::GraphicsPipelineState id=27 vsg::VertexInputState
             {
-              NumUserObjects 0
+              userObjects 0
               NumBindings 4
               binding 0
               stride 12
@@ -1367,31 +826,32 @@ void main()
             subpass 0
           }
         }
-        vsg::StateCommand id=27 vsg::BindDescriptorSet
+        vsg::StateCommand id=28 vsg::BindDescriptorSet
         {
-          NumUserObjects 0
+          userObjects 0
           slot 1
+          pipelineBindPoint 0
           layout id=13
           firstSet 0
-          descriptorSet id=28 vsg::DescriptorSet
+          descriptorSet id=29 vsg::DescriptorSet
           {
-            NumUserObjects 0
+            userObjects 0
             setLayout id=14
             descriptors 1
-            vsg::Descriptor id=29 vsg::DescriptorBuffer
+            vsg::Descriptor id=30 vsg::DescriptorBuffer
             {
-              NumUserObjects 0
+              userObjects 0
               dstBinding 10
               dstArrayElement 0
-              NumData 1
-              Data id=30 vsg::PbrMaterialValue
+              dataList 1
+              data id=31 vsg::PbrMaterialValue
               {
-                NumUserObjects 0
-                Layout 0 0 0 1 1 1 0 -1
-                Value                baseColorFactor 1 1 1 1
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.000607824 1 0.0829795 1
                 emissiveFactor 0 0 0 1
-                diffuseFactor 1 1 1 1
-                specularFactor 0 0 0 1
+                diffuseFactor 0.000607824 1 0.0829795 1
+                specularFactor 0.2 0.2 0.2 1
                 metallicFactor 1
                 roughnessFactor 1
                 alphaMask 1
@@ -1400,10 +860,11 @@ void main()
               }
             }
           }
+          dynamicOffsets 0
         }
-        vsg::StateCommand id=31 vsg::BindViewDescriptorSets
+        vsg::StateCommand id=32 vsg::BindViewDescriptorSets
         {
-          NumUserObjects 0
+          userObjects 0
           slot 2
           pipelineBindPoint 0
           layout id=13
@@ -1415,69 +876,69 @@ void main()
        -2.01494 2 0.983509 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=32 vsg::MatrixTransform
+    vsg::Node id=33 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=33 vsg::StateGroup
+      vsg::Node id=34 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=34 vsg::VertexIndexDraw
+        vsg::Node id=35 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=35 vsg::vec3Array
+          Array id=36 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
              1 -1 -1 1 -1 -1 1 1 1 1 1 1
              1 1 1 1 -1 1 1 -1 1 1 -1 1
              -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
              -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
              -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
           }
-          Array id=36 vsg::vec3Array
+          Array id=37 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
              0 0 -1 1 0 -0 0 0 1 0 1 -0
              1 0 -0 0 -1 -0 0 0 1 1 0 -0
              -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
              0 -1 -0 0 0 -1 -1 0 -0 0 0 1
              0 1 -0 -1 0 -0 0 -1 -0 0 0 1
           }
-          Array id=37 vsg::vec2Array
+          Array id=38 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
              0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
              0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
              0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
           }
-          Array id=38 vsg::vec4Value
+          Array id=39 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
-          Indices id=39 vsg::ushortArray
+          Indices id=40 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 36
-            Storage id=0
-            Data 17 13 0 17 0 4 5 2 8 5 8 11
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
              16 3 9 16 9 22 10 6 19 10 19 23
              1 20 7 1 14 20 21 18 12 21 12 15
           }
@@ -1489,77 +950,120 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=27
-        vsg::StateCommand id=31
+        vsg::StateCommand id=41 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=42 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=43 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=44 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=45 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.259799 0.165466 0.00276839 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.259799 0.165466 0.00276839 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 1
+                roughnessFactor 1
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=32
         prototypeArrayState id=0
       }
       matrix -0.1 0 -1.50996e-08 0 0 2 0 0 1.50996e-08 0 -0.1 0
        1.98506 2 -1.01649 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=40 vsg::MatrixTransform
+    vsg::Node id=46 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=41 vsg::StateGroup
+      vsg::Node id=47 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=42 vsg::VertexIndexDraw
+        vsg::Node id=48 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=43 vsg::vec3Array
+          Array id=49 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
              1 -1 -1 1 -1 -1 1 1 1 1 1 1
              1 1 1 1 -1 1 1 -1 1 1 -1 1
              -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
              -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
              -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
           }
-          Array id=44 vsg::vec3Array
+          Array id=50 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
              0 0 -1 1 0 -0 0 0 1 0 1 -0
              1 0 -0 0 -1 -0 0 0 1 1 0 -0
              -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
              0 -1 -0 0 0 -1 -1 0 -0 0 0 1
              0 1 -0 -1 0 -0 0 -1 -0 0 0 1
           }
-          Array id=45 vsg::vec2Array
+          Array id=51 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
              0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
              0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
              0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
           }
-          Array id=46 vsg::vec4Value
+          Array id=52 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
-          Indices id=47 vsg::ushortArray
+          Indices id=53 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 36
-            Storage id=0
-            Data 17 13 0 17 0 4 5 2 8 5 8 11
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
              16 3 9 16 9 22 10 6 19 10 19 23
              1 20 7 1 14 20 21 18 12 21 12 15
           }
@@ -1571,77 +1075,120 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=27
-        vsg::StateCommand id=31
+        vsg::StateCommand id=54 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=55 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=56 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=57 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=58 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.00319976 0.00940055 0.661864 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.00319976 0.00940055 0.661864 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 1
+                roughnessFactor 1
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=32
         prototypeArrayState id=0
       }
       matrix -0.1 0 -1.50996e-08 0 0 1 0 0 1.50996e-08 0 -0.1 0
        -2.01494 1 -1.01649 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=48 vsg::MatrixTransform
+    vsg::Node id=59 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=49 vsg::StateGroup
+      vsg::Node id=60 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=50 vsg::VertexIndexDraw
+        vsg::Node id=61 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=51 vsg::vec3Array
+          Array id=62 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
              1 -1 -1 1 -1 -1 1 1 1 1 1 1
              1 1 1 1 -1 1 1 -1 1 1 -1 1
              -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
              -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
              -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
           }
-          Array id=52 vsg::vec3Array
+          Array id=63 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
              0 0 -1 1 0 -0 0 0 1 0 1 -0
              1 0 -0 0 -1 -0 0 0 1 1 0 -0
              -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
              0 -1 -0 0 0 -1 -1 0 -0 0 0 1
              0 1 -0 -1 0 -0 0 -1 -0 0 0 1
           }
-          Array id=53 vsg::vec2Array
+          Array id=64 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
              0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
              0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
              0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
           }
-          Array id=54 vsg::vec4Value
+          Array id=65 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
-          Indices id=55 vsg::ushortArray
+          Indices id=66 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 36
-            Storage id=0
-            Data 17 13 0 17 0 4 5 2 8 5 8 11
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
              16 3 9 16 9 22 10 6 19 10 19 23
              1 20 7 1 14 20 21 18 12 21 12 15
           }
@@ -1653,23 +1200,66 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=27
-        vsg::StateCommand id=31
+        vsg::StateCommand id=67 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=68 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=69 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=70 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=71 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.603469 0 1 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.603469 0 1 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 1
+                roughnessFactor 1
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=32
         prototypeArrayState id=0
       }
       matrix -0.1 0 -1.50996e-08 0 0 1.5 0 0 1.50996e-08 0 -0.1 0
        1.98506 1.5 0.98351 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=56 vsg::MatrixTransform
+    vsg::Node id=72 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=57 vsg::MatrixTransform
+      vsg::Node id=73 vsg::MatrixTransform
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=58 vsg::PointLight
+        vsg::Node id=74 vsg::PointLight
         {
           name "Light_Orientation"
           color 100 100 100
@@ -1684,26 +1274,26 @@ void main()
        3.62173 10.3769 -0.0164907 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=59 vsg::MatrixTransform
+    vsg::Node id=75 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=60 vsg::StateGroup
+      vsg::Node id=76 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=61 vsg::VertexIndexDraw
+        vsg::Node id=77 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=62 vsg::vec3Array
+          Array id=78 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 679
-            Storage id=0
-            Data 4.43 0 -0.336 4.201 0 -0.336 4.201 0 -0.248 4.332 0 -0.248
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 679
+            storage id=0
+            data 4.43 0 -0.336 4.201 0 -0.336 4.201 0 -0.248 4.332 0 -0.248
              4.332 0 -0.108 4.32023 0 -0.104318 4.3084 0 -0.100792 4.2965 0 -0.0974531
              4.28452 0 -0.0943333 4.27244 0 -0.0914636 4.26025 0 -0.088875 4.24794 0 -0.086599
              4.23548 0 -0.0846667 4.22288 0 -0.0831094 4.2101 0 -0.0819583 4.19715 0 -0.0812448
@@ -1874,13 +1464,13 @@ void main()
              0.075 0 -0.682 0.075 0 -0 0.173 0 -0 0.173 0 -0.297
              0.555 0 -0.297 0.555 0 -0 0.653 0 -0
           }
-          Array id=63 vsg::vec3Array
+          Array id=79 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 679
-            Storage id=0
-            Data 0 1 -0 0 1 -0 0 1 -0 0 1 -0
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 679
+            storage id=0
+            data 0 1 -0 0 1 -0 0 1 -0 0 1 -0
              0 1 -0 0 1 -0 0 1 -0 0 1 -0
              0 1 -0 0 1 -0 0 1 -0 0 1 -0
              0 1 -0 0 1 -0 0 1 -0 0 1 -0
@@ -2051,13 +1641,13 @@ void main()
              0 1 -0 0 1 -0 0 1 -0 0 1 -0
              0 1 -0 0 1 -0 0 1 -0
           }
-          Array id=64 vsg::vec2Array
+          Array id=80 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 679
-            Storage id=0
-            Data 0 1 0.00990099 1 0.019802 1 0.029703 1 0.039604 1 0.049505 1
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 679
+            storage id=0
+            data 0 1 0.00990099 1 0.019802 1 0.029703 1 0.039604 1 0.049505 1
              0.0594059 1 0.0693069 1 0.0792079 1 0.0891089 1 0.0990099 1 0.108911 1
              0.118812 1 0.128713 1 0.138614 1 0.148515 1 0.158416 1 0.158416 1
              0.168317 1 0.178218 1 0.178218 1 0.188119 1 0.19802 1 0.19802 1
@@ -2172,19 +1762,19 @@ void main()
              0.454545 1 0.545455 1 0.636364 1 0.727273 1 0.818182 1 0.909091 1
              1 1
           }
-          Array id=65 vsg::vec4Value
+          Array id=81 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
-          Indices id=66 vsg::ushortArray
+          Indices id=82 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 1479
-            Storage id=0
-            Data 2 0 1 2 3 0 3 134 0 4 134 3
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 1479
+            storage id=0
+            data 2 0 1 2 3 0 3 134 0 4 134 3
              5 134 4 6 134 5 7 134 6 8 134 7
              9 134 8 10 134 9 11 134 10 12 134 11
              13 134 12 14 134 13 15 134 14 17 134 15
@@ -2317,34 +1907,77 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=27
-        vsg::StateCommand id=31
+        vsg::StateCommand id=83 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=84 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=85 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=86 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=87 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.8 0.0206886 0.0134132 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.8 0.0206886 0.0134132 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 1
+                roughnessFactor 1
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=32
         prototypeArrayState id=0
       }
       matrix 0.8 0 0 0 0 1.72057e-07 2.88664 0 0 -0.8 4.76837e-08 0
        -1.79571 1.3531 -2.01649 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=67 vsg::MatrixTransform
+    vsg::Node id=88 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=68 vsg::StateGroup
+      vsg::Node id=89 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=69 vsg::VertexIndexDraw
+        vsg::Node id=90 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=70 vsg::vec3Array
+          Array id=91 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 1966
-            Storage id=0
-            Data 0.4375 0.164062 0.765625 0.4375 0.164062 0.765625 0.4375 0.164062 0.765625 0.4375 0.164062 0.765625
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 1966
+            storage id=0
+            data 0.4375 0.164062 0.765625 0.4375 0.164062 0.765625 0.4375 0.164062 0.765625 0.4375 0.164062 0.765625
              -0.4375 0.164062 0.765625 -0.4375 0.164062 0.765625 -0.4375 0.164062 0.765625 -0.4375 0.164062 0.765625
              0.5 0.09375 0.6875 0.5 0.09375 0.6875 0.5 0.09375 0.6875 0.5 0.09375 0.6875
              -0.5 0.09375 0.6875 -0.5 0.09375 0.6875 -0.5 0.09375 0.6875 -0.5 0.09375 0.6875
@@ -2837,13 +2470,13 @@ void main()
              0.859375 0.382812 -0.382812 0.859375 0.382812 -0.382812 -0.859375 0.382812 -0.382812 -0.859375 0.382812 -0.382812
              -0.859375 0.382812 -0.382812 -0.859375 0.382812 -0.382812
           }
-          Array id=71 vsg::vec3Array
+          Array id=92 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 1966
-            Storage id=0
-            Data 0.205152 -0.82061 -0.533396 0.35995 -0.508895 0.78196 0.664993 -0.200752 0.719363 0.799477 -0.35099 -0.487486
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 1966
+            storage id=0
+            data 0.205152 -0.82061 -0.533396 0.35995 -0.508895 0.78196 0.664993 -0.200752 0.719363 0.799477 -0.35099 -0.487486
              -0.799477 -0.35099 -0.487486 -0.664993 -0.200752 0.719363 -0.35995 -0.508895 0.78196 -0.205152 -0.82061 -0.533396
              0.35995 -0.508895 0.78196 0.415548 -0.79332 0.444931 0.664993 -0.200752 0.719363 0.829427 -0.303581 0.468924
              -0.829427 -0.303581 0.468924 -0.664993 -0.200752 0.719363 -0.415548 -0.79332 0.444931 -0.35995 -0.508895 0.78196
@@ -3336,13 +2969,13 @@ void main()
              -0.449919 0.883769 -0.128548 0.542773 -0.206254 -0.81416 -0.542773 -0.206254 -0.81416 0.449919 0.883769 -0.128548
              0.538364 -0.00975296 -0.842656 0.781868 0.623133 0.0196779
           }
-          Array id=72 vsg::vec2Array
+          Array id=93 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 1966
-            Storage id=0
-            Data 0.870622 0.410351 0.870622 0.410351 0.870622 0.410351 0.870622 0.410351 0.868067 0.17849 0.868067 0.17849
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 1966
+            storage id=0
+            data 0.870622 0.410351 0.870622 0.410351 0.870622 0.410351 0.870622 0.410351 0.868067 0.17849 0.868067 0.17849
              0.868067 0.17849 0.868067 0.17849 0.860081 0.439885 0.860081 0.439885 0.860081 0.439885 0.860081 0.439885
              0.856226 0.149453 0.856226 0.149453 0.856226 0.149453 0.856226 0.149453 0.853018 0.478438 0.853018 0.478438
              0.847458 0.111252 0.847458 0.111252 0.798481 0.430465 0.798481 0.430465 0.795104 0.161598 0.795104 0.161598
@@ -3671,19 +3304,19 @@ void main()
              0.276936 0.374933 0.276936 0.374933 0.834705 0.793041 0.671403 0.407344 0.671403 0.407344 0.671403 0.407344
              0.09282 0.410138 0.09282 0.410138 0.09282 0.410138 0.09282 0.410138
           }
-          Array id=73 vsg::vec4Value
+          Array id=94 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
-          Indices id=74 vsg::ushortArray
+          Indices id=95 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 2904
-            Storage id=0
-            Data 34 0 232 34 232 226 152 2 10 152 10 144
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 2904
+            storage id=0
+            data 34 0 232 34 232 226 152 2 10 152 10 144
              3 154 162 3 162 235 165 157 4 165 4 236
              13 5 159 13 159 151 29 36 6 29 6 15
              239 7 37 239 37 229 1 26 8 1 35 26
@@ -3934,77 +3567,120 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=27
-        vsg::StateCommand id=31
+        vsg::StateCommand id=96 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=97 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=98 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=99 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=100 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.118926 0.8 0 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.118926 0.8 0 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 1
+                roughnessFactor 1
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=32
         prototypeArrayState id=0
       }
       matrix 5.25273e-08 0 -0.293754 0 0 0.293754 0 0 0.293754 0 5.25273e-08 0
        -1.52547 0.954521 -0.0164909 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=75 vsg::MatrixTransform
+    vsg::Node id=101 vsg::MatrixTransform
     {
-      NumUserObjects 0
+      userObjects 0
       children 1
-      vsg::Node id=76 vsg::StateGroup
+      vsg::Node id=102 vsg::StateGroup
       {
-        NumUserObjects 0
+        userObjects 0
         children 1
-        vsg::Node id=77 vsg::VertexIndexDraw
+        vsg::Node id=103 vsg::VertexIndexDraw
         {
-          NumUserObjects 0
+          userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=78 vsg::vec3Array
+          Array id=104 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data -1 -1 1 -1 -1 1 -1 -1 1 -1 1 1
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data -1 -1 1 -1 -1 1 -1 -1 1 -1 1 1
              -1 1 1 -1 1 1 -1 -1 -1 -1 -1 -1
              -1 -1 -1 -1 1 -1 -1 1 -1 -1 1 -1
              1 -1 1 1 -1 1 1 -1 1 1 1 1
              1 1 1 1 1 1 1 -1 -1 1 -1 -1
              1 -1 -1 1 1 -1 1 1 -1 1 1 -1
           }
-          Array id=79 vsg::vec3Array
+          Array id=105 vsg::vec3Array
           {
-            NumUserObjects 0
-            Layout 0 12 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data -1 0 -0 0 -1 -0 0 0 1 -1 0 -0
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data -1 0 -0 0 -1 -0 0 0 1 -1 0 -0
              0 0 1 0 1 -0 -1 0 -0 0 -1 -0
              0 0 -1 -1 0 -0 0 0 -1 0 1 -0
              0 -1 -0 0 0 1 1 0 -0 0 0 1
              0 1 -0 1 0 -0 0 -1 -0 0 0 -1
              1 0 -0 0 0 -1 0 1 -0 1 0 -0
           }
-          Array id=80 vsg::vec2Array
+          Array id=106 vsg::vec2Array
           {
-            NumUserObjects 0
-            Layout 0 8 0 1 1 1 0 -1
-            Size 24
-            Storage id=0
-            Data 0.375 1 0.125 0.25 0.375 0 0.625 1 0.625 0 0.875 0.25
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.375 1 0.125 0.25 0.375 0 0.625 1 0.625 0 0.875 0.25
              0.375 0.75 0.125 0.5 0.375 0.75 0.625 0.75 0.625 0.75 0.875 0.5
              0.375 0.25 0.375 0.25 0.375 0.25 0.625 0.25 0.625 0.25 0.625 0.25
              0.375 0.5 0.375 0.5 0.375 0.5 0.625 0.5 0.625 0.5 0.625 0.5
           }
-          Array id=81 vsg::vec4Value
+          Array id=107 vsg::vec4Value
           {
-            NumUserObjects 0
-            Layout 0 0 0 1 1 1 0 -1
-            Value 1 1 1 1
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
           }
-          Indices id=82 vsg::ushortArray
+          Indices id=108 vsg::ushortArray
           {
-            NumUserObjects 0
-            Layout 0 2 0 1 1 1 0 -1
-            Size 36
-            Storage id=0
-            Data 0 3 9 0 9 6 13 4 2 13 15 4
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 0 3 9 0 9 6 13 4 2 13 15 4
              22 11 5 22 5 16 7 18 12 7 12 1
              8 10 21 8 21 19 20 17 14 20 23 17
           }
@@ -4016,8 +3692,8 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=27
-        vsg::StateCommand id=31
+        vsg::StateCommand id=67
+        vsg::StateCommand id=32
         prototypeArrayState id=0
       }
       matrix -0.204441 -0.127862 0.25774 0 0.0221593 0.308246 0.170494 0 -0.286858 0.114938 -0.170519 0
