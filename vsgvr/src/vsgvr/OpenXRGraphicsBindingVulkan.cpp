@@ -41,9 +41,9 @@ namespace vsgvr {
     _binding = XrGraphicsBindingVulkanKHR();
     _binding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR;
     _binding.next = nullptr;
-    _binding.instance = _vkInstance->getInstance();
-    _binding.physicalDevice = _vkPhysicalDevice->getPhysicalDevice();
-    _binding.device = _vkDevice->getDevice();
+    _binding.instance = _vkInstance->vk();
+    _binding.physicalDevice = _vkPhysicalDevice->vk();
+    _binding.device = _vkDevice->vk();
     _binding.queueFamilyIndex = queueFamilyIndex;
     _binding.queueIndex = queueIndex;
   }
@@ -119,7 +119,7 @@ namespace vsgvr {
     VkPhysicalDevice vkPhysicalDevice;
     {
       auto fn = (PFN_xrGetVulkanGraphicsDeviceKHR)xr_pfn(xrInstance->getInstance(), "xrGetVulkanGraphicsDeviceKHR");
-      xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), vkInstance->getInstance(), &vkPhysicalDevice), "Failed to get Vulkan physical device from OpenXR");
+      xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), vkInstance->vk(), &vkPhysicalDevice), "Failed to get Vulkan physical device from OpenXR");
     }
     return vkPhysicalDevice;
   }

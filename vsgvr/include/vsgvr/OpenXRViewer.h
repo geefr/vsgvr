@@ -31,11 +31,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/OpenXRGraphicsBindingVulkan.h>
 #include <vsgvr/OpenXRSession.h>
 
-#include <vsg/viewer/CommandGraph.h>
-#include <vsg/viewer/RecordAndSubmitTask.h>
-#include <vsg/viewer/CompileManager.h>
-#include <vsg/viewer/UpdateOperations.h>
-#include <vsg/viewer/RenderGraph.h>
+#include <vsg/app/CommandGraph.h>
+#include <vsg/app/RecordAndSubmitTask.h>
+#include <vsg/app/CompileManager.h>
+#include <vsg/app/UpdateOperations.h>
+#include <vsg/app/RenderGraph.h>
 #include <vsg/ui/FrameStamp.h>
 
 #include <string>

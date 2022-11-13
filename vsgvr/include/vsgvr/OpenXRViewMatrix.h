@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsg/viewer/ViewMatrix.h>
+#include <vsg/app/ViewMatrix.h>
 
 #include <vsg/maths/mat4.h>
 #include <vsg/maths/vec4.h>

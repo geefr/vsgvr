@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
     vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice;
     for (auto& dev : vkInstance->getPhysicalDevices())
     {
-      if (dev->getPhysicalDevice() == xrRequiredDevice)
+      if (dev->vk() == xrRequiredDevice)
       {
         physicalDevice = dev;
       }

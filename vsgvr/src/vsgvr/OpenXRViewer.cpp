@@ -32,9 +32,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <iostream>
 
-#include <vsg/traversals/ComputeBounds.h>
-#include <vsg/traversals/CompileTraversal.h>
-#include <vsg/viewer/View.h>
+#include <vsg/utils/ComputeBounds.h>
+#include <vsg/app/CompileTraversal.h>
+#include <vsg/app/View.h>
 #include <vsg/ui/UIEvent.h>
 
 using namespace vsg;
@@ -396,7 +396,7 @@ namespace vsgvr
       CommandGraphs secondary_commandGraphs;
       for (auto& commandGraph : commandGraphs)
       {
-        if (commandGraph->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+        if (commandGraph->level() == VK_COMMAND_BUFFER_LEVEL_PRIMARY)
           primary_commandGraphs.emplace_back(commandGraph);
         else
           secondary_commandGraphs.emplace_back(commandGraph);
