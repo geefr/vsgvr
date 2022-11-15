@@ -363,6 +363,159 @@ namespace vsgvr
     return commandGraphs;
   }
 
+  void OpenXRViewer::compile(ref_ptr<ResourceHints> hints)
+  {
+    // TODO: This should be unified with the vsg Viewer::compile
+    //       there's no real need for it to be copied here
+    if (recordAndSubmitTasks.empty())
+    {
+      return;
+    }
+
+    // TODO: CompileManager requires a child class of Viewer
+    // if (!compileManager) compileManager = CompileManager::create(*this, hints);
+
+    bool containsPagedLOD = false;
+    ref_ptr<DatabasePager> databasePager;
+
+    struct DeviceResources
+    {
+      CollectResourceRequirements collectResources;
+      vsg::ref_ptr<vsg::CompileTraversal> compile;
+    };
+
+    // find which devices are available and the resources required for then,
+    using DeviceResourceMap = std::map<ref_ptr<vsg::Device>, DeviceResources>;
+    DeviceResourceMap deviceResourceMap;
+    for (auto& task : recordAndSubmitTasks)
+    {
+        auto& collectResources = deviceResourceMap[task->device].collectResources;
+        for (auto& commandGraph : task->commandGraphs)
+        {
+
+            commandGraph->accept(collectResources);
+        }
+
+        if (task->databasePager && !databasePager) databasePager = task->databasePager;
+    }
+
+
+    // allocate DescriptorPool for each Device 
+    ResourceRequirements::Views views;
+    for (auto& [device, deviceResource] : deviceResourceMap)
+    {
+      auto& collectResources = deviceResource.collectResources;
+      auto& resourceRequirements = collectResources.requirements;
+
+      if (hints) hints->accept(collectResources);
+
+      views.insert(resourceRequirements.views.begin(), resourceRequirements.views.end());
+
+      if (resourceRequirements.containsPagedLOD) containsPagedLOD = true;
+
+      auto physicalDevice = device->getPhysicalDevice();
+
+      // auto maxSets = resourceRequirements.computeNumDescriptorSets();
+      // auto descriptorPoolSizes = resourceRequirements.computeDescriptorPoolSizes();
+
+      auto queueFamily = physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT); // TODO : could we just use transfer bit?
+
+      deviceResource.compile = CompileTraversal::create(device, resourceRequirements);
+      // deviceResource.compile->overrideMask = 0xffffffff;
+
+      // CT TODO need to reorganize this whole section
+      for (auto& context : deviceResource.compile->contexts)
+      {
+        context->commandPool = vsg::CommandPool::create(device, queueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        context->graphicsQueue = device->getQueue(queueFamily);
+        context->reserve(resourceRequirements);
+      }
+    }
+
+    // assign the viewID's to each View
+    for (auto& [const_view, binDetails] : views)
+    {
+      auto view = const_cast<View*>(const_view);
+      for (auto& binNumber : binDetails.indices)
+      {
+        bool binNumberMatched = false;
+        for (auto& bin : view->bins)
+        {
+          if (bin->binNumber == binNumber)
+          {
+            binNumberMatched = true;
+          }
+        }
+        if (!binNumberMatched)
+        {
+          Bin::SortOrder sortOrder = (binNumber < 0) ? Bin::ASCENDING : ((binNumber == 0) ? Bin::NO_SORT : Bin::DESCENDING);
+          view->bins.push_back(Bin::create(binNumber, sortOrder));
+        }
+      }
+    }
+
+    if (containsPagedLOD && !databasePager) databasePager = DatabasePager::create();
+
+    // create the Vulkan objects
+    for (auto& task : recordAndSubmitTasks)
+    {
+        auto& deviceResource = deviceResourceMap[task->device];
+        auto& resourceRequirements = deviceResource.collectResources.requirements;
+
+        bool task_containsPagedLOD = false;
+
+        for (auto& commandGraph : task->commandGraphs)
+        {
+            commandGraph->maxSlot = resourceRequirements.maxSlot;
+            commandGraph->accept(*deviceResource.compile);
+
+            if (resourceRequirements.containsPagedLOD) task_containsPagedLOD = true;
+        }
+
+        if (task_containsPagedLOD)
+        {
+            if (!task->databasePager) task->databasePager = databasePager;
+        }
+
+        if (task->databasePager)
+        {
+            // TODO: CompileManager requires a child class of Viewer
+            // task->databasePager->compileManager = compileManager;
+        }
+
+        if (task->earlyTransferTask)
+        {
+            task->earlyTransferTask->assign(resourceRequirements.earlyDynamicData);
+        }
+        if (task->lateTransferTask)
+        {
+            task->lateTransferTask->assign(resourceRequirements.lateDynamicData);
+        }
+    }
+
+    // record any transfer commands
+    for (auto& dp : deviceResourceMap)
+    {
+      dp.second.compile->record();
+    }
+
+    // wait for the transfers to complete
+    for (auto& dp : deviceResourceMap)
+    {
+      dp.second.compile->waitForCompletion();
+    }
+
+    // start any DatabasePagers
+    for (auto& task : recordAndSubmitTasks)
+    {
+      if (task->databasePager)
+      {
+        task->databasePager->start();
+      }
+    }
+  }
+
+
   void OpenXRViewer::assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
   {
     struct DeviceQueueFamily
@@ -410,158 +563,21 @@ namespace vsgvr
       uint32_t numBuffers = 1; // TODO: Needs to relate to OpenXR swapchain surely
 
       auto device = deviceQueueFamily.device;
+      uint32_t transferQueueFamily = device->getPhysicalDevice()->getQueueFamily(VK_QUEUE_TRANSFER_BIT);
+
       // with don't have a presentFamily so this set of commandGraphs aren't associated with a window
       // set up Submission with CommandBuffer and signals
-      auto recordAndSubmitTask = vsg::RecordAndSubmitTask::create(device, numBuffers); 
+      auto recordAndSubmitTask = vsg::RecordAndSubmitTask::create(device, numBuffers);
       recordAndSubmitTask->commandGraphs = commandGraphs;
       recordAndSubmitTask->queue = device->getQueue(deviceQueueFamily.queueFamily);
       recordAndSubmitTasks.emplace_back(recordAndSubmitTask);
+
+      recordAndSubmitTask->earlyTransferTask->transferQueue = device->getQueue(transferQueueFamily);
+      recordAndSubmitTask->lateTransferTask->transferQueue = device->getQueue(transferQueueFamily);
+
     }
   }
 
-  void OpenXRViewer::compile(ref_ptr<ResourceHints> hints)
-  {
-    // TODO: This should be unified with the vsg Viewer::compile
-    //       there's no real need for it to be copied here
-    if (recordAndSubmitTasks.empty())
-    {
-      return;
-    }
-
-    // TODO: CompileManager requires a child class of Viewer
-    // if (!compileManager) compileManager = CompileManager::create(*this, hints);
-
-    bool containsPagedLOD = false;
-    ref_ptr<DatabasePager> databasePager;
-
-    struct DeviceResources
-    {
-      CollectResourceRequirements collectResources;
-      vsg::ref_ptr<vsg::CompileTraversal> compile;
-    };
-
-    // find which devices are available and the resources required for then,
-    using DeviceResourceMap = std::map<ref_ptr<vsg::Device>, DeviceResources>;
-    DeviceResourceMap deviceResourceMap;
-    for (auto& task : recordAndSubmitTasks)
-    {
-      for (auto& commandGraph : task->commandGraphs)
-      {
-        auto& deviceResources = deviceResourceMap[commandGraph->device];
-        commandGraph->accept(deviceResources.collectResources);
-      }
-
-      if (task->databasePager && !databasePager) databasePager = task->databasePager;
-    }
-
-    // allocate DescriptorPool for each Device 
-    ResourceRequirements::Views views;
-    for (auto& [device, deviceResource] : deviceResourceMap)
-    {
-      auto& collectResources = deviceResource.collectResources;
-      auto& resourceRequirements = collectResources.requirements;
-
-      if (hints) hints->accept(collectResources);
-
-      views.insert(resourceRequirements.views.begin(), resourceRequirements.views.end());
-
-      if (resourceRequirements.containsPagedLOD) containsPagedLOD = true;
-
-      auto physicalDevice = device->getPhysicalDevice();
-
-      auto maxSets = resourceRequirements.computeNumDescriptorSets();
-      auto descriptorPoolSizes = resourceRequirements.computeDescriptorPoolSizes();
-
-      auto queueFamily = physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT); // TODO : could we just use transfer bit?
-
-      deviceResource.compile = CompileTraversal::create(device, resourceRequirements);
-      deviceResource.compile->overrideMask = 0xffffffff;
-
-      // CT TODO need to reorganize this whole section
-      for (auto& context : deviceResource.compile->contexts)
-      {
-        context->commandPool = vsg::CommandPool::create(device, queueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        context->graphicsQueue = device->getQueue(queueFamily);
-        context->reserve(resourceRequirements);
-      }
-    }
-
-    // assign the viewID's to each View
-    for (auto& [const_view, binDetails] : views)
-    {
-      auto view = const_cast<View*>(const_view);
-      for (auto& binNumber : binDetails.indices)
-      {
-        bool binNumberMatched = false;
-        for (auto& bin : view->bins)
-        {
-          if (bin->binNumber == binNumber)
-          {
-            binNumberMatched = true;
-          }
-        }
-        if (!binNumberMatched)
-        {
-          Bin::SortOrder sortOrder = (binNumber < 0) ? Bin::ASCENDING : ((binNumber == 0) ? Bin::NO_SORT : Bin::DESCENDING);
-          view->bins.push_back(Bin::create(binNumber, sortOrder));
-        }
-      }
-    }
-
-    if (containsPagedLOD && !databasePager) databasePager = DatabasePager::create();
-
-    // create the Vulkan objects
-    for (auto& task : recordAndSubmitTasks)
-    {
-        std::set<Device*> devices;
-
-        bool task_containsPagedLOD = false;
-
-        for (auto& commandGraph : task->commandGraphs)
-        {
-            if (commandGraph->device) devices.insert(commandGraph->device);
-
-            auto& deviceResource = deviceResourceMap[commandGraph->device];
-            auto& resourceRequirements = deviceResource.collectResources.requirements;
-            commandGraph->maxSlot = resourceRequirements.maxSlot;
-            commandGraph->accept(*deviceResource.compile);
-
-            if (resourceRequirements.containsPagedLOD) task_containsPagedLOD = true;
-        }
-
-        if (task_containsPagedLOD)
-        {
-            if (!task->databasePager) task->databasePager = databasePager;
-        }
-
-        if (task->databasePager)
-        {
-          // TODO: CompileManager requires a child class of Viewer
-          // task->databasePager->compileManager = compileManager;
-        }
-    }
-
-    // record any transfer commands
-    for (auto& dp : deviceResourceMap)
-    {
-      dp.second.compile->record();
-    }
-
-    // wait for the transfers to complete
-    for (auto& dp : deviceResourceMap)
-    {
-      dp.second.compile->waitForCompletion();
-    }
-
-    // start any DatabasePagers
-    for (auto& task : recordAndSubmitTasks)
-    {
-      if (task->databasePager)
-      {
-        task->databasePager->start();
-      }
-    }
-  }
  
   void OpenXRViewer::getViewConfiguration() {
     _viewConfigurationProperties = XrViewConfigurationProperties();
