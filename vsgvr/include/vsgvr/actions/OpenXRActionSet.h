@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRCommon.h>
 #include <vsgvr/actions/OpenXRAction.h>
 #include <vsg/core/Inherit.h>
 

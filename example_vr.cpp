@@ -1,8 +1,8 @@
 #include <vsg/all.h>
 
-#include <vsgvr/OpenXRInstance.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan.h>
-#include <vsgvr/OpenXRViewer.h>
+#include <vsgvr/xr/OpenXRInstance.h>
+#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/app/OpenXRViewer.h>
 #include <vsgvr/actions/OpenXRActionSet.h>
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
 
@@ -52,11 +52,6 @@ int main(int argc, char **argv) {
     windowTraits->windowTitle = "example_vr";
     arguments.read("--screen", windowTraits->screenNum);
     arguments.read("--display", windowTraits->display);
-    
-    // TODO: Instantiate devices and nodes in scene
-    // TODO: If controllers are off when program starts they won't be added later
-    // - This needs a better interface for controller poses - Ideally common between vr/xr apis, but xr does actions/spaces differently
-    // vsgvr::createDeviceNodes(vr, vsg_scene, controllerNodeLeft, controllerNodeRight);
 
     // Initialise OpenXR, and retrieve vulkan requirements
     // OpenXR will require certain vulkan versions, along with a specific physical device

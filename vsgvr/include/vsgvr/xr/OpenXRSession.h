@@ -22,11 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <vsg/core/Inherit.h>
-#include <vsgvr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRCommon.h>
 
-#include <vsgvr/OpenXRInstance.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan.h>
-#include <vsgvr/OpenXRSwapchain.h>
+#include <vsgvr/xr/OpenXRInstance.h>
+#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/xr/OpenXRSwapchain.h>
 
 #include <vsg/vk/Framebuffer.h>
 

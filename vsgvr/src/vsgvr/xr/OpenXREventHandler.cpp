@@ -19,10 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/OpenXREventHandler.h>
+#include <vsgvr/xr/OpenXREventHandler.h>
 
-#include <vsgvr/OpenXRViewer.h>
-#include <vsgvr/OpenXRSession.h>
+#include <vsgvr/app/OpenXRViewer.h>
+#include <vsgvr/xr/OpenXRSession.h>
 
 #include <vsg/core/Exception.h>
 

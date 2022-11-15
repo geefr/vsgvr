@@ -19,22 +19,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#pragma once
+#include <vsgvr/xr/OpenXRTraits.h>
 
-#include <vsg/core/Inherit.h>
+namespace vsgvr
+{
+  OpenXrTraits::OpenXrTraits() {}
 
-#include <vsgvr/OpenXRCommon.h>
-#include <vsgvr/OpenXRTraits.h>
-
-namespace vsgvr {
-    class OpenXRInstance;
-    class OpenXRSession;
-    class VSG_DECLSPEC OpenXREventHandler : public vsg::Inherit<vsg::Object, OpenXREventHandler>
-    {
-        public:
-            OpenXREventHandler();
-            ~OpenXREventHandler();
-
-            void pollEvents(OpenXRInstance* instance, OpenXRSession* session);
-    };
+  void OpenXrTraits::setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch)
+  {
+    applicationVersion = XR_MAKE_VERSION(maj, min, patch);
+  }
+  void OpenXrTraits::setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch)
+  {
+    engineVersion = XR_MAKE_VERSION(maj, min, patch);
+  }
 }

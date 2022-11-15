@@ -27,7 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/maths/vec4.h>
 #include <vsg/maths/quat.h>
 
-#include <vsgvr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRCommon.h>
 
 namespace vsgvr {
   class VSG_DECLSPEC OpenXRViewMatrix : public vsg::Inherit<vsg::ViewMatrix, OpenXRViewMatrix>

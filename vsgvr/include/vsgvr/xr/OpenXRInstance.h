@@ -24,8 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Inherit.h>
 #include <vsg/core/ref_ptr.h>
 
-#include <vsgvr/OpenXRCommon.h>
-#include <vsgvr/OpenXRTraits.h>
+#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRTraits.h>
 #include <vsgvr/actions/OpenXRActionSet.h>
 
 namespace vsgvr {

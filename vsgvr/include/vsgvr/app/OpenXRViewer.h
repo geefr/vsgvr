@@ -24,12 +24,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Inherit.h>
 #include <vsg/core/ref_ptr.h>
 
-#include <vsgvr/OpenXRCommon.h>
-#include <vsgvr/OpenXRInstance.h>
-#include <vsgvr/OpenXRTraits.h>
-#include <vsgvr/OpenXREventHandler.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan.h>
-#include <vsgvr/OpenXRSession.h>
+#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRInstance.h>
+#include <vsgvr/xr/OpenXRTraits.h>
+#include <vsgvr/xr/OpenXREventHandler.h>
+#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/xr/OpenXRSession.h>
 
 #include <vsg/app/CommandGraph.h>
 #include <vsg/app/RecordAndSubmitTask.h>

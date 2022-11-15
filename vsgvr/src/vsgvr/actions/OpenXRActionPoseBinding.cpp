@@ -20,10 +20,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
-#include <vsgvr/OpenXRSession.h>
+#include <vsgvr/xr/OpenXRSession.h>
 
 #include <vsg/core/Exception.h>
-#include "../OpenXRMacros.cpp"
+#include "../xr/OpenXRMacros.cpp"
 
 #include <vsg/maths/mat4.h>
 #include <vsg/maths/quat.h>

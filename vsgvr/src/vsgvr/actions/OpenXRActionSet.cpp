@@ -20,10 +20,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <vsgvr/actions/OpenXRActionSet.h>
-#include <vsgvr/OpenXRInstance.h>
+#include <vsgvr/xr/OpenXRInstance.h>
 
 #include <vsg/core/Exception.h>
-#include "../OpenXRMacros.cpp"
+#include "../xr/OpenXRMacros.cpp"
 
 #include <iostream>
 

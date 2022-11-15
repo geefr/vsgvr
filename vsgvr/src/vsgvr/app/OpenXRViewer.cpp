@@ -19,16 +19,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/OpenXRViewer.h>
-#include <vsgvr/OpenXRViewMatrix.h>
-#include <vsgvr/OpenXRProjectionMatrix.h>
+#include <vsgvr/app/OpenXRViewer.h>
+#include <vsgvr/xr/OpenXRViewMatrix.h>
+#include <vsgvr/xr/OpenXRProjectionMatrix.h>
 
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
 
 #include <vsg/core/Exception.h>
 
 #include <openxr/openxr_reflection.h>
-#include "OpenXRMacros.cpp"
+#include "../xr/OpenXRMacros.cpp"
 
 #include <iostream>
 
@@ -415,13 +415,9 @@ namespace vsgvr
 
       auto physicalDevice = device->getPhysicalDevice();
 
-      // auto maxSets = resourceRequirements.computeNumDescriptorSets();
-      // auto descriptorPoolSizes = resourceRequirements.computeDescriptorPoolSizes();
-
       auto queueFamily = physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT); // TODO : could we just use transfer bit?
 
       deviceResource.compile = CompileTraversal::create(device, resourceRequirements);
-      // deviceResource.compile->overrideMask = 0xffffffff;
 
       // CT TODO need to reorganize this whole section
       for (auto& context : deviceResource.compile->contexts)

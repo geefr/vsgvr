@@ -23,8 +23,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/core/Inherit.h>
 #include <vsg/state/ImageView.h>
-#include <vsgvr/OpenXRCommon.h>
-#include <vsgvr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
 
 namespace vsgvr
 {

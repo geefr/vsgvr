@@ -21,8 +21,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/OpenXRCommon.h>
-#include <vsgvr/OpenXRInstance.h>
+#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/OpenXRInstance.h>
 
 #include <vsg/core/Inherit.h>
 #include <vsg/vk/Instance.h>
