@@ -2,6 +2,7 @@
 
 #include <vsgvr/xr/OpenXRInstance.h>
 #include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/xr/OpenXRViewMatrix.h>
 #include <vsgvr/app/OpenXRViewer.h>
 #include <vsgvr/actions/OpenXRActionSet.h>
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
@@ -145,9 +146,15 @@ int main(int argc, char **argv) {
     vr->compile();
 
     // Create a CommandGraph to render the desktop window
-    // TODO: For now, naively display one of the HMD's displays
-    // Alternates include binding a regular perspective camera to the HMD's position, or 3rd person cameras as desired
-    auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, xrCameras.front(), vsg_scene);
+    // TODO: I tried to share one of the HMD's cameras here, but under steamvr that caused a deadlock when rendering
+    //       Instead, create a standard perspective camera and bind it to the hmd's position - This looks better on the desktop window anyway
+    
+    // set up the camera
+    auto lookAt = vsg::LookAt::create();
+    auto perspective = vsg::Perspective::create(30.0, static_cast<double>(desktopWindow->extent2D().width) / static_cast<double>(desktopWindow->extent2D().height), 0.1, 100.0);
+    auto desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));
+    auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, desktopCamera, vsg_scene);
+
     desktopViewer->assignRecordAndSubmitTaskAndPresentation({desktopCommandGraph});
     desktopViewer->compile();
     
@@ -161,7 +168,7 @@ int main(int argc, char **argv) {
     // Ask OpenXR to bind the actions in the set
     if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
           {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
-          {rightHandPoseBinding, "/user/hand/right/input/aim/pose"}
+          {rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
        }))
     {
       // All action sets, which will be initialised in the viewer's session
@@ -216,27 +223,36 @@ int main(int argc, char **argv) {
         controllerNodeRight->matrix = rightHandPoseBinding->getTransform();
       }
 
+      // Match the desktop camera to the HMD view
+      // Ideally OpenXR would provide /user/head as a pose, but at least in the simple_controller profile it won't be available
+      // Instead place the camera on one of the user's eyes, it'll be close enough
+      desktopCamera->viewMatrix = xrCameras.front()->viewMatrix;
+      // TODO: Just mirroring the projection matrix here isn't quite right - We would need to correct for aspect
+      //       What may be better is placing the camera at the average of the xr cameras (between the eyes)
+      desktopCamera->projectionMatrix = xrCameras.front()->projectionMatrix;
+
       // The session is running in some form, and a frame must be processed
       // The OpenXR frame loop takes priority - Acquire a frame to render into
       auto shouldQuit = false;
+
+      // Desktop render
+      // * The scene graph is updated by the desktop render
+      // * if PollEventsResult::RunningDontRender the desktop render could be skipped
+      if (desktopViewer->advanceToNextFrame())
+      {
+        desktopViewer->handleEvents();
+        desktopViewer->update();
+        desktopViewer->recordAndSubmit();
+        desktopViewer->present();
+      }
+      else
+      {
+        // Desktop window was closed
+        shouldQuit = true;
+      }
+
       if (vr->advanceToNextFrame())
       {
-        // Desktop render
-        // * The scene graph is updated by the desktop render
-        // * if PollEventsResult::RunningDontRender the desktop render could be skipped
-        if(desktopViewer->advanceToNextFrame())
-        {
-          desktopViewer->handleEvents();
-          desktopViewer->update();
-          desktopViewer->recordAndSubmit();
-          desktopViewer->present();
-        }
-        else
-        {
-          // Desktop window was closed
-          shouldQuit = true;
-        }
-
         if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)
         {
           // XR Runtime requested that rendering is not performed (not visible to user)

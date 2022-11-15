@@ -61,4 +61,10 @@ Convert to vsg via `vsgconv model.glb model.vsgt`
 * Ensure vsgXchange is built with assimp support (For assimp itself I used vcpkg)
 * Ensure a recent build is used for correct lighting (fd35cc2 or newer)#
 
+# Development
+
+```
+set XR_API_LAYER_PATH="C:/dev/OpenXR-SDK-Source/build/src/api_layers/"
+set XR_ENABLE_API_LAYERS=XR_APILAYER_LUNARG_core_validation
+```
 
