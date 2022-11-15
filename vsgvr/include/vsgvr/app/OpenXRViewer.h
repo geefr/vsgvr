@@ -42,54 +42,91 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 
 namespace vsgvr {
+    /**
+     * A viewer which renders data to the OpenXR runtime
+     * 
+     * This class is similar to vsg::Viewer, however:
+     * * The event handling loop is somewhat different, requiring the application to behave correctly, based on the result of OpenXRViewer::pollEvents
+     * * This viewer has no presentation surface or vsg::Window association - Rendered data is passed to OpenXR only
+     *   * Any elements in vsg which require a vsg::Window cannot work with this viewer (TODO)
+     * * While some functions are similar, this class does not directly inherit from vsg::Viewer (TODO)
+     */
     class VSG_DECLSPEC OpenXRViewer : public vsg::Inherit<vsg::Object, OpenXRViewer>
     {
         public:
-            OpenXRViewer() = delete;
+            /**
+             * Constructor
+             * 
+             * The OpenXR runtime is bound to vulkan through the graphicsBinding structure. Ensure that:
+             * * The Vulkan version is compatible - OpenXRGraphicsBindingVulkan::getVulkanRequirements
+             * * That the required instance and device extensions are present - OpenXRGraphicsBindingVulkan::getVulkanRequirements
+             * * A specific PhysicalDevice is used - OpenXRGraphicsBindingVulkan::getVulkanDeviceRequirements
+             */
             OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding);
+
+            OpenXRViewer() = delete;
             ~OpenXRViewer();
 
             // TODO: Update this - Summary level of what to do, based on the event updates.
             //       Simple things don't need any input from app, so it might just reduce
             //       to a boolean good/exit status.
+
+            /**
+             * Whether polling for events succeeded, and what action the application
+             * should perform next within the render loop 
+             */
             enum class PollEventsResult {
+                // The application should continue rendering
                 Success,
+                // OpenXR is idle, the application should reduce power usage
+                // until further notice (but keep polling for events now and then)
                 RuntimeIdle,
+                // OpenXR is not running - The application should try again
                 NotRunning,
+                // OpenXR is running, but rendering is not required at the moment (headset not on head)
+                // The application should continue the render loop, except for actually rendering content
                 RunningDontRender,
+                // OpenXR is running, and rendering is required
                 RunningDoRender,
+                // The user or OpenXR has requested that the application exits
                 Exit,
             };
+
             /// Must be called regularly, within the render loop
             /// The application must handle the returned values accordingly,
             /// to avoid exceptions being thrown on subsequence calls
             auto pollEvents() -> PollEventsResult;
 
-/*
-            /// thread safe container for update operations
-            vsg::ref_ptr<vsg::UpdateOperations> updateOperations;
-
-            /// add an update operation
-            void addUpdateOperation(vsg::ref_ptr<vsg::Operation> op, vsg::UpdateOperations::RunBehavior runBehavior = vsg::UpdateOperations::ONE_TIME)
-            {
-                updateOperations->add(op, runBehavior);
-            }
-
-            vsg::ref_ptr<vsg::CompileManager> compileManager;
-*/
+            /// Similar to vsg::Viewer, advance the framebuffers and prepare for rendering
+            ///
+            /// Internally this will acquire a frame / swapchain image from OpenXR. The application
+            /// **must** call releaseFrame() once after rendering, even if this method returns false.
+            ///
+            /// @return Whether the application should render.
             bool advanceToNextFrame();
+
+            /// Submit rendering tasks to Vulkan
+            void recordAndSubmit();
+
+            /// Release or end the current OpenXR frame
+            ///
+            /// This method **must** be called if advanceToNextFrame() was called
             void releaseFrame();
 
-            // TODO: The 'Viewer' implementation, avoid this duplication
-            vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
-            std::vector<vsg::ref_ptr<vsg::CommandGraph>> createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, bool assignHeadlight = true);
-            void assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
             // Manage the work to do each frame using RecordAndSubmitTasks.
             using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
             RecordAndSubmitTasks recordAndSubmitTasks;
+
+            // TODO: These methods are required at the moment, and have some small differences from their vsg
+            //       counterparts. Ideally these would not be duplicated, but this will likely require chnanges
+            //       within vsg to correct. In the long run OpenXRViewer should only be concerned with the XR parts
+            //       or may even be moved to be a 'Window' class.
+            vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
+            void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
             void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
-            void update();
-            void recordAndSubmit();
+
+            // TODO: Intention for now is to rely on a desktop window/viewer to update the scene graph
+            // void update();
 
             // OpenXR action sets, which will be managed by the viewer / session
             std::vector<vsg::ref_ptr<OpenXRActionSet>> actionSets;
@@ -98,6 +135,8 @@ namespace vsgvr {
             std::vector<vsg::ref_ptr<OpenXRActionSet>> activeActionSets;
 
         private:
+            vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
+
             void shutdownAll();
             void getViewConfiguration();
 
@@ -135,7 +174,4 @@ namespace vsgvr {
             XrCompositionLayerProjection _layerProjection;
             std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
-
-    /// update Viewer data structures to match the needs of newly compile subgraph
-    // extern VSG_DECLSPEC void updateXRViewer(OpenXRViewer& viewer, const vsg::CompileResult& compileResult);
 }

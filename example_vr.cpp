@@ -40,10 +40,10 @@ int main(int argc, char **argv) {
     controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt"));
     vsg_scene->addChild(controllerNodeRight);
 
-
-    // Initialise vr, and add nodes to the scene graph for each tracked device
+    // Initialise OpenXR
     // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
-    // TODO: Some of these parameters are ignored at the moment
+    //       This should be improved in the future, at least to query what form factors are available.
+    // TODO: Some parameters on xrTraits are non-functional at the moment
     auto xrTraits = vsgvr::OpenXrTraits();
     xrTraits.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
@@ -90,11 +90,22 @@ int main(int argc, char **argv) {
       }
     }
     
-    // TODO: For now, the window is just for instance creation, later it could also be used for mirror-window rendering
+    // VSync must be disabled - In this example we're driving a desktop window and HMD from the same thread,
+    // the OpenXRViewer must never be waiting for the desktop window to sync
+    windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+
+    auto desktopViewer = vsg::Viewer::create();
     auto desktopWindow = vsg::Window::create(windowTraits);
+    if (!desktopWindow)
+    {
+        std::cout << "Could not create windows." << std::endl;
+        return EXIT_FAILURE;
+    }
+    desktopViewer->addWindow(desktopWindow);
+
+    // Ensure the correct physical device is selected
+    // Technically the desktop window and HMD could use different devices, but for simplicity OpenXR is configured to use the same device as the desktop
     auto vkInstance = desktopWindow->getOrCreateInstance();
-    
-    // Ensure the correct physical device is used
     VkPhysicalDevice xrRequiredDevice = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanDeviceRequirements(xrInstance, vkInstance, xrVulkanReqs);
     vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice;
     for (auto& dev : vkInstance->getPhysicalDevices())
@@ -111,58 +122,37 @@ int main(int argc, char **argv) {
     }
     desktopWindow->setPhysicalDevice(physicalDevice);
 
-    // Ensure the VkDevice has been initialised
-    // TODO: For now explicitly creating a device with just a graphics queue. OpenXR should be able to share the device directly from the window however,
-    //       which probably ties into rendering the mirror window as part of the XR render graph (If that doesn't affect framerates)
-    /*desktopWindow->getOrCreateSurface();
-    desktopWindow->getOrCreateDevice();*/
-    vsg::ref_ptr<vsg::Device> vkDevice;
-    vsg::ref_ptr<vsgvr::OpenXRGraphicsBindingVulkan> graphicsBinding;
-    {
-      vsg::Names requestedLayers;
-      if (windowTraits->debugLayer)
-      {
-        requestedLayers.push_back("VK_LAYER_LUNARG_standard_validation");
-        if (windowTraits->apiDumpLayer) requestedLayers.push_back("VK_LAYER_LUNARG_api_dump");
-      }
-
-      vsg::Names validatedNames = vsg::validateInstancelayerNames(requestedLayers);
-      vsg::Names deviceExtensions;
-      deviceExtensions.insert(deviceExtensions.end(), windowTraits->deviceExtensionNames.begin(), windowTraits->deviceExtensionNames.end());
-
-      auto queueFamily = physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT);
-      if (queueFamily < 0)
-      {
-        std::cout << "Failed to find graphics queue" << std::endl;
-      }
-
-      vsg::QueueSettings queueSettings{ vsg::QueueSetting{queueFamily, {1.0}} };
-      vkDevice = vsg::Device::create(physicalDevice, queueSettings, validatedNames, deviceExtensions, windowTraits->deviceFeatures, vkInstance->getAllocationCallbacks());
-      std::cout << "Created our own vsg::Device " << vkDevice << std::endl;
-
-      graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, queueFamily, 0);
-    }
-    
-    // TODO: Hide the desktop window, it doesn't render anything for now
-    desktopWindow = nullptr;
+    // Bind OpenXR to the Device
+    desktopWindow->getOrCreateSurface();
+    auto vkDevice = desktopWindow->getOrCreateDevice();
+    auto graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
 
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
     auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);
 
-    // add the CommandGraph to render the scene
-    // TODO: For now, add an ambient light - Adding a headlight works but technically results in a different light source for each eye
-    // auto ambient = vsg::AmbientLight::create();
-    // ambient->intensity = 1.0f;
-    // vsg_scene->addChild(ambient);
-
-    auto commandGraphs = vr->createCommandGraphsForView(vsg_scene, false);
-    vr->assignRecordAndSubmitTaskAndPresentation(commandGraphs);
-
-    // compile all Vulkan objects and transfer image, vertex and primitive data to GPU
+    // Create CommandGraphs to render the scene to the HMD
+    std::vector<vsg::ref_ptr<vsg::Camera>> xrCameras;
+    // TODO: This only really exists because vsg::createCommandGraphForView requires
+    // a Window instance. Other than some possible improvements later, it could use the same code as vsg
+    // OpenXR rendering may use one or more command graphs, as decided by the viewer
+    // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
+    auto xrCommandGraphs = vr->createCommandGraphsForView(vsg_scene, xrCameras, false);
+    // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
+    // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
+    vr->assignRecordAndSubmitTask(xrCommandGraphs);
+    // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
+    // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
     vr->compile();
+
+    // Create a CommandGraph to render the desktop window
+    // TODO: For now, naively display one of the HMD's displays
+    // Alternates include binding a regular perspective camera to the HMD's position, or 3rd person cameras as desired
+    auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, xrCameras.front(), vsg_scene);
+    desktopViewer->assignRecordAndSubmitTaskAndPresentation({desktopCommandGraph});
+    desktopViewer->compile();
     
-    // TODO: Quick test of action sets / poses - Should be able to locate this space each frame, then turn it into a transform node update in the scene graph right?
-    //       Probably easiest not to worry about pose-in-action-space - vsg can handle this
+    // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
+    // along with binding the OpenXR input subsystem through to usable actions.
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
     auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
     baseActionSet->actions.push_back(leftHandPoseBinding);
@@ -188,11 +178,15 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
 
+    // add close handler to respond the close window button and pressing escape
+    desktopViewer->addEventHandler(vsg::CloseHandler::create(desktopViewer));
+
     // Render loop
     for(;;)
     {
+      // OpenXR events must be checked first
       auto pol = vr->pollEvents();
-      if( pol == vsgvr::OpenXRViewer::PollEventsResult::Exit)
+      if( pol == vsgvr::OpenXRViewer::PollEventsResult::Exit )
       {
         // User exited through VR overlay / XR runtime
         break;
@@ -211,8 +205,8 @@ int main(int argc, char **argv) {
 
       // Scene graph updates
       // TODO: This should be automatic, or handled by a graph traversal / node tags?
-      // TODO: The transforms / spaces on these need to be validated. Visually they're correct, 
-      //       but at the moment there's a rotate/invert within the display matrices.
+      // TODO: The transforms / spaces on these need to be validated. Visually they're correct,
+      //       but there's probably bugs in here.
       if (leftHandPoseBinding->getTransformValid())
       {
         controllerNodeLeft->matrix = leftHandPoseBinding->getTransform();
@@ -222,24 +216,48 @@ int main(int argc, char **argv) {
         controllerNodeRight->matrix = rightHandPoseBinding->getTransform();
       }
 
-      // The session is running, and a frame must be processed
+      // The session is running in some form, and a frame must be processed
+      // The OpenXR frame loop takes priority - Acquire a frame to render into
+      auto shouldQuit = false;
       if (vr->advanceToNextFrame())
       {
-        if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)
+        // Desktop render
+        // * The scene graph is updated by the desktop render
+        // * if PollEventsResult::RunningDontRender the desktop render could be skipped
+        if(desktopViewer->advanceToNextFrame())
         {
-          // XR Runtime requested that rendering is not performed (not visible to user)
+          desktopViewer->handleEvents();
+          desktopViewer->update();
+          desktopViewer->recordAndSubmit();
+          desktopViewer->present();
         }
         else
         {
-          // Render a frame
-          vr->update();
-          vr->recordAndSubmit();
+          // Desktop window was closed
+          shouldQuit = true;
+        }
+
+        if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)
+        {
+          // XR Runtime requested that rendering is not performed (not visible to user)
+          // While this happens frames must still be acquired and released however, in
+          // order to synchronise with the OpenXR runtime
+        }
+        else
+        {
+          // Render to the HMD
+          vr->recordAndSubmit(); // Render XR frame
         }
       }
- 
+
       // End the frame, and present to user
-      // Frames must be released, even if the previous advanceToNextFrame returned false (dontrender)
+      // Frames must be explicitly released, even if the previous advanceToNextFrame returned false (PollEventsResult::RunningDontRender)
       vr->releaseFrame();
+
+      if(shouldQuit)
+      {
+        break;
+      }
     }
 
     return EXIT_SUCCESS;

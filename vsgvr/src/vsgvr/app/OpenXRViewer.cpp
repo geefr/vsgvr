@@ -156,6 +156,7 @@ namespace vsgvr
     return static_cast<bool>(_frameState.shouldRender);
   }
 
+/*
   void OpenXRViewer::update()
   {
     for (auto& task : recordAndSubmitTasks)
@@ -165,9 +166,8 @@ namespace vsgvr
         task->databasePager->updateSceneGraph(_frameStamp);
       }
     }
-
-    // updateOperations->run();
   }
+*/
 
   void OpenXRViewer::recordAndSubmit()
   {
@@ -287,36 +287,22 @@ namespace vsgvr
   vsg::ref_ptr<vsg::Camera>
     OpenXRViewer::createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
       const VkExtent2D& extent) {
-    // Create an initial camera - Both the desktop and hmd cameras are intialised
-    // like this but their parameters will be updated each frame based on the
-    // hmd's pose/matrices
-    vsg::ComputeBounds computeBounds;
-    scene->accept(computeBounds);
-    vsg::dvec3 centre =
-      (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
-    double radius =
-      vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.6;
-    double nearFarRatio = 0.001;
-
-    // set up the camera
-    auto lookAt = vsg::LookAt::create(centre + vsg::dvec3(0.0, 0.0, radius * 3.5),
-      centre, vsg::dvec3(0.0, 1.0, 0.0));
-
+    // Create an initial camera - OpenXR will provide us with matrices later,
+    // so the parameters here don't matter
+    auto lookAt = vsg::LookAt::create(vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0), vsg::dvec3(0.0, 1.0, 0.0));
     auto perspective = vsg::Perspective::create(
       30.0,
       static_cast<double>(extent.width) / static_cast<double>(extent.height),
-      nearFarRatio * radius, radius * 4.5);
-
-    return vsg::Camera::create(perspective, lookAt,
-      vsg::ViewportState::create(extent));
+      0.01, 100.0);
+    return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
   }
 
-  std::vector<vsg::ref_ptr<vsg::CommandGraph>>
-    OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, bool assignHeadlight) {
-    
+  vsg::CommandGraphs OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
+    // * vsg::CommandGraph::createCommandGraphForView
+    // * vsg::RenderGraph::createRenderGraphForView
+
     auto numViews = _viewConfigurationViews.size();
     std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
-    vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(_graphicsBinding->getVkDevice());
 
     // TODO: Arguably the camera is per-view, but the render graph itself is otherwise identical. For now have a single render graph, and modify the camera as needed for each eye/view.
     // TODO: To separate the view-specific data, would need multiple recordAndSubmitTasks? - When rendering, need to associate tasks with each view, if duplicated.
@@ -334,6 +320,8 @@ namespace vsgvr
                               _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
 
       auto camera = createCameraForScene(vsg_scene, hmdExtent);
+      cameras.push_back(camera);
+
       auto view = View::create(camera);
       // TODO: Need to check how this interacts with the multi-view rendering. Does this mean that each eye views the scene with
       //       a different light source? As that may look odd..
@@ -341,8 +329,6 @@ namespace vsgvr
       if (vsg_scene) view->addChild(vsg_scene);
 
       // Set up the render graph
-      // TODO: For now the first framebuffer is set, and updated later during rendering
-      //       Ideally this would be handled inside Rendergraph.
       auto renderGraph = RenderGraph::create();
       renderGraph->addChild(view);
 
@@ -512,7 +498,7 @@ namespace vsgvr
   }
 
 
-  void OpenXRViewer::assignRecordAndSubmitTaskAndPresentation(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
+  void OpenXRViewer::assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
   {
     struct DeviceQueueFamily
     {
