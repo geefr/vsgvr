@@ -26,9 +26,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/VRViewMatrix.h>
 
 #include <vsg/core/Exception.h>
-#include <vsg/traversals/ComputeBounds.h>
-#include <vsg/viewer/RenderGraph.h>
-#include <vsg/viewer/View.h>
+#include <vsg/utils/ComputeBounds.h>
+#include <vsg/app/RenderGraph.h>
+#include <vsg/app/View.h>
 
 namespace vsgvr {
 VRViewer::VRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
@@ -161,7 +161,7 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
     auto camera = createCameraForScene(vsg_scene, hmdExtent);
     m_hmdCameras.push_back(camera);
     auto renderGraph =
-        createHmdRenderGraph(m_desktopWindow->getDevice(), *compile->contexts.front(),
+        createHmdRenderGraph(m_desktopWindow->getDevice(), context,
                              hmdExtent, image, m_desktopWindow->clearColor());
     hmdImages.push_back(image);
     auto view = vsg::View::create(camera, vsg_scene);
@@ -345,12 +345,10 @@ void VRViewer::submitVRFrames() {
     images.push_back(
         img.colourImage->vk(m_desktopWindow->getDevice()->deviceID));
 
-  m_ctx->submitFrames(images, m_desktopWindow->getDevice()->getDevice(),
-                      m_desktopWindow->getPhysicalDevice()->getPhysicalDevice(),
-                      m_desktopWindow->getInstance()->getInstance(),
-                      m_desktopWindow->getDevice()
-                          ->getQueue(hmdCommandGraph->queueFamily)
-                          ->queue(),
+  m_ctx->submitFrames(images, m_desktopWindow->getDevice()->vk(),
+                      m_desktopWindow->getPhysicalDevice()->vk(),
+                      m_desktopWindow->getInstance()->vk(),
+                      m_desktopWindow->getDevice()->getQueue(hmdCommandGraph->queueFamily)->vk(),
                       hmdCommandGraph->queueFamily, hmdImages.front().width,
                       hmdImages.front().height, hmdImageFormat,
                       VK_SAMPLE_COUNT_1_BIT);

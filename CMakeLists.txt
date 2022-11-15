@@ -18,7 +18,7 @@ set(OpenGL_GL_PREFERENCE GLVND)
 # add_subdirectory(deps/Format.cmake)
 
 # Package/System requirements
-find_package(vsg REQUIRED)
+find_package(vsg 1.0.0 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 vsg_setup_dir_vars()
