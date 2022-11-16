@@ -29,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/OpenXRActionSet.h>
 
 namespace vsgvr {
-    class VSG_DECLSPEC OpenXRInstance : public vsg::Inherit<vsg::Object, OpenXRInstance>
+    class VSGVR_DECLSPEC OpenXRInstance : public vsg::Inherit<vsg::Object, OpenXRInstance>
     {
         public:
             OpenXRInstance() = delete;
