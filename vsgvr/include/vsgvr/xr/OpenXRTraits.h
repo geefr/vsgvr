@@ -27,7 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 
 namespace vsgvr {
-  class OpenXrTraits {
+  class VSGVR_DECLSPEC OpenXrTraits {
   public:
     OpenXrTraits();
     std::vector<std::string> xrExtensions = {

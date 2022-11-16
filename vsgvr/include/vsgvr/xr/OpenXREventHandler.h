@@ -29,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr {
     class OpenXRInstance;
     class OpenXRSession;
-    class VSG_DECLSPEC OpenXREventHandler : public vsg::Inherit<vsg::Object, OpenXREventHandler>
+    class VSGVR_DECLSPEC OpenXREventHandler : public vsg::Inherit<vsg::Object, OpenXREventHandler>
     {
         public:
             OpenXREventHandler();

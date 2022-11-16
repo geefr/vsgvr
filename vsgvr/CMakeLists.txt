@@ -28,7 +28,7 @@ set( SOURCES
   src/vsgvr/actions/OpenXRActionPoseBinding.cpp
 )
 
-add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )
+add_library( vsgvr ${SOURCES} ${HEADERS} )
 
 target_include_directories(
   vsgvr PRIVATE
@@ -36,3 +36,9 @@ target_include_directories(
 )
 target_link_libraries( vsgvr PUBLIC vsg::vsg )
 target_link_libraries( vsgvr PUBLIC openxr_loader )
+if(WIN32 AND BUILD_SHARED_LIBS)
+    target_compile_options(vsgvr PRIVATE "-DVSGVR_DECLSPEC=__declspec(dllexport)")
+    target_compile_options(vsgvr INTERFACE "-DVSGVR_DECLSPEC=__declspec(dllimport)")
+else()
+    target_compile_options(vsgvr PUBLIC -DVSGVR_DECLSPEC=)
+endif()

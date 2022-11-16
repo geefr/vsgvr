@@ -49,7 +49,7 @@ namespace vsgvr {
       VkPhysicalDevice* physicalDevice;
     };
 
-    class VSG_DECLSPEC OpenXRGraphicsBindingVulkan : public vsg::Inherit<vsg::Object, OpenXRGraphicsBindingVulkan>
+    class VSGVR_DECLSPEC OpenXRGraphicsBindingVulkan : public vsg::Inherit<vsg::Object, OpenXRGraphicsBindingVulkan>
     {
         public:
             static VulkanRequirements getVulkanRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance);

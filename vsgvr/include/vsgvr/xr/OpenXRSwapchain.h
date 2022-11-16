@@ -38,7 +38,7 @@ namespace vsgvr
     virtual ~SwapchainImage();
   };
 
-  class VSG_DECLSPEC OpenXRSwapchain : public vsg::Inherit<vsg::Object, OpenXRSwapchain>
+  class VSGVR_DECLSPEC OpenXRSwapchain : public vsg::Inherit<vsg::Object, OpenXRSwapchain>
   {
   public:
     OpenXRSwapchain() = delete;
