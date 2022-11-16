@@ -21,16 +21,25 @@ int main(int argc, char **argv) {
     dataPath.append(VSGVR_REL_DATADIR);
     options->paths.push_back(dataPath);
     vsg::Path filename = "world.vsgt";
-    if (argc > 1)
-      filename = arguments[1];
-    if (arguments.errors())
-      return arguments.writeErrorMessages(std::cerr);
+    if (argc > 1) {
+        filename = arguments[1];
+        if (!vsg::fileExists(filename)) {
+            std::cerr << "Could not find file '" << filename << "'" << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+    if (arguments.errors()) {
+        arguments.writeErrorMessages(std::cerr);
+        return EXIT_FAILURE;
+    }
 
     // load the scene graph
     vsg::ref_ptr<vsg::Group> vsg_scene =
         vsg::read_cast<vsg::Group>(filename, options);
-    if (!vsg_scene)
-      return 0;
+    if (!vsg_scene) {
+        std::cerr << "Could not read the scene graph" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     // Initialise vr, and add nodes to the scene graph for each tracked device
     // TODO: If controllers are off when program starts they won't be added later
@@ -78,7 +87,7 @@ int main(int argc, char **argv) {
   }
   catch( const vsg::Exception& e )
   {
-    std::cout << "VSG Exception: " << e.message << std::endl;
+    std::cerr << "VSG Exception: " << e.message << std::endl;
     return EXIT_FAILURE;
   }
 }
