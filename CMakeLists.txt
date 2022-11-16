@@ -89,6 +89,7 @@ target_include_directories( example_vr PRIVATE
 if( MSVC )
   set_target_properties(example_vr PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OPENVR_BINDIR}")
 endif()
+set_target_properties(example_vr PROPERTIES OUTPUT_NAME vsgopenvrviewer)
 
 install(TARGETS example_vr)
 
