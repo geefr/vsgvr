@@ -1,17 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(VSGVR)
-
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-
-include(GNUInstallDirs)
+project(vsgvr
+    VERSION 0.4.0
+    DESCRIPTION "VulkanSceneGraph based virtual reality viewer"
+    LANGUAGES CXX
+)
 
 include(FetchContent)
-
-if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
-  set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE )
-  set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
-endif()
 
 # Compiler/Tool requirements
 set( CMAKE_CXX_STANDARD 17 )
@@ -23,6 +18,9 @@ set(OpenGL_GL_PREFERENCE GLVND)
 # Package/System requirements
 find_package(vsg REQUIRED)
 find_package(Vulkan REQUIRED)
+
+vsg_setup_dir_vars()
+vsg_setup_build_vars()
 
 # TODO: openvr paths are hardcoded
 set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
