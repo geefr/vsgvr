@@ -30,6 +30,15 @@ if(WIN32 AND BUILD_SHARED_LIBS)
 else()
     target_compile_options(vsgvr PUBLIC -DVSGVR_DECLSPEC=)
 endif()
+set_target_properties(vsgvr PROPERTIES
+    VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+    SOVERSION ${VSGVR_SOVERSION}
+)
+if(WIN32)
+    set_target_properties(vsgvr PROPERTIES
+        OUTPUT_NAME vsgvr-${VSGVR_SOVERSION}
+    )
+endif()
 
 install(TARGETS vsgvr ${INSTALL_TARGETS_DEFAULT_FLAGS})
 install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vsgvr)

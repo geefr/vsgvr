@@ -6,6 +6,8 @@ project(vsgvr
     LANGUAGES CXX
 )
 
+set(VSGVR_SOVERSION 0)
+
 include(FetchContent)
 
 # Compiler/Tool requirements
