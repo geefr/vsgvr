@@ -21,6 +21,10 @@ int main(int argc, char **argv) {
     auto options = vsg::Options::create();
     arguments.read(options);
 
+    // add relative data path based on binary dir
+    vsg::Path dataPath = vsg::filePath(vsg::executableFilePath());
+    dataPath.append(VSGVR_REL_DATADIR);
+    options->paths.push_back(dataPath);
     vsg::Path filename = "world.vsgt";
     if (argc > 1)
       filename = arguments[1];
@@ -34,11 +38,11 @@ int main(int argc, char **argv) {
       return 0;
 
     auto controllerNodeLeft = vsg::MatrixTransform::create();
-    controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt"));
+    controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt", options));
     vsg_scene->addChild(controllerNodeLeft);
 
     auto controllerNodeRight = vsg::MatrixTransform::create();
-    controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt"));
+    controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt", options));
     vsg_scene->addChild(controllerNodeRight);
 
     // Initialise OpenXR

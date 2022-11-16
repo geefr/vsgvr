@@ -25,6 +25,10 @@ add_subdirectory( deps/openxr )
 
 add_subdirectory( vsgvr )
 
+# setup relative data install path
+file(RELATIVE_PATH VSGVR_REL_DATADIR ${CMAKE_INSTALL_FULL_BINDIR} ${CMAKE_INSTALL_FULL_DATADIR}/vsgvr)
+add_definitions(-DVSGVR_REL_DATADIR=\"${VSGVR_REL_DATADIR}\")
+
 add_executable( example_vr example_vr.cpp )
 target_link_libraries( example_vr vsg::vsg vsgvr )
 target_include_directories( example_vr PRIVATE 
@@ -32,6 +36,6 @@ target_include_directories( example_vr PRIVATE
   vsgvr/include )
 
 # Copy models into the build dir
-configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/world.vsgt COPYONLY)
-configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller.vsgt COPYONLY)
-configure_file(models/controller/controller2.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller2.vsgt COPYONLY)
+configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/world.vsgt COPYONLY)
+configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/controller.vsgt COPYONLY)
+configure_file(models/controller/controller2.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/controller2.vsgt COPYONLY)
