@@ -14,7 +14,7 @@ set( CMAKE_CXX_STANDARD 17 )
 set(OpenGL_GL_PREFERENCE GLVND)
 
 # Package/System requirements
-find_package(vsg 1.0.0)
+find_package(vsg 1.0.0 NO_CMAKE_FIND_ROOT_PATH)
 find_package(Vulkan REQUIRED)
 
 add_subdirectory( deps/openxr )
