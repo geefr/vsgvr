@@ -71,9 +71,18 @@ if( MSVC )
   set_target_properties(example_vr PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OPENVR_BINDIR}")
 endif()
 
+install(TARGETS example_vr)
+
 # Copy models into the build dir
 configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/world.vsgt COPYONLY)
 configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/controller.vsgt COPYONLY)
 configure_file(models/controller/controller2.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/controller2.vsgt COPYONLY)
+
+install(FILES
+    models/world/world.vsgt
+    models/controller/controller.vsgt
+    models/controller/controller2.vsgt
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/vsgvr
+)
 
 add_subdirectory( tests )
