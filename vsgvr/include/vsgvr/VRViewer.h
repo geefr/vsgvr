@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/VR.h>
 
 namespace vsgvr {
-class VSG_DECLSPEC VRViewer final : public vsg::Inherit<vsg::Viewer, VRViewer> {
+class VSGVR_DECLSPEC VRViewer final : public vsg::Inherit<vsg::Viewer, VRViewer> {
 public:
   VRViewer(vsg::ref_ptr<vsgvr::VRContext> ctx,
            vsg::ref_ptr<vsg::WindowTraits> windowTraits);

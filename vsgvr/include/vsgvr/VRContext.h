@@ -30,7 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  class VSG_DECLSPEC VRContext : public vsg::Inherit<vsg::Object, VRContext>
+  class VSGVR_DECLSPEC VRContext : public vsg::Inherit<vsg::Object, VRContext>
   {
   public:
     using TrackedDevices = std::map<uint32_t, vsg::ref_ptr<vsgvr::VRDevice>>;

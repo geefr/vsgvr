@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/VR.h>
 
 namespace vsgvr {
-class VSG_DECLSPEC UpdateVRVisitor
+class VSGVR_DECLSPEC UpdateVRVisitor
     : public vsg::Inherit<vsg::Visitor, UpdateVRVisitor> {
 public:
   UpdateVRVisitor() = delete;

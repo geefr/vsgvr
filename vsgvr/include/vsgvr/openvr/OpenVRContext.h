@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr
 {
   class OpenVRContextImpl;
-  class VSG_DECLSPEC OpenVRContext : public vsg::Inherit<vsgvr::VRContext, OpenVRContext>
+  class VSGVR_DECLSPEC OpenVRContext : public vsg::Inherit<vsgvr::VRContext, OpenVRContext>
   {
   public:
     OpenVRContext(vsgvr::VRContext::TrackingOrigin origin = vsgvr::VRContext::TrackingOrigin::Standing);

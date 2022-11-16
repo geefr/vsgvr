@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/viewer/ViewMatrix.h>
 
 namespace vsgvr {
-class VSG_DECLSPEC VRViewMatrix
+class VSGVR_DECLSPEC VRViewMatrix
     : public vsg::Inherit<vsg::ViewMatrix, VRViewMatrix> {
 public:
   VRViewMatrix(vsg::mat4 matrix) : mat(matrix) {}

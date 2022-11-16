@@ -27,7 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  class VSG_DECLSPEC VRDevice : public vsg::Inherit<vsg::Object, VRDevice>
+  class VSGVR_DECLSPEC VRDevice : public vsg::Inherit<vsg::Object, VRDevice>
   {
   public:
     enum class DeviceType
