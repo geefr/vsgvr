@@ -97,7 +97,7 @@ namespace vsgvr
         _system = 0;
         _systemProperties = XrSystemProperties();
         xr_check(xrDestroyInstance(_instance), "Failed to destroy XR Instance");
-        _instance = nullptr;
+        _instance = 0;
     }
 
     void OpenXRInstance::createSystem()

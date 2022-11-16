@@ -49,7 +49,7 @@ namespace vsgvr {
 
             void setSpaceLocation(XrSpaceLocation location);
         private:
-            XrSpace _space = nullptr;
+            XrSpace _space = 0;
 
             bool _transformValid = false;
             vsg::mat4 _transform;

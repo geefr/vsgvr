@@ -57,7 +57,7 @@ namespace vsgvr {
 
             OpenXrTraits _xrTraits;
 
-            XrInstance _instance = nullptr;
+            XrInstance _instance = 0;
             XrInstanceProperties _instanceProperties;
 
             XrSystemId _system = 0;

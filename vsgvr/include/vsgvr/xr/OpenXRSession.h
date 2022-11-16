@@ -69,10 +69,10 @@ namespace vsgvr {
 
             vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;
             
-            XrSession _session = nullptr;
+            XrSession _session = 0;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;
-            XrSpace _space = nullptr;
+            XrSpace _space = 0;
 
             struct PerViewData
             {

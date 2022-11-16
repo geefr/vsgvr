@@ -61,8 +61,9 @@ namespace vsgvr {
       xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), &graphicsRequirements), "Failed to get Vulkan requirements");
 
       // min/max vulkan api version supported by the XR runtime (XR_MAKE_VERSION)
-      reqs.minVersion = VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(graphicsRequirements.minApiVersionSupported), XR_VERSION_MINOR(graphicsRequirements.minApiVersionSupported), XR_VERSION_PATCH(graphicsRequirements.minApiVersionSupported));
-      reqs.maxVersion = VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(graphicsRequirements.maxApiVersionSupported), XR_VERSION_MINOR(graphicsRequirements.maxApiVersionSupported), XR_VERSION_PATCH(graphicsRequirements.maxApiVersionSupported));
+      reqs.minVersion = VK_MAKE_VERSION(XR_VERSION_MAJOR(graphicsRequirements.minApiVersionSupported), XR_VERSION_MINOR(graphicsRequirements.minApiVersionSupported), XR_VERSION_PATCH(graphicsRequirements.minApiVersionSupported));
+      reqs.maxVersion = VK_MAKE_VERSION(XR_VERSION_MAJOR(graphicsRequirements.maxApiVersionSupported), XR_VERSION_MINOR(graphicsRequirements.maxApiVersionSupported), XR_VERSION_PATCH(graphicsRequirements.maxApiVersionSupported));
+
       std::stringstream ss;
       ss << XR_VERSION_MAJOR(graphicsRequirements.minApiVersionSupported) << "." << XR_VERSION_MINOR(graphicsRequirements.minApiVersionSupported) << "." << XR_VERSION_PATCH(graphicsRequirements.minApiVersionSupported);
       reqs.minVersionStr = ss.str();

@@ -264,9 +264,9 @@ namespace vsgvr {
   void OpenXRSession::destroySession()
   {
     xr_check(xrDestroySpace(_space));
-    _space = nullptr;
+    _space = 0;
     xr_check(xrDestroySession(_session));
-    _session = nullptr;
+    _session = 0;
   }
 
   void OpenXRSession::beginSession(XrViewConfigurationType viewConfigurationType)

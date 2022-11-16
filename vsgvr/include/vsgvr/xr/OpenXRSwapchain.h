@@ -63,7 +63,7 @@ namespace vsgvr
     void destroySwapchain();
 
     VkFormat _swapchainFormat = VK_FORMAT_UNDEFINED;
-    XrSwapchain _swapchain = nullptr;
+    XrSwapchain _swapchain = 0;
     VkExtent2D _extent;
 
     std::vector<VkImage> _swapchainImages;
