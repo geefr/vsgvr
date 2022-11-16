@@ -22,9 +22,9 @@ The following configurations have been tested:
 
 Feature                      | Status
 -----------------------------|--------
-Linux Build                  | Building
-Windows Build                | Building
-Android Build                | Not Implemented Yet
+Linux Build                  | Done
+Windows Build                | Done
+Android Build                | Builds, but untested, no example application
 Code quality / API           | Messy, but in roughly the right structure for now
 OpenXR Rendering             | Working, could do with a cleanup and better vsg integration at some point
 OpenXR Input                 | Not Implemented Yet
