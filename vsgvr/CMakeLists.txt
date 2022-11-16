@@ -42,3 +42,10 @@ if(WIN32 AND BUILD_SHARED_LIBS)
 else()
     target_compile_options(vsgvr PUBLIC -DVSGVR_DECLSPEC=)
 endif()
+
+install(TARGETS vsgvr ${INSTALL_TARGETS_DEFAULT_FLAGS})
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vsgvr)
+
+vsg_add_cmake_support_files(
+    CONFIG_TEMPLATE vsgvrConfig.cmake.in
+)

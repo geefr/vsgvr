@@ -35,7 +35,16 @@ target_include_directories( example_vr PRIVATE
   ${OPENVR_ROOT}/headers
   vsgvr/include )
 
+install(TARGETS example_vr)
+
 # Copy models into the build dir
 configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/world.vsgt COPYONLY)
 configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/controller.vsgt COPYONLY)
 configure_file(models/controller/controller2.vsgt ${CMAKE_CURRENT_BINARY_DIR}/share/vsgvr/controller2.vsgt COPYONLY)
+
+install(FILES
+    models/world/world.vsgt
+    models/controller/controller.vsgt
+    models/controller/controller2.vsgt
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/vsgvr
+)
