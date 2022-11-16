@@ -36,8 +36,10 @@ int main(int argc, char **argv) {
     // load the scene graph
     vsg::ref_ptr<vsg::Group> vsg_scene =
         vsg::read_cast<vsg::Group>(filename, options);
-    if (!vsg_scene)
-      return 0;
+    if (!vsg_scene) {
+        std::cerr << "Could not read the scene graph" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     auto controllerNodeLeft = vsg::MatrixTransform::create();
     controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt", options));
@@ -286,7 +288,7 @@ int main(int argc, char **argv) {
   }
   catch( const vsg::Exception& e )
   {
-    std::cout << "VSG Exception: " << e.message << std::endl;
+    std::cerr << "VSG Exception: " << e.message << std::endl;
     return EXIT_FAILURE;
   }
 }
