@@ -26,7 +26,14 @@ int main(int argc, char **argv) {
     arguments.read(options);
 
     auto vsg_scene = vsg::Group::create();
-    vsg_scene->addChild(world());
+
+    // load the scene graph
+    // * Load the bulk of the scene from command line, or the built-in world model
+    // * Always load controllers separately from built-in models
+    auto worldScene = vsg::read_cast<vsg::Group>(filename, options);
+    if (!worldScene) {
+    	vsg_scene->addChild(world());
+    }
 
     auto controllerNodeLeft = controller();
     vsg_scene->addChild(controllerNodeLeft);
@@ -270,7 +277,7 @@ int main(int argc, char **argv) {
   }
   catch( const vsg::Exception& e )
   {
-    std::cout << "VSG Exception: " << e.message << std::endl;
+    std::cerr << "VSG Exception: " << e.message << std::endl;
     return EXIT_FAILURE;
   }
 }
