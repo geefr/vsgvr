@@ -74,3 +74,5 @@ install(FILES
     models/controller/controller2.vsgt
     DESTINATION ${CMAKE_INSTALL_DATADIR}/vsgvr
 )
+
+vsg_add_feature_summary()
