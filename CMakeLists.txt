@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(VSGVR)
 
 option( BUILD_SHARED_LIBS "Build shared libraries" OFF )
-option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples or not" ON )
+option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples" ON )
 
 if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
   set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE )
@@ -11,8 +11,11 @@ if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
 endif()
 
 if( NOT VSGVR_XR_PLATFORM )
+  # OPENXR_GENERIC - The standard openxr_loader.so, built from deps/openxr
+  # OPENXR_SYSTEM - Whatever OpenXR is available via find_package
+  # OPENXR_OCULUS_MODULE - Oculus specific runtime from their Mobile OpenXR SDK
   set( VSGVR_XR_PLATFORM "OPENXR_GENERIC" CACHE STRING "The OpenXR loader / platform combination to build" )
-  set_property( CACHE VSGVR_XR_PLATFORM PROPERTY STRINGS "OPENXR_GENERIC" "OPENXR_OCULUS_MOBILE" )
+  set_property( CACHE VSGVR_XR_PLATFORM PROPERTY STRINGS "OPENXR_GENERIC" "OPENXR_SYSTEM" "OPENXR_OCULUS_MOBILE" )
 endif()
 
 # Compiler/Tool requirements
@@ -28,8 +31,12 @@ endif()
 
 find_package(Vulkan REQUIRED)
 
+set(OpenXR_LIBRARY openxr_loader)
 if( VSGVR_XR_PLATFORM STREQUAL "OPENXR_GENERIC" )
   add_subdirectory( deps/openxr )
+elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_SYSTEM" )
+  find_package(OpenXR REQUIRED)
+  set(OpenXR_LIBRARY OpenXR::openxr_loader)
 elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_OCULUS_MOBILE" )
   if(NOT ANDROID)
     message(FATAL_ERROR "Oculus Mobile SDK is only supported when building for Android")

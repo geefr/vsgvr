@@ -40,8 +40,7 @@ target_include_directories(
   vsgvr PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries( vsgvr PUBLIC vsg::vsg )
-target_link_libraries( vsgvr PUBLIC openxr_loader )
+target_link_libraries( vsgvr PUBLIC vsg::vsg ${OpenXR_LIBRARY} )
 
 if(WIN32 AND BUILD_SHARED_LIBS)
   target_compile_definitions(vsgvr PRIVATE VSGVR_DECLSPEC="__declspec(dllexport)")
