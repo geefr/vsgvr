@@ -60,7 +60,7 @@ target_link_libraries( example_vr vsg::vsg vsgvr )
 target_include_directories( example_vr PRIVATE 
   ${OPENVR_ROOT}/headers
   vsgvr/include )
-
+set_target_properties(example_vr PROPERTIES OUTPUT_NAME vsgopenxrviewer)
 install(TARGETS example_vr)
 
 # Copy models into the build dir
