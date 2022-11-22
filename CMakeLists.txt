@@ -23,7 +23,16 @@ vsg_setup_build_vars()
 vsg_add_target_clobber()
 vsg_add_target_uninstall()
 
-add_subdirectory( deps/openxr )
+find_package(OpenXR QUIET)
+if(OpenXR_FOUND)
+    set(OpenXR_LIBRARY OpenXR::openxr_loader)
+elseif(IS_DIRECTORY deps/openxr)
+    message(STATUS "Using embedded OpenXR development kit")
+    add_subdirectory(deps/openxr)
+    set(OpenXR_LIBRARY openxr_loader)
+else()
+    message(FATAL_ERROR "Could not find OpenXR development kit")
+endif()
 
 add_subdirectory( vsgvr )
 
