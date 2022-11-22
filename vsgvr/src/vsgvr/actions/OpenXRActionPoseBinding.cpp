@@ -61,8 +61,10 @@ namespace vsgvr
 
     void OpenXRActionPoseBinding::destroyActionSpace()
     {
-        xr_check(xrDestroySpace(_space));
-        _space = 0;
+        if (_space) {
+            xr_check(xrDestroySpace(_space));
+            _space = nullptr;
+        }
     }
 
     void OpenXRActionPoseBinding::setSpaceLocation(XrSpaceLocation location)
