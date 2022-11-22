@@ -1,31 +1,17 @@
 
-file(GLOB HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/vsgvr/*.h )
+file(GLOB HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/vsgvr/*/*.h )
 
 set( SOURCES
-  include/vsgvr/xr/OpenXRCommon.h
-  include/vsgvr/xr/OpenXRInstance.h
-  src/vsgvr/xr/OpenXRInstance.cpp
-  include/vsgvr/xr/OpenXREventHandler.h
-  src/vsgvr/xr/OpenXREventHandler.cpp
-  include/vsgvr/xr/OpenXRTraits.h
-  src/vsgvr/xr/OpenXRTraits.cpp
-  include/vsgvr/app/OpenXRViewer.h
-  src/vsgvr/app/OpenXRViewer.cpp
-  include/vsgvr/xr/OpenXRGraphicsBindingVulkan.h
-  src/vsgvr/xr/OpenXRGraphicsBindingVulkan.cpp
-  include/vsgvr/xr/OpenXRSession.h
-  src/vsgvr/xr/OpenXRSession.cpp
-  include/vsgvr/xr/OpenXRSwapchain.h
-  src/vsgvr/xr/OpenXRSwapchain.cpp
-  include/vsgvr/xr/OpenXRViewMatrix.h
-  include/vsgvr/xr/OpenXRProjectionMatrix.h
-
-  include/vsgvr/actions/OpenXRAction.h
   src/vsgvr/actions/OpenXRAction.cpp
-  include/vsgvr/actions/OpenXRActionSet.h
-  src/vsgvr/actions/OpenXRActionSet.cpp
-  include/vsgvr/actions/OpenXRActionPoseBinding.h
   src/vsgvr/actions/OpenXRActionPoseBinding.cpp
+  src/vsgvr/actions/OpenXRActionSet.cpp
+  src/vsgvr/app/OpenXRViewer.cpp
+  src/vsgvr/xr/OpenXREventHandler.cpp
+  src/vsgvr/xr/OpenXRGraphicsBindingVulkan.cpp
+  src/vsgvr/xr/OpenXRInstance.cpp
+  src/vsgvr/xr/OpenXRSession.cpp
+  src/vsgvr/xr/OpenXRSwapchain.cpp
+  src/vsgvr/xr/OpenXRTraits.cpp
 )
 
 add_library( vsgvr ${SOURCES} ${HEADERS} )
