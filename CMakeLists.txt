@@ -105,3 +105,6 @@ install(FILES
 )
 
 add_subdirectory( tests )
+
+vsg_add_feature_summary()
+
