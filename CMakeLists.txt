@@ -56,6 +56,23 @@ else()
     message(FATAL_ERROR "Could not find openvr development kit")
 endif()
 
+vsg_add_target_clang_format(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+)
+vsg_add_target_cppcheck(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+)
+vsg_add_target_clobber()
+vsg_add_target_docs(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include
+)
+vsg_add_target_uninstall()
+
 #####################
 
 add_subdirectory( vsgvr )
