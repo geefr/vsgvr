@@ -20,7 +20,22 @@ find_package(Vulkan REQUIRED)
 
 vsg_setup_dir_vars()
 vsg_setup_build_vars()
+
+vsg_add_target_clang_format(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+)
+vsg_add_target_cppcheck(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+)
 vsg_add_target_clobber()
+vsg_add_target_docs(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include
+)
 vsg_add_target_uninstall()
 
 find_package(OpenXR QUIET)
