@@ -149,6 +149,11 @@ VRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene) {
   auto numImages = m_ctx->numberOfHmdImages();
 
   vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(*this);
+  // when vsg::CompileTraversal is created from a vsg::Viewer instance
+  // compile->context is only filled when
+  // viewer->assignRecordAndSubmitTaskAndPresentation() was called before
+  // vsg::ref_ptr<vsg::CompileTraversal> compile = vsg::CompileTraversal::create(*this);
+  vsg::Context context(m_desktopWindow->getOrCreateDevice());
   uint32_t hmdWidth = 0, hmdHeight = 0;
   m_ctx->getRecommendedTargetSize(hmdWidth, hmdHeight);
   VkExtent2D hmdExtent{hmdWidth, hmdHeight};
