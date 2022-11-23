@@ -20,7 +20,7 @@ target_include_directories(
   ${PROJECT_SOURCE_DIR}/vr
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   PUBLIC
-  ${OPENVR_ROOT}/headers
+  ${OPENVR_INCLUDE_DIRS}
 )
 target_link_libraries( vsgvr PUBLIC vsg::vsg ${OPENVR_LIB})
 target_link_directories( vsgvr PUBLIC ${OPENVR_LIBDIR} )

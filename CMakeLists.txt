@@ -22,15 +22,36 @@ find_package(Vulkan REQUIRED)
 vsg_setup_dir_vars()
 vsg_setup_build_vars()
 
-# TODO: openvr paths are hardcoded
-set( OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr )
-set( OPENVR_LIB "openvr_api" )
-if( MSVC )
-  set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/win64 )
-  set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/win64 )
+find_package(PkgConfig)
+if (PKG_CONFIG_FOUND)
+    pkg_search_module(OPENVR openvr)
+endif()
+if (OPENVR_FOUND)
+    set(OPENVR_LIB ${OPENVR_LIBRARIES})
+    set(OPENVR_LIBDIR ${OPENVR_LIBRARY_DIRS})
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(openvr
+        FOUND_VAR OPENVR_FOUND
+        REQUIRED_VARS
+            OPENVR_LIBRARIES
+            OPENVR_INCLUDE_DIRS
+        VERSION_VAR OPENVR_VERSION
+    )
+elseif(IS_DIRECTORY deps/openvr)
+    message(STATUS "Using embedded openvr development kit")
+    set(OPENVR_LIB "openvr_api" )
+    set(OPENVR_ROOT ${PROJECT_SOURCE_DIR}/deps/openvr)
+    set(OPENVR_INCLUDE_DIRS ${OPENVR_ROOT}/headers)
+    if( MSVC )
+        set(OPENVR_BINDIR ${OPENVR_ROOT}/bin/win64)
+        set(OPENVR_LIBDIR ${OPENVR_ROOT}/lib/win64)
+    else()
+        set(OPENVR_BINDIR ${OPENVR_ROOT}/bin/linux64)
+        set(OPENVR_LIBDIR ${OPENVR_ROOT}/lib/linux64)
+    endif()
+    add_subdirectory(deps/openvr)
 else()
-  set( OPENVR_BINDIR ${OPENVR_ROOT}/bin/linux64 )
-  set( OPENVR_LIBDIR ${OPENVR_ROOT}/lib/linux64 )
+    message(FATAL_ERROR "Could not find openvr development kit")
 endif()
 
 #####################
@@ -40,7 +61,7 @@ add_subdirectory( vsgvr )
 add_executable( example_vr example_vr.cpp )
 target_link_libraries( example_vr vsg::vsg vsgvr )
 target_include_directories( example_vr PRIVATE 
-  ${OPENVR_ROOT}/headers
+  ${OPENVR_INCLUDE_DIRS}
   vsgvr/include )
 if( MSVC )
   set_target_properties(example_vr PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${OPENVR_BINDIR}")
