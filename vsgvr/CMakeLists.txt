@@ -36,7 +36,11 @@ set_target_properties(vsgvr PROPERTIES
 )
 if(WIN32)
     set_target_properties(vsgvr PROPERTIES
-        OUTPUT_NAME vsgvr-${VSGVR_SOVERSION}
+        OUTPUT_NAME vsgvr-openvr-${VSGVR_SOVERSION}
+    )
+else()
+    set_target_properties(vsgvr PROPERTIES
+        OUTPUT_NAME vsgvr-openvr
     )
 endif()
 
