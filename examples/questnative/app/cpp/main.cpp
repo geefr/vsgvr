@@ -1,6 +1,5 @@
 
 #include <initializer_list>
-//#include <memory>
 #include <cstdlib>
 #include <cstring>
 #include <jni.h>
@@ -44,10 +43,6 @@ struct AppData
     vsg::ref_ptr<vsg::MatrixTransform> controllerNodeLeft;
     vsg::ref_ptr<vsg::MatrixTransform> controllerNodeRight;
     vsg::ref_ptr<vsgAndroid::Android_Window> window;
-
-    bool animate;
-
-    float time;
 };
 
 //
@@ -55,9 +50,6 @@ struct AppData
 //
 static int vsg_init(struct AppData* appData)
 {
-    appData->animate = true;
-    appData->time = 0.0f;
-
     auto vsg_scene = vsg::Group::create();
     vsg_scene->addChild(world());
     appData->controllerNodeLeft = controller();
@@ -235,8 +227,6 @@ static void vsg_term(struct AppData* appData)
     appData->viewer = nullptr;
     appData->vr = nullptr;
     appData->window = nullptr;
-    // appData->uniformBufferData.clear();
-    appData->animate = false;
 }
 
 //
@@ -333,12 +323,6 @@ static void android_handlecmd(struct android_app* app, int32_t cmd)
         case APP_CMD_TERM_WINDOW:
             // The window is being hidden or closed, clean it up.
             vsg_term(appData);
-            break;
-        case APP_CMD_GAINED_FOCUS:
-            appData->animate = true;
-            break;
-        case APP_CMD_LOST_FOCUS:
-            appData->animate = false;
             break;
     }
 }

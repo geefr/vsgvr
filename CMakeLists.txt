@@ -4,6 +4,8 @@ project(VSGVR)
 
 include(FetchContent)
 
+option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples or not" ON )
+
 if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
   set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE )
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
@@ -48,9 +50,10 @@ endif()
 
 add_subdirectory( vsgvr )
 
-add_executable( example_vr example_vr.cpp )
-target_link_libraries( example_vr vsg::vsg vsgvr )
-target_include_directories( example_vr PRIVATE vsgvr/include )
+
+if( VSGVR_BUILD_EXAMPLES )
+  add_subdirectory( examples )
+endif()
 
 # Copy models into the build dir
 configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/world.vsgt COPYONLY)

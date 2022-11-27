@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- BEGIN_INCLUDE(manifest) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.vsg.vsgnative"
+          package="com.vsgvr.vsgvrquestnative"
           android:versionCode="1"
           android:versionName="1.0">
 
@@ -33,7 +33,7 @@
               android:configChanges="density|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|uiMode"
               android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
         <!-- Tell NativeActivity the name of our .so -->
-        <meta-data android:name="android.app.lib_name" android:value="vsgnative" />
+        <meta-data android:name="android.app.lib_name" android:value="vsgvrquestnative" />
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="com.oculus.intent.category.VR" />

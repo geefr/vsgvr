@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.0)
 
-project(vsgandroidnative)
+project(vsgvrquestnative)
 
 # build native_app_glue as a static lib
 set(${CMAKE_C_FLAGS}, "${CMAKE_C_FLAGS}")
@@ -15,11 +15,8 @@ set(CMAKE_CXX_VISIBILITY_PRESET default)
 set(CMAKE_DEBUG_POSTFIX "")
 
 # find vsg
-# find_package(vsg REQUIRED NO_CMAKE_FIND_ROOT_PATH)
-# set( BUILD_SHARED_LIBS ON )
-add_subdirectory(D:/dev/vsg/VulkanSceneGraph vsg)
-
-add_subdirectory(D:/dev/vsg/vsgvr vsgvr)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../VulkanSceneGraph" vsg)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../" vsgvr)
 
 # Export ANativeActivity_onCreate(),
 # Refer to: https://github.com/android-ndk/ndk/issues/381.
@@ -27,16 +24,16 @@ set(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
 # add vsgnative target
-add_library(vsgnative SHARED
-        main.cpp)
+add_library(vsgvrquestnative SHARED main.cpp)
 
 # add the app glue include directory
-target_include_directories(vsgnative PRIVATE
+target_include_directories(vsgvrquestnative PRIVATE
     ${ANDROID_NDK}/sources/android/native_app_glue
-        D:/dev/vsg/vsgvr/vsgvr/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../vsgvr/include
+    )
 
 # add lib dependencies
-target_link_libraries(vsgnative
+target_link_libraries(vsgvrquestnative
     vsg::vsg vsgvr
     android
     native_app_glue

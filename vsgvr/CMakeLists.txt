@@ -38,7 +38,7 @@ endif()
 add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )
 
 target_include_directories(
-  vsgvr PRIVATE
+  vsgvr PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries( vsgvr PUBLIC vsg::vsg )
