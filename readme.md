@@ -34,7 +34,7 @@ Feature                      | Status
 -----------------------------|--------
 Linux Build                  | Done
 Windows Build                | Done
-Android Build                | Builds, but untested, no example application
+Android Build                | Bugs in controller position/tracking, otherwise done
 Code quality / API           | Messy, but in roughly the right structure for now
 OpenXR Rendering             | Working, could do with a cleanup and better vsg integration at some point
 OpenXR Input                 | Not Implemented Yet
