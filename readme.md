@@ -14,11 +14,13 @@ The basic `example_vr.cpp` application is similar to the desktop vsg Viewer appl
 
 ### Supported Hardware
 
-In theory, any OpenXR compatible hardware or systems are supported.
+In theory, any OpenXR compatible hardware or systems are supported. Some slightly different behaviour has been noted between OpenXR runtimes however.
 
 The following configurations have been tested:
 * Rendering to a virtual HMD in Monado, on Linux
 * Rendering to SteamVR (HTC Vive), on Linux, and Windows
+* Rendering to SteamVR + Oculus Line (Quest 2) on Windows
+* Rendering to Oculus OpenXR runtime (Quest 2) on Windows
 
 Feature                      | Status
 -----------------------------|--------

@@ -28,6 +28,13 @@ set( SOURCES
   src/vsgvr/actions/OpenXRActionPoseBinding.cpp
 )
 
+if( ANDROID )
+  list(APPEND SOURCES
+    include/vsgvr/xr/OpenXRAndroidTraits.h
+    src/vsgvr/xr/OpenXRAndroidTraits.cpp
+  )
+endif()
+
 add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )
 
 target_include_directories(

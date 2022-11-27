@@ -25,6 +25,8 @@ namespace vsgvr
 {
   OpenXrTraits::OpenXrTraits() {}
 
+  OpenXrTraits::~OpenXrTraits() {}
+
   void OpenXrTraits::setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch)
   {
     applicationVersion = XR_MAKE_VERSION(maj, min, patch);

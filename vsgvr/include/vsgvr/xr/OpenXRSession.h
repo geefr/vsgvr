@@ -37,7 +37,6 @@ namespace vsgvr {
             OpenXRSession() = delete;
             OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding,
                           VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
-            ~OpenXRSession();
 
             XrSession getSession() const { return _session; }
             XrSessionState getSessionState() const { return _sessionState; }
@@ -61,6 +60,8 @@ namespace vsgvr {
 
             Frame& frame(size_t view, size_t i) { return _viewData[view].frames[i]; }
             Frames& frames(size_t view) { return _viewData[view].frames; }
+        protected:
+            virtual ~OpenXRSession();
         private:
             void createSession(vsg::ref_ptr<OpenXRInstance> instance);
             void createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);

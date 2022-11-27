@@ -48,4 +48,10 @@ namespace {
       "Failed to look up function: " + name);
     return fn;
   }
+  PFN_xrVoidFunction xr_pfn_noexcept(XrInstance instance, std::string name) {
+    PFN_xrVoidFunction fn = nullptr;
+    auto res = xrGetInstanceProcAddr(instance, name.c_str(), &fn);
+    if( XR_SUCCEEDED(res) ) return fn;
+    else return nullptr;
+  }
 }

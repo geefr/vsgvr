@@ -23,11 +23,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/OpenXRCommon.h>
 
+#include <vsg/core/Inherit.h>
+
 #include <string>
 #include <vector>
 
 namespace vsgvr {
-  class OpenXrTraits {
+  class VSG_DECLSPEC OpenXrTraits : public vsg::Inherit<vsg::Object, OpenXrTraits> {
   public:
     OpenXrTraits();
     std::vector<std::string> xrExtensions = {
@@ -53,17 +55,8 @@ namespace vsgvr {
     XrEnvironmentBlendMode environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
     VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_SRGB; // Runtimes _should_ support this, as a preferred option
     uint32_t swapchainSampleCount = 4;
-  };
 
-  //class OpenXrVulkanTraits {
-  //public:
-  //  std::vector<std::string> vulkanInstanceExtensions = {
-  //    "VK_EXT_debug_report"
-  //  };
-  //  std::vector<std::string> vulkanLayers;
-  //  uint32_t vulkanVersion = VK_API_VERSION_1_0;
-  //  // TODO: These do nothing at the moment
-  //  bool vulkanDebugLayer = false;
-  //  bool vulkanApiDumpLayer = false;
-  //};
+    protected:
+      virtual ~OpenXrTraits();
+  };
 }

@@ -62,7 +62,7 @@ namespace vsgvr {
              * * That the required instance and device extensions are present - OpenXRGraphicsBindingVulkan::getVulkanRequirements
              * * A specific PhysicalDevice is used - OpenXRGraphicsBindingVulkan::getVulkanDeviceRequirements
              */
-            OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding);
+            OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<OpenXrTraits> xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding);
 
             OpenXRViewer() = delete;
             ~OpenXRViewer();
@@ -144,13 +144,13 @@ namespace vsgvr {
             void createActionSpaces();
             void destroyActionSpaces();
 
-            OpenXrTraits _xrTraits;
+            vsg::ref_ptr<OpenXrTraits> _xrTraits;
 
             OpenXREventHandler _eventHandler;
 
             vsg::ref_ptr<OpenXRInstance> _instance;
 
-            // Details of chosen _xrTraits.viewConfigurationType
+            // Details of chosen _xrTraits->viewConfigurationType
             // Details of individual views - recommended size / sampling
             XrViewConfigurationProperties _viewConfigurationProperties;
             std::vector<XrViewConfigurationView> _viewConfigurationViews;
