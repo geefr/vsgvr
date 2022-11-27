@@ -19,21 +19,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#pragma once
+#include <vsgvr/xr/OpenXRAndroidTraits.h>
 
-#include <vsg/core/Inherit.h>
+namespace vsgvr
+{
+  OpenXrAndroidTraits::OpenXrAndroidTraits() {}
 
-#include <vsgvr/xr/OpenXRCommon.h>
-
-namespace vsgvr {
-    class OpenXRInstance;
-    class OpenXRSession;
-    class VSG_DECLSPEC OpenXREventHandler : public vsg::Inherit<vsg::Object, OpenXREventHandler>
-    {
-        public:
-            OpenXREventHandler();
-            ~OpenXREventHandler();
-
-            void pollEvents(OpenXRInstance* instance, OpenXRSession* session);
-    };
+  OpenXrAndroidTraits::~OpenXrAndroidTraits() {}
 }

@@ -28,10 +28,17 @@ set( SOURCES
   src/vsgvr/actions/OpenXRActionPoseBinding.cpp
 )
 
+if( ANDROID )
+  list(APPEND SOURCES
+    include/vsgvr/xr/OpenXRAndroidTraits.h
+    src/vsgvr/xr/OpenXRAndroidTraits.cpp
+  )
+endif()
+
 add_library( vsgvr STATIC ${SOURCES} ${HEADERS} )
 
 target_include_directories(
-  vsgvr PRIVATE
+  vsgvr PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries( vsgvr PUBLIC vsg::vsg )

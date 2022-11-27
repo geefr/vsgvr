@@ -21,19 +21,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsg/core/Inherit.h>
+#include <vsgvr/xr/OpenXRTraits.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <jni.h>
 
 namespace vsgvr {
-    class OpenXRInstance;
-    class OpenXRSession;
-    class VSG_DECLSPEC OpenXREventHandler : public vsg::Inherit<vsg::Object, OpenXREventHandler>
-    {
-        public:
-            OpenXREventHandler();
-            ~OpenXREventHandler();
+  class VSG_DECLSPEC OpenXrAndroidTraits : public vsg::Inherit<vsgvr::OpenXrTraits, OpenXrAndroidTraits> {
+  public:
+    OpenXrAndroidTraits();
 
-            void pollEvents(OpenXRInstance* instance, OpenXRSession* session);
-    };
+    JavaVM* vm = nullptr;
+    jobject activity = nullptr;
+  protected:
+    virtual ~OpenXrAndroidTraits();
+  };
 }

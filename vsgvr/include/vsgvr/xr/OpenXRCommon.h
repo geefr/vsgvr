@@ -25,5 +25,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <openxr/openxr_reflection.h>
 
 #include <vulkan/vulkan.h>
+
 #define XR_USE_GRAPHICS_API_VULKAN
+#ifdef ANDROID
+# define XR_USE_PLATFORM_ANDROID
+# define XR_USE_PLATFORM_ANDROID_KHR
+# include <jni.h>
+#endif
 #include <openxr/openxr_platform.h>

@@ -41,8 +41,9 @@ using namespace vsg;
 
 namespace vsgvr
 {
-  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, OpenXrTraits xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
+  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<OpenXrTraits> xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
+    , _xrTraits(xrTraits)
     , _graphicsBinding(graphicsBinding)
     // , updateOperations(UpdateOperations::create())
   {
@@ -84,7 +85,7 @@ namespace vsgvr
       if (!_session->getSessionRunning())
       {
         // Begin session. Transition to synchronised after a few begin/end frames
-        _session->beginSession(_xrTraits.viewConfigurationType);
+        _session->beginSession(_xrTraits->viewConfigurationType);
       }
       return PollEventsResult::RunningDontRender;
     case XR_SESSION_STATE_SYNCHRONIZED:
@@ -184,7 +185,7 @@ namespace vsgvr
       viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
       viewLocateInfo.next = nullptr;
       viewLocateInfo.space = _session->getSpace();
-      viewLocateInfo.viewConfigurationType = _xrTraits.viewConfigurationType;
+      viewLocateInfo.viewConfigurationType = _xrTraits->viewConfigurationType;
       viewLocateInfo.displayTime = _frameState.predictedDisplayTime;
 
       auto viewState = XrViewState();
@@ -566,15 +567,15 @@ namespace vsgvr
     _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
     _viewConfigurationProperties.next = nullptr;
 
-    xr_check(xrGetViewConfigurationProperties(_instance->getInstance(), _instance->getSystem(), _xrTraits.viewConfigurationType, &_viewConfigurationProperties));
+    xr_check(xrGetViewConfigurationProperties(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, &_viewConfigurationProperties));
     uint32_t count = 0;
-    xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits.viewConfigurationType, 0, &count, nullptr));
+    xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, 0, &count, nullptr));
     _viewConfigurationViews.resize(count, XrViewConfigurationView());
     for (auto& v : _viewConfigurationViews) {
       v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
       v.next = nullptr;
     }
-    xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits.viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
+    xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
   }
 
   void OpenXRViewer::syncActions()
@@ -654,7 +655,7 @@ namespace vsgvr
     if (_session) {
       throw Exception({ "openXRViewer: Session already initialised" });
     }
-    _session = OpenXRSession::create(_instance, _graphicsBinding, _xrTraits.swapchainFormat, _viewConfigurationViews);
+    _session = OpenXRSession::create(_instance, _graphicsBinding, _xrTraits->swapchainFormat, _viewConfigurationViews);
   }
 
   void OpenXRViewer::destroySession() {
