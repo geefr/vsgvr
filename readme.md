@@ -21,6 +21,14 @@ The following configurations have been tested:
 * Rendering to SteamVR (HTC Vive), on Linux, and Windows
 * Rendering to SteamVR + Oculus Line (Quest 2) on Windows
 * Rendering to Oculus OpenXR runtime (Quest 2) on Windows
+* Rendering to Oculus Quest 2, native build for Android
+
+The following should work:
+* All other desktop OpenXR runtimes, which use the standard OpenXR loader
+
+The following might work / support is planned:
+* Monado running on an Android phone / tablet
+
 
 Feature                      | Status
 -----------------------------|--------
