@@ -19,8 +19,6 @@
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
 #include <openxr/openxr_platform.h>
 
-
-#include "model_teapot.cpp"
 #include "controller.cpp"
 #include "controller2.cpp"
 #include "world.cpp"
