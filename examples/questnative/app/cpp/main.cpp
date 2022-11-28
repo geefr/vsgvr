@@ -19,9 +19,9 @@
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
 #include <openxr/openxr_platform.h>
 
-#include "controller.cpp"
-#include "controller2.cpp"
-#include "world.cpp"
+#include "../../../../models/controller/controller.cpp"
+#include "../../../../models/controller/controller2.cpp"
+#include "../../../../models/world/world.cpp"
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "vsgnative", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "vsgnative", __VA_ARGS__))
@@ -48,8 +48,8 @@ struct AppData
 //
 static int vsg_init(struct AppData* appData)
 {
-    auto vsg_scene = vsg::Group::create();
-    vsg_scene->addChild(world());
+    auto vsg_scene = world(); // vsg::Group::create();
+    // vsg_scene->addChild(world());
     appData->controllerNodeLeft = controller();
     vsg_scene->addChild(appData->controllerNodeLeft);
     appData->controllerNodeRight = controller2();

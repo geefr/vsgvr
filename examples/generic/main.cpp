@@ -10,6 +10,10 @@
 #include <iostream>
 #include <algorithm>
 
+#include "../../models/controller/controller.cpp"
+#include "../../models/controller/controller2.cpp"
+#include "../../models/world/world.cpp"
+
 int main(int argc, char **argv) {
   try
   {
@@ -21,24 +25,30 @@ int main(int argc, char **argv) {
     auto options = vsg::Options::create();
     arguments.read(options);
 
-    vsg::Path filename = "world.vsgt";
-    if (argc > 1)
-      filename = arguments[1];
-    if (arguments.errors())
-      return arguments.writeErrorMessages(std::cerr);
+    //vsg::Path filename = "world.vsgt";
+    //if (argc > 1)
+    //  filename = arguments[1];
+    //if (arguments.errors())
+    //  return arguments.writeErrorMessages(std::cerr);
 
-    // load the scene graph
-    vsg::ref_ptr<vsg::Group> vsg_scene =
-        vsg::read_cast<vsg::Group>(filename, options);
-    if (!vsg_scene)
-      return 0;
+    //// load the scene graph
+    //vsg::ref_ptr<vsg::Group> vsg_scene =
+    //    vsg::read_cast<vsg::Group>(filename, options);
+    //if (!vsg_scene)
+    //  return 0;
 
-    auto controllerNodeLeft = vsg::MatrixTransform::create();
-    controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt"));
+    auto vsg_scene = world(); // vsg::Group::create();
+    // vsg_scene->addChild(world());
+
+    auto controllerNodeLeft = controller();
+    auto controllerNodeRight = controller2();
+
+    //auto controllerNodeLeft = vsg::MatrixTransform::create();
+    //controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt"));
     vsg_scene->addChild(controllerNodeLeft);
 
-    auto controllerNodeRight = vsg::MatrixTransform::create();
-    controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt"));
+    //auto controllerNodeRight = vsg::MatrixTransform::create();
+    //controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt"));
     vsg_scene->addChild(controllerNodeRight);
 
     // Initialise OpenXR
