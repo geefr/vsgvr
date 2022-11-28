@@ -19,8 +19,8 @@ In theory, any OpenXR compatible hardware or systems are supported. Some slightl
 The following configurations have been tested:
 * Rendering to a virtual HMD in Monado, on Linux
 * Rendering to SteamVR (HTC Vive), on Linux, and Windows
-* Rendering to SteamVR + Oculus Line (Quest 2) on Windows
-* Rendering to Oculus OpenXR runtime (Quest 2) on Windows
+* Rendering to SteamVR + Oculus Link (Quest 2) on Windows
+* Rendering to Oculus OpenXR runtime + Oculus Link (Quest 2) on Windows
 * Rendering to Oculus Quest 2, native build for Android
 
 The following should work:
