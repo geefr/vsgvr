@@ -31,7 +31,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/vk/Framebuffer.h>
 
 namespace vsgvr {
-    class VSG_DECLSPEC OpenXRSession : public vsg::Inherit<vsg::Object, OpenXRSession>
+    class VSGVR_DECLSPEC OpenXRSession : public vsg::Inherit<vsg::Object, OpenXRSession>
     {
         public:
             OpenXRSession() = delete;
@@ -92,3 +92,4 @@ namespace vsgvr {
             std::vector<PerViewData> _viewData;
     };
 }
+

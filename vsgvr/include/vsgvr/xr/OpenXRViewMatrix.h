@@ -30,7 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/OpenXRCommon.h>
 
 namespace vsgvr {
-  class VSG_DECLSPEC OpenXRViewMatrix : public vsg::Inherit<vsg::ViewMatrix, OpenXRViewMatrix>
+  class VSGVR_DECLSPEC OpenXRViewMatrix : public vsg::Inherit<vsg::ViewMatrix, OpenXRViewMatrix>
   {
   public:
     OpenXRViewMatrix(const vsg::dmat4& m) :
@@ -81,3 +81,4 @@ namespace vsgvr {
     vsg::dmat4 matrix;
   };
 }
+

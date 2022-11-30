@@ -23,10 +23,41 @@ int main(int argc, char **argv) {
     // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO
     // related options to use when reading and writing files.
     auto options = vsg::Options::create();
+    options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
     arguments.read(options);
 
     auto vsg_scene = vsg::Group::create();
-    vsg_scene->addChild(world());
+
+    // load the scene graph
+    // * Load the bulk of the scene from command line, or the built-in world model
+    // * Always load controllers separately from built-in models
+    // read any vsg files
+    for (int i = 1; i < argc; ++i)
+    {
+      vsg::Path filename = arguments[i];
+      auto path = vsg::filePath(filename);
+      auto object = vsg::read(filename, options);
+      if (auto node = object.cast<vsg::Node>(); node)
+      {
+        vsg_scene->addChild(node);
+      }
+      else if (object)
+      {
+        std::cerr << "Unable to view object of type " << object->className() << std::endl;
+        return EXIT_FAILURE;
+      }
+      else
+      {
+        std::cerr << "Unable to load file " << filename << std::endl;
+        return EXIT_FAILURE;
+      }
+    }
+
+    if (vsg_scene->children.size() == 0)
+    {
+      std::cerr << "Loading built-in example scene" << std::endl;
+      vsg_scene->addChild(world());
+    }
 
     auto controllerNodeLeft = controller();
     vsg_scene->addChild(controllerNodeLeft);
@@ -270,7 +301,7 @@ int main(int argc, char **argv) {
   }
   catch( const vsg::Exception& e )
   {
-    std::cout << "VSG Exception: " << e.message << std::endl;
+    std::cerr << "VSG Exception: " << e.message << std::endl;
     return EXIT_FAILURE;
   }
 }

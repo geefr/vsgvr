@@ -45,7 +45,6 @@ namespace vsgvr
     : _instance(xrInstance)
     , _xrTraits(xrTraits)
     , _graphicsBinding(graphicsBinding)
-    // , updateOperations(UpdateOperations::create())
   {
     getViewConfiguration();
     createSession();
@@ -58,8 +57,6 @@ namespace vsgvr
 
   void OpenXRViewer::shutdownAll()
   {
-    // TODO: May need to wait - Can't destroy swapchain in session until idle
-    // vkDeviceWaitIdle(_graphicsBinding->getVkDevice()->getDevice());
     if (_session) destroySession();
   }
 
@@ -95,7 +92,6 @@ namespace vsgvr
       syncActions();
       return PollEventsResult::RunningDoRender;
     case XR_SESSION_STATE_STOPPING:
-      std::cerr << "Ending Session" << std::endl;
       _session->endSession();
       return PollEventsResult::NotRunning;
     case XR_SESSION_STATE_LOSS_PENDING:
@@ -665,10 +661,5 @@ namespace vsgvr
     destroyActionSpaces();
     _session = 0;
   }
-/*
-  void updateXRViewer(OpenXRViewer& viewer, const vsg::CompileResult& compileResult)
-  {
-    updateTasks(viewer.recordAndSubmitTasks, viewer.compileManager, compileResult);
-  }
-  */
 }
+

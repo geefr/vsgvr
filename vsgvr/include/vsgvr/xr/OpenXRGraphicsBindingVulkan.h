@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string>
 
 namespace vsgvr {
-    struct VulkanRequirements
+    struct VSGVR_DECLSPEC VulkanRequirements
     {
       uint32_t minVersion;
       uint32_t maxVersion;
@@ -44,12 +44,12 @@ namespace vsgvr {
       std::set<std::string> deviceExtensions;
     };
 
-    struct VulkanGraphicsRequirements
+    struct VSGVR_DECLSPEC VulkanGraphicsRequirements
     {
       VkPhysicalDevice* physicalDevice;
     };
 
-    class VSG_DECLSPEC OpenXRGraphicsBindingVulkan : public vsg::Inherit<vsg::Object, OpenXRGraphicsBindingVulkan>
+    class VSGVR_DECLSPEC OpenXRGraphicsBindingVulkan : public vsg::Inherit<vsg::Object, OpenXRGraphicsBindingVulkan>
     {
         public:
             static VulkanRequirements getVulkanRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance);
@@ -73,3 +73,4 @@ namespace vsgvr {
             XrGraphicsBindingVulkanKHR _binding;
     };
 }
+

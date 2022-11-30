@@ -32,7 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-    class VSG_DECLSPEC OpenXRProjectionMatrix : public vsg::Inherit<vsg::ProjectionMatrix, OpenXRProjectionMatrix>
+    class VSGVR_DECLSPEC OpenXRProjectionMatrix : public vsg::Inherit<vsg::ProjectionMatrix, OpenXRProjectionMatrix>
     {
     public:
         OpenXRProjectionMatrix(vsg::dmat4 matrix)
@@ -68,3 +68,4 @@ namespace vsgvr
         vsg::dmat4 mat;
     };
 }
+

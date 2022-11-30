@@ -28,7 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr {
     class OpenXRInstance;
     class OpenXRActionSet;
-    class VSG_DECLSPEC OpenXRAction : public vsg::Inherit<vsg::Object, OpenXRAction>
+    class VSGVR_DECLSPEC OpenXRAction : public vsg::Inherit<vsg::Object, OpenXRAction>
     {
         public:
             OpenXRAction(OpenXRActionSet* actionSet, XrActionType actionType, std::string name, std::string localisedName );
@@ -49,3 +49,4 @@ namespace vsgvr {
             XrAction _action;
     };
 }
+

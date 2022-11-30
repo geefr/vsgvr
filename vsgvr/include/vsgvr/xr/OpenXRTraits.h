@@ -29,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 
 namespace vsgvr {
-  class VSG_DECLSPEC OpenXrTraits : public vsg::Inherit<vsg::Object, OpenXrTraits> {
+  class VSGVR_DECLSPEC OpenXrTraits : public vsg::Inherit<vsg::Object, OpenXrTraits> {
   public:
     OpenXrTraits();
     std::vector<std::string> xrExtensions = {
@@ -60,3 +60,4 @@ namespace vsgvr {
       virtual ~OpenXrTraits();
   };
 }
+

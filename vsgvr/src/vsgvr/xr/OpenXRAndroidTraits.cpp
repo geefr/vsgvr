@@ -27,3 +27,4 @@ namespace vsgvr
 
   OpenXrAndroidTraits::~OpenXrAndroidTraits() {}
 }
+

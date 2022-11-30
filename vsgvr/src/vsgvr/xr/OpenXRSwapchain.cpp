@@ -160,3 +160,4 @@ namespace vsgvr {
     xr_check(xrDestroySwapchain(_swapchain));
   }
 }
+

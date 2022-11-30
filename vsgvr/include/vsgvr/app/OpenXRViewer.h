@@ -51,7 +51,7 @@ namespace vsgvr {
      *   * Any elements in vsg which require a vsg::Window cannot work with this viewer (TODO)
      * * While some functions are similar, this class does not directly inherit from vsg::Viewer (TODO)
      */
-    class VSG_DECLSPEC OpenXRViewer : public vsg::Inherit<vsg::Object, OpenXRViewer>
+    class VSGVR_DECLSPEC OpenXRViewer : public vsg::Inherit<vsg::Object, OpenXRViewer>
     {
         public:
             /**
@@ -175,3 +175,4 @@ namespace vsgvr {
             std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
 }
+

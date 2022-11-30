@@ -33,7 +33,7 @@ namespace vsgvr {
      * An action of type XR_INPUT_ACTION_TYPE_POSE, and an associated action space
      * The space will only be valid while a session is running
      */
-    class VSG_DECLSPEC OpenXRActionPoseBinding : public vsg::Inherit<OpenXRAction, OpenXRActionPoseBinding>
+    class VSGVR_DECLSPEC OpenXRActionPoseBinding : public vsg::Inherit<OpenXRAction, OpenXRActionPoseBinding>
     {
         public:
             OpenXRActionPoseBinding(OpenXRActionSet* actionSet, std::string name, std::string localisedName);
@@ -55,3 +55,4 @@ namespace vsgvr {
             vsg::mat4 _transform;
     };
 }
+

@@ -294,3 +294,4 @@ namespace vsgvr {
     _sessionState = event.state;
   }
 }
+

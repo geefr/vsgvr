@@ -34,15 +34,15 @@ Feature                      | Status
 -----------------------------|--------
 Linux Build                  | Done
 Windows Build                | Done
-Android Build                | Bugs in controller position/tracking, otherwise done
+Android Build (Oculus)       | Done
+Android Build (Gneeric)      | Done, untested
 Code quality / API           | Messy, but in roughly the right structure for now
 OpenXR Rendering             | Working, could do with a cleanup and better vsg integration at some point
-OpenXR Input                 | Not Implemented Yet
+OpenXR Input                 | Not Implemented (But OpenXR API directly accessible)
 Controller tracking          | Working
 Controller models in scene   | Working
 HMD tracking                 | Working
 Desktop view                 | Working
-
 
 ## Setup
 
@@ -71,9 +71,8 @@ monado-service
 
 ### Android Phone / Tablet
 
-TODO: Once the Android build is functional, it should be possible to use most phones/tablets as an XR display.
-These don't directly match how a VR setup works, but should provide basic hardware for rotation/positional tracking (ARCore).
-
+TODO: Currently vsgvr can be built for Android against the generic OpenXR loader - In theory this means it will work against Monado running on a phone/tablet.
+This is however unverified, if you know how to install Monado on a phone, or otherwise have a functional OpenXR runtime on your phone please get in touch.
 
 ## Compilation
 
@@ -81,8 +80,9 @@ Required:
 * cmake > 3.14
 * vulkan sdk
 * VulkanSceneGraph
-* The OpenXR loader - Included as a git submodule in deps/openxr
-* (For model creation) vsgXchange
+* The OpenXR loader - From a variety of sources
+  * OPENXR\_GENERIC - The generic OpenXR loader, included as a git submodule at deps/openxr
+  * OPENXR\_OCULUS\_MOBILE - The Oculus mobile SDK, available from https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/
 
 ```sh
 # Ensure submodules are available
@@ -99,8 +99,7 @@ make
 ## Models
 
 Models created in Blender
-* Controller 'top' is at 0,0 (or just below)
-* Controller 'up' is [0,0,-1] in blender space
+* Should face 'forward' as normal
 
 Export from blender to gltf:
 * Include custom properties
@@ -108,14 +107,13 @@ Export from blender to gltf:
 * +Y up
 
 Convert to vsg via `vsgconv model.glb model.vsgt`
-* Ensure vsgXchange is built with assimp support (For assimp itself I used vcpkg)
-* Ensure a recent build is used for correct lighting (fd35cc2 or newer)#
+* Ensure vsgXchange is built with assimp support
 
 ## Development Tips
-
 
 Validation layers from the OpenXR SDK
 ```
 set XR_API_LAYER_PATH="C:/dev/OpenXR-SDK-Source/build/src/api_layers/"
 set XR_ENABLE_API_LAYERS=XR_APILAYER_LUNARG_core_validation
 ```
+

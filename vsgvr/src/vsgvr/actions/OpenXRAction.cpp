@@ -62,3 +62,4 @@ namespace vsgvr
         xr_check(xrDestroyAction(_action));
     }
 }
+
