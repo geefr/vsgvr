@@ -1,14 +1,14 @@
 # VSG OpenXR Integration
 
-(prototype) VR support for [VulkanSceneGraph](https://github.com/vsg-dev/VulkanSceneGraph) via OpenXR.
+VR/XR integration layer for [VulkanSceneGraph](https://github.com/vsg-dev/VulkanSceneGraph) via OpenXR.
 
 ## Status
 
-Basic rendering and presentation is functional, presented to application through an OpenXRViewer class, similar to the desktop vsg::Viewer.
-
-Pose bindings are available, to allow models to be bound to controller positions or similar.
-
-The basic `example_vr.cpp` application is similar to the desktop vsg Viewer application, and some test models are provided.
+Generally things are a work in progress, but functionality is suitable for simple scenes:
+* vsgvr works with the main VR platforms, and the codebase is somewhat portable
+* Basic rendering and presentation is functional, presented to application through an OpenXRViewer class, similar to the desktop vsg::Viewer.
+* Pose bindings are available, to allow models to be bound to controller positions or similar.
+* The basic `example_vr.cpp` application is similar in usage to the desktop vsg Viewer application, and some test models are provided.
 
 [![Demo Video](http://img.youtube.com/vi/ZA7syEMAIMo/0.jpg)](http://www.youtube.com/watch?v=ZA7syEMAIMo "vsgvr Demo Video")
 
@@ -35,7 +35,7 @@ Feature                      | Status
 Linux Build                  | Done
 Windows Build                | Done
 Android Build (Oculus)       | Done
-Android Build (Gneeric)      | Done, untested
+Android Build (Generic)      | Done, untested
 Code quality / API           | Messy, but in roughly the right structure for now
 OpenXR Rendering             | Working, could do with a cleanup and better vsg integration at some point
 OpenXR Input                 | Not Implemented (But OpenXR API directly accessible)
