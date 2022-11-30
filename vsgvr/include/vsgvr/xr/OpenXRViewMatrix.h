@@ -39,10 +39,17 @@ namespace vsgvr {
 
     OpenXRViewMatrix(const XrPosef& pose)
     {
-      // https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp _create_view_from_pose
-      // Convert pose to matrix, then invert into the view matrix
-      // TODO: Axis mapping here was done by experimentation, and based on OpenVR setup. This needs review later.
-      // See also https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/main/src/common/xr_linear.h
+      // OpenXR space: x-right, y-up, z-back
+      // VSG/Vulkan space: x-right, y-forward, z-up
+      // * Invert y -> To flip the handedness (x-right, y-back, z-up)
+      // * Rotate clockwise around x -> To move into vsg space (x-right, y-up, z-back)
+      // After this, models are built for vsg space, and default concepts in the api map across
+      // 
+      // Ref:
+      // * https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp _create_view_from_pose
+      // * https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/main/src/common/xr_linear.h
+
+      // Work out the view matrix for the HMD camera, in the VSG space
       auto q = vsg::dquat(
         pose.orientation.x,
         pose.orientation.y * -1.0,
@@ -51,10 +58,15 @@ namespace vsgvr {
       );
       auto rotateMat = vsg::rotate(q);
 
-      auto p = vsg::dvec3(pose.position.x, pose.position.y * -1.0, pose.position.z);
+      auto p = vsg::dvec3(pose.position.x, pose.position.y * -1, pose.position.z);
       auto translateMat = vsg::translate(p);
       matrix = vsg::inverse(translateMat * rotateMat );
 
+      // Also map all rendered content into this space
+      // Other OpenXR applications don't do this bit, but adding it in
+      // means we can place content as we would normally in VSG,
+      // and that this view matrix matches the equivalent vsg::LookAt
+      // for a desktop camera.
       vsg::dmat4 viewAxesMat(
         1, 0, 0, 0,
         0, -1, 0, 0,

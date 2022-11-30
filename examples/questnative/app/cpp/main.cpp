@@ -19,9 +19,9 @@
 #include <vsgvr/actions/OpenXRActionPoseBinding.h>
 #include <openxr/openxr_platform.h>
 
-#include "controller.cpp"
-#include "controller2.cpp"
-#include "world.cpp"
+#include "../../../../models/controller/controller.cpp"
+#include "../../../../models/controller/controller2.cpp"
+#include "../../../../models/world/world.cpp"
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "vsgnative", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "vsgnative", __VA_ARGS__))

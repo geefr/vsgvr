@@ -58,6 +58,8 @@ namespace vsgvr {
     auto spaceCreateInfo = XrReferenceSpaceCreateInfo();
     spaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
     spaceCreateInfo.next = nullptr;
+    // Session's pose within the natural reference space
+    // In the case of STAGE, x-right, y-up, z-back
     spaceCreateInfo.poseInReferenceSpace.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
     spaceCreateInfo.poseInReferenceSpace.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
     // TODO: Should check what spaces are supported here
