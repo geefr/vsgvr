@@ -25,30 +25,12 @@ int main(int argc, char **argv) {
     auto options = vsg::Options::create();
     arguments.read(options);
 
-    //vsg::Path filename = "world.vsgt";
-    //if (argc > 1)
-    //  filename = arguments[1];
-    //if (arguments.errors())
-    //  return arguments.writeErrorMessages(std::cerr);
-
-    //// load the scene graph
-    //vsg::ref_ptr<vsg::Group> vsg_scene =
-    //    vsg::read_cast<vsg::Group>(filename, options);
-    //if (!vsg_scene)
-    //  return 0;
-
-    auto vsg_scene = world(); // vsg::Group::create();
-    // vsg_scene->addChild(world());
+    auto vsg_scene = vsg::Group::create();
+    vsg_scene->addChild(world());
 
     auto controllerNodeLeft = controller();
-    auto controllerNodeRight = controller2();
-
-    //auto controllerNodeLeft = vsg::MatrixTransform::create();
-    //controllerNodeLeft->addChild(vsg::read_cast<vsg::Node>("controller.vsgt"));
     vsg_scene->addChild(controllerNodeLeft);
-
-    //auto controllerNodeRight = vsg::MatrixTransform::create();
-    //controllerNodeRight->addChild(vsg::read_cast<vsg::Node>("controller2.vsgt"));
+    auto controllerNodeRight = controller2();
     vsg_scene->addChild(controllerNodeRight);
 
     // Initialise OpenXR
@@ -64,13 +46,11 @@ int main(int argc, char **argv) {
     arguments.read("--screen", windowTraits->screenNum);
     arguments.read("--display", windowTraits->display);
 
-    // Initialise OpenXR, and retrieve vulkan requirements
-    // OpenXR will require certain vulkan versions, along with a specific physical device
-    // Use a desktop window to create the instance, and select the correct device
+    // Retrieve vulkan requirements
+    // OpenXR will require certain vulkan versions, along with a specific physical device, and instance/device extensions
     auto xrInstance = vsgvr::OpenXRInstance::create(xrTraits);
     auto xrVulkanReqs = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanRequirements(xrInstance);
-    
-    // Validate the Vulkan instance, and re-create the instance with the required extensions
+
     if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
     {
       std::cout << "Vulkan API too low for OpenXR. Minimum required is " << xrVulkanReqs.minVersionStr << std::endl;
@@ -160,7 +140,7 @@ int main(int argc, char **argv) {
     //       Instead, create a standard perspective camera and bind it to the hmd's position - This looks better on the desktop window anyway
     
     // set up the camera
-    auto lookAt = vsg::LookAt::create();
+    auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
     auto perspective = vsg::Perspective::create(30.0, static_cast<double>(desktopWindow->extent2D().width) / static_cast<double>(desktopWindow->extent2D().height), 0.1, 100.0);
     auto desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));
     auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, desktopCamera, vsg_scene);

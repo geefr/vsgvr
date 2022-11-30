@@ -48,8 +48,8 @@ struct AppData
 //
 static int vsg_init(struct AppData* appData)
 {
-    auto vsg_scene = world(); // vsg::Group::create();
-    // vsg_scene->addChild(world());
+    auto vsg_scene = vsg::Group::create();
+    vsg_scene->addChild(world());
     appData->controllerNodeLeft = controller();
     vsg_scene->addChild(appData->controllerNodeLeft);
     appData->controllerNodeRight = controller2();

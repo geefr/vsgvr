@@ -127,8 +127,7 @@ Root id=1 vsg::MatrixTransform
                   defaultVersion 450
                   target 65536
                   forwardCompatible 0
-                  defines 1
-                  element "VSG_TWO_SIDED_LIGHTING"
+                  defines 0
                 }
                 source "#version 450
 #extension GL_ARB_separate_shader_objects : enable
@@ -276,6 +275,2285 @@ void main()
               {
                 userObjects 0
                 hints id=18
+                source "#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#pragma import_defines (VSG_DIFFUSE_MAP, VSG_GREYSACLE_DIFFUSE_MAP, VSG_EMISSIVE_MAP, VSG_LIGHTMAP_MAP, VSG_NORMAL_MAP, VSG_METALLROUGHNESS_MAP, VSG_SPECULAR_MAP, VSG_TWO_SIDED_LIGHTING, VSG_WORKFLOW_SPECGLOSS, VSG_VIEW_LIGHT_DATA)
+
+const float PI = 3.14159265359;
+const float RECIPROCAL_PI = 0.31830988618;
+const float RECIPROCAL_PI2 = 0.15915494;
+const float EPSILON = 1e-6;
+const float c_MinRoughness = 0.04;
+
+#ifdef VSG_DIFFUSE_MAP
+layout(binding = 0) uniform sampler2D diffuseMap;
+#endif
+
+#ifdef VSG_METALLROUGHNESS_MAP
+layout(binding = 1) uniform sampler2D mrMap;
+#endif
+
+#ifdef VSG_NORMAL_MAP
+layout(binding = 2) uniform sampler2D normalMap;
+#endif
+
+#ifdef VSG_LIGHTMAP_MAP
+layout(binding = 3) uniform sampler2D aoMap;
+#endif
+
+#ifdef VSG_EMISSIVE_MAP
+layout(binding = 4) uniform sampler2D emissiveMap;
+#endif
+
+#ifdef VSG_SPECULAR_MAP
+layout(binding = 5) uniform sampler2D specularMap;
+#endif
+
+layout(binding = 10) uniform PbrData
+{
+    vec4 baseColorFactor;
+    vec4 emissiveFactor;
+    vec4 diffuseFactor;
+    vec4 specularFactor;
+    float metallicFactor;
+    float roughnessFactor;
+    float alphaMask;
+    float alphaMaskCutoff;
+} pbr;
+
+layout(set = 1, binding = 0) uniform LightData
+{
+    vec4 values[64];
+} lightData;
+
+layout(location = 0) in vec3 eyePos;
+layout(location = 1) in vec3 normalDir;
+layout(location = 2) in vec4 vertexColor;
+layout(location = 3) in vec2 texCoord0;
+layout(location = 5) in vec3 viewDir;
+
+layout(location = 0) out vec4 outColor;
+
+
+// Encapsulate the various inputs used by the various functions in the shading equation
+// We store values in this struct to simplify the integration of alternative implementations
+// of the shading terms, outlined in the Readme.MD Appendix.
+struct PBRInfo
+{
+    float NdotL;                  // cos angle between normal and light direction
+    float NdotV;                  // cos angle between normal and view direction
+    float NdotH;                  // cos angle between normal and half vector
+    float LdotH;                  // cos angle between light direction and half vector
+    float VdotH;                  // cos angle between view direction and half vector
+    float VdotL;                  // cos angle between view direction and light direction
+    float perceptualRoughness;    // roughness value, as authored by the model creator (input to shader)
+    float metalness;              // metallic value at the surface
+    vec3 reflectance0;            // full reflectance color (normal incidence angle)
+    vec3 reflectance90;           // reflectance color at grazing angle
+    float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])
+    vec3 diffuseColor;            // color contribution from diffuse lighting
+    vec3 specularColor;           // color contribution from specular lighting
+};
+
+
+vec4 SRGBtoLINEAR(vec4 srgbIn)
+{
+    vec3 linOut = pow(srgbIn.xyz, vec3(2.2));
+    return vec4(linOut,srgbIn.w);
+}
+
+vec4 LINEARtoSRGB(vec4 srgbIn)
+{
+    vec3 linOut = pow(srgbIn.xyz, vec3(1.0 / 2.2));
+    return vec4(linOut, srgbIn.w);
+}
+
+float rcp(const in float value)
+{
+    return 1.0 / value;
+}
+
+float pow5(const in float value)
+{
+    return value * value * value * value * value;
+}
+
+// Find the normal for this fragment, pulling either from a predefined normal map
+// or from the interpolated mesh normal and tangent attributes.
+vec3 getNormal()
+{
+#ifdef VSG_NORMAL_MAP
+    // Perturb normal, see http://www.thetenthplanet.de/archives/1180
+    vec3 tangentNormal = texture(normalMap, texCoord0).xyz * 2.0 - 1.0;
+
+    //tangentNormal *= vec3(2,2,1);
+
+    vec3 q1 = dFdx(eyePos);
+    vec3 q2 = dFdy(eyePos);
+    vec2 st1 = dFdx(texCoord0);
+    vec2 st2 = dFdy(texCoord0);
+
+    vec3 N = normalize(normalDir);
+    vec3 T = normalize(q1 * st2.t - q2 * st1.t);
+    vec3 B = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+
+    return normalize(TBN * tangentNormal);
+#else
+    return normalize(normalDir);
+#endif
+}
+
+// Basic Lambertian diffuse
+// Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog
+// See also [1], Equation 1
+vec3 BRDF_Diffuse_Lambert(PBRInfo pbrInputs)
+{
+    return pbrInputs.diffuseColor * RECIPROCAL_PI;
+}
+
+vec3 BRDF_Diffuse_Custom_Lambert(PBRInfo pbrInputs)
+{
+    return pbrInputs.diffuseColor * RECIPROCAL_PI * pow(pbrInputs.NdotV, 0.5 + 0.3 * pbrInputs.perceptualRoughness);
+}
+
+// [Gotanda 2012, \"Beyond a Simple Physically Based Blinn-Phong Model in Real-Time\"]
+vec3 BRDF_Diffuse_OrenNayar(PBRInfo pbrInputs)
+{
+    float a = pbrInputs.alphaRoughness;
+    float s = a;// / ( 1.29 + 0.5 * a );
+    float s2 = s * s;
+    float VoL = 2 * pbrInputs.VdotH * pbrInputs.VdotH - 1;		// double angle identity
+    float Cosri = pbrInputs.VdotL - pbrInputs.NdotV * pbrInputs.NdotL;
+    float C1 = 1 - 0.5 * s2 / (s2 + 0.33);
+    float C2 = 0.45 * s2 / (s2 + 0.09) * Cosri * ( Cosri >= 0 ? 1.0 / max(pbrInputs.NdotL, pbrInputs.NdotV) : 1 );
+    return pbrInputs.diffuseColor / PI * ( C1 + C2 ) * ( 1 + pbrInputs.perceptualRoughness * 0.5 );
+}
+
+// [Gotanda 2014, \"Designing Reflectance Models for New Consoles\"]
+vec3 BRDF_Diffuse_Gotanda(PBRInfo pbrInputs)
+{
+    float a = pbrInputs.alphaRoughness;
+    float a2 = a * a;
+    float F0 = 0.04;
+    float VoL = 2 * pbrInputs.VdotH * pbrInputs.VdotH - 1;		// double angle identity
+    float Cosri = VoL - pbrInputs.NdotV * pbrInputs.NdotL;
+    float a2_13 = a2 + 1.36053;
+    float Fr = ( 1 - ( 0.542026*a2 + 0.303573*a ) / a2_13 ) * ( 1 - pow( 1 - pbrInputs.NdotV, 5 - 4*a2 ) / a2_13 ) * ( ( -0.733996*a2*a + 1.50912*a2 - 1.16402*a ) * pow( 1 - pbrInputs.NdotV, 1 + rcp(39*a2*a2+1) ) + 1 );
+    //float Fr = ( 1 - 0.36 * a ) * ( 1 - pow( 1 - NoV, 5 - 4*a2 ) / a2_13 ) * ( -2.5 * Roughness * ( 1 - NoV ) + 1 );
+    float Lm = ( max( 1 - 2*a, 0 ) * ( 1 - pow5( 1 - pbrInputs.NdotL ) ) + min( 2*a, 1 ) ) * ( 1 - 0.5*a * (pbrInputs.NdotL - 1) ) * pbrInputs.NdotL;
+    float Vd = ( a2 / ( (a2 + 0.09) * (1.31072 + 0.995584 * pbrInputs.NdotV) ) ) * ( 1 - pow( 1 - pbrInputs.NdotL, ( 1 - 0.3726732 * pbrInputs.NdotV * pbrInputs.NdotV ) / ( 0.188566 + 0.38841 * pbrInputs.NdotV ) ) );
+    float Bp = Cosri < 0 ? 1.4 * pbrInputs.NdotV * pbrInputs.NdotL * Cosri : Cosri;
+    float Lr = (21.0 / 20.0) * (1 - F0) * ( Fr * Lm + Vd + Bp );
+    return pbrInputs.diffuseColor * RECIPROCAL_PI * Lr;
+}
+
+vec3 BRDF_Diffuse_Burley(PBRInfo pbrInputs)
+{
+    float energyBias = mix(pbrInputs.perceptualRoughness, 0.0, 0.5);
+    float energyFactor = mix(pbrInputs.perceptualRoughness, 1.0, 1.0 / 1.51);
+    float fd90 = energyBias + 2.0 * pbrInputs.VdotH * pbrInputs.VdotH * pbrInputs.perceptualRoughness;
+    float f0 = 1.0;
+    float lightScatter = f0 + (fd90 - f0) * pow(1.0 - pbrInputs.NdotL, 5.0);
+    float viewScatter = f0 + (fd90 - f0) * pow(1.0 - pbrInputs.NdotV, 5.0);
+
+    return pbrInputs.diffuseColor * lightScatter * viewScatter * energyFactor;
+}
+
+vec3 BRDF_Diffuse_Disney(PBRInfo pbrInputs)
+{
+	float Fd90 = 0.5 + 2.0 * pbrInputs.perceptualRoughness * pbrInputs.VdotH * pbrInputs.VdotH;
+    vec3 f0 = vec3(0.1);
+	vec3 invF0 = vec3(1.0, 1.0, 1.0) - f0;
+	float dim = min(invF0.r, min(invF0.g, invF0.b));
+	float result = ((1.0 + (Fd90 - 1.0) * pow(1.0 - pbrInputs.NdotL, 5.0 )) * (1.0 + (Fd90 - 1.0) * pow(1.0 - pbrInputs.NdotV, 5.0 ))) * dim;
+	return pbrInputs.diffuseColor * result;
+}
+
+// The following equation models the Fresnel reflectance term of the spec equation (aka F())
+// Implementation of fresnel from [4], Equation 15
+vec3 specularReflection(PBRInfo pbrInputs)
+{
+    //return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance0) * pow(clamp(1.0 - pbrInputs.VdotH, 0.0, 1.0), 5.0);
+    return pbrInputs.reflectance0 + (pbrInputs.reflectance90 - pbrInputs.reflectance90*pbrInputs.reflectance0) * exp2((-5.55473 * pbrInputs.VdotH - 6.98316) * pbrInputs.VdotH);
+}
+
+// This calculates the specular geometric attenuation (aka G()),
+// where rougher material will reflect less light back to the viewer.
+// This implementation is based on [1] Equation 4, and we adopt their modifications to
+// alphaRoughness as input as originally proposed in [2].
+float geometricOcclusion(PBRInfo pbrInputs)
+{
+    float NdotL = pbrInputs.NdotL;
+    float NdotV = pbrInputs.NdotV;
+    float r = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;
+
+    float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r + (1.0 - r) * (NdotL * NdotL)));
+    float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r + (1.0 - r) * (NdotV * NdotV)));
+    return attenuationL * attenuationV;
+}
+
+// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())
+// Implementation from \"Average Irregularity Representation of a Roughened Surface for Ray Reflection\" by T. S. Trowbridge, and K. P. Reitz
+// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.
+float microfacetDistribution(PBRInfo pbrInputs)
+{
+    float roughnessSq = pbrInputs.alphaRoughness * pbrInputs.alphaRoughness;
+    float f = (pbrInputs.NdotH * roughnessSq - pbrInputs.NdotH) * pbrInputs.NdotH + 1.0;
+    return roughnessSq / (PI * f * f);
+}
+
+vec3 BRDF(vec3 u_LightColor, vec3 v, vec3 n, vec3 l, vec3 h, float perceptualRoughness, float metallic, vec3 specularEnvironmentR0, vec3 specularEnvironmentR90, float alphaRoughness, vec3 diffuseColor, vec3 specularColor, float ao)
+{
+    float unclmapped_NdotL = dot(n, l);
+
+    #ifdef VSG_TWO_SIDED_LIGHTING
+    if (unclmapped_NdotL < 0.0)
+    {
+        n = -n;
+        unclmapped_NdotL = -unclmapped_NdotL;
+    }
+    #endif
+
+    vec3 reflection = -normalize(reflect(v, n));
+    reflection.y *= -1.0f;
+
+    float NdotL = clamp(unclmapped_NdotL, 0.001, 1.0);
+    float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
+    float NdotH = clamp(dot(n, h), 0.0, 1.0);
+    float LdotH = clamp(dot(l, h), 0.0, 1.0);
+    float VdotH = clamp(dot(v, h), 0.0, 1.0);
+    float VdotL = clamp(dot(v, l), 0.0, 1.0);
+
+    PBRInfo pbrInputs = PBRInfo(NdotL,
+                                NdotV,
+                                NdotH,
+                                LdotH,
+                                VdotH,
+                                VdotL,
+                                perceptualRoughness,
+                                metallic,
+                                specularEnvironmentR0,
+                                specularEnvironmentR90,
+                                alphaRoughness,
+                                diffuseColor,
+                                specularColor);
+
+    // Calculate the shading terms for the microfacet specular shading model
+    vec3 F = specularReflection(pbrInputs);
+    float G = geometricOcclusion(pbrInputs);
+    float D = microfacetDistribution(pbrInputs);
+
+    // Calculation of analytical lighting contribution
+    vec3 diffuseContrib = (1.0 - F) * BRDF_Diffuse_Disney(pbrInputs);
+    vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
+    // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+    vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);
+
+    color *= ao;
+
+#ifdef VSG_EMISSIVE_MAP
+    vec3 emissive = SRGBtoLINEAR(texture(emissiveMap, texCoord0)).rgb * pbr.emissiveFactor.rgb;
+#else
+    vec3 emissive = pbr.emissiveFactor.rgb;
+#endif
+    color += emissive;
+
+    return color;
+}
+
+float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular)
+{
+    float perceivedDiffuse = sqrt(0.299 * diffuse.r * diffuse.r + 0.587 * diffuse.g * diffuse.g + 0.114 * diffuse.b * diffuse.b);
+    float perceivedSpecular = sqrt(0.299 * specular.r * specular.r + 0.587 * specular.g * specular.g + 0.114 * specular.b * specular.b);
+
+    if (perceivedSpecular < c_MinRoughness)
+    {
+        return 0.0;
+    }
+
+    float a = c_MinRoughness;
+    float b = perceivedDiffuse * (1.0 - maxSpecular) / (1.0 - c_MinRoughness) + perceivedSpecular - 2.0 * c_MinRoughness;
+    float c = c_MinRoughness - perceivedSpecular;
+    float D = max(b * b - 4.0 * a * c, 0.0);
+    return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
+}
+
+void main()
+{
+    float perceptualRoughness = 0.0;
+    float metallic;
+    vec3 diffuseColor;
+    vec4 baseColor;
+
+    float ambientOcclusion = 1.0;
+
+    vec3 f0 = vec3(0.04);
+
+#ifdef VSG_DIFFUSE_MAP
+    #ifdef VSG_GREYSACLE_DIFFUSE_MAP
+        float v = texture(diffuseMap, texCoord0.st).s * pbr.baseColorFactor;
+        baseColor = vertexColor * vec4(v, v, v, 1.0);
+    #else
+        baseColor = vertexColor * SRGBtoLINEAR(texture(diffuseMap, texCoord0)) * pbr.baseColorFactor;
+    #endif
+#else
+    baseColor = vertexColor * pbr.baseColorFactor;
+#endif
+
+    if (pbr.alphaMask == 1.0f)
+    {
+        if (baseColor.a < pbr.alphaMaskCutoff)
+            discard;
+    }
+
+#ifdef VSG_WORKFLOW_SPECGLOSS
+    #ifdef VSG_DIFFUSE_MAP
+        vec4 diffuse = SRGBtoLINEAR(texture(diffuseMap, texCoord0));
+    #else
+        vec4 diffuse = vec4(1.0);
+    #endif
+
+    #ifdef VSG_SPECULAR_MAP
+        vec3 specular = SRGBtoLINEAR(texture(specularMap, texCoord0)).rgb;
+        perceptualRoughness = 1.0 - texture(specularMap, texCoord0).a;
+    #else
+        vec3 specular = vec3(0.0);
+        perceptualRoughness = 0.0;
+    #endif
+
+        float maxSpecular = max(max(specular.r, specular.g), specular.b);
+
+        // Convert metallic value from specular glossiness inputs
+        metallic = convertMetallic(diffuse.rgb, specular, maxSpecular);
+
+        const float epsilon = 1e-6;
+        vec3 baseColorDiffusePart = diffuse.rgb * ((1.0 - maxSpecular) / (1 - c_MinRoughness) / max(1 - metallic, epsilon)) * pbr.diffuseFactor.rgb;
+        vec3 baseColorSpecularPart = specular - (vec3(c_MinRoughness) * (1 - metallic) * (1 / max(metallic, epsilon))) * pbr.specularFactor.rgb;
+        baseColor = vec4(mix(baseColorDiffusePart, baseColorSpecularPart, metallic * metallic), diffuse.a);
+#else
+        perceptualRoughness = pbr.roughnessFactor;
+        metallic = pbr.metallicFactor;
+
+    #ifdef VSG_METALLROUGHNESS_MAP
+        vec4 mrSample = texture(mrMap, texCoord0);
+        perceptualRoughness = mrSample.g * perceptualRoughness;
+        metallic = mrSample.b * metallic;
+    #endif
+#endif
+
+#ifdef VSG_LIGHTMAP_MAP
+    ambientOcclusion = texture(aoMap, texCoord0).r;
+#endif
+
+    diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
+    diffuseColor *= 1.0 - metallic;
+
+    float alphaRoughness = perceptualRoughness * perceptualRoughness;
+
+    vec3 specularColor = mix(f0, baseColor.rgb, metallic);
+
+    // Compute reflectance.
+    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
+
+    // For typical incident reflectance range (between 4% to 100%) set the grazing reflectance to 100% for typical fresnel effect.
+    // For very low reflectance range on highly diffuse objects (below 4%), incrementally reduce grazing reflecance to 0%.
+    float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
+    vec3 specularEnvironmentR0 = specularColor.rgb;
+    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
+
+    vec3 n = getNormal();
+    vec3 v = normalize(viewDir);    // Vector from surface point to camera
+
+    float shininess = 100.0f;
+
+    vec3 color = vec3(0.0, 0.0, 0.0);
+
+    vec4 lightNums = lightData.values[0];
+    int numAmbientLights = int(lightNums[0]);
+    int numDirectionalLights = int(lightNums[1]);
+    int numPointLights = int(lightNums[2]);
+    int numSpotLights = int(lightNums[3]);
+    int index = 1;
+    if (numAmbientLights>0)
+    {
+        // ambient lights
+        for(int i = 0; i<numAmbientLights; ++i)
+        {
+            vec4 ambient_color = lightData.values[index++];
+            color += (baseColor.rgb * ambient_color.rgb) * (ambient_color.a * ambientOcclusion);
+        }
+    }
+
+    if (numDirectionalLights>0)
+    {
+        // directional lights
+        for(int i = 0; i<numDirectionalLights; ++i)
+        {
+            vec4 lightColor = lightData.values[index++];
+            vec3 direction = -lightData.values[index++].xyz;
+
+            vec3 l = direction;         // Vector from surface point to light
+            vec3 h = normalize(l+v);    // Half vector between both l and v
+            float scale = lightColor.a;
+
+            color.rgb += BRDF(lightColor.rgb * scale, v, n, l, h, perceptualRoughness, metallic, specularEnvironmentR0, specularEnvironmentR90, alphaRoughness, diffuseColor, specularColor, ambientOcclusion);
+        }
+    }
+
+    if (numPointLights>0)
+    {
+        // point light
+        for(int i = 0; i<numPointLights; ++i)
+        {
+            vec4 lightColor = lightData.values[index++];
+            vec3 position = lightData.values[index++].xyz;
+            vec3 delta = position - eyePos;
+            float distance2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+            vec3 direction = delta / sqrt(distance2);
+
+            vec3 l = direction;         // Vector from surface point to light
+            vec3 h = normalize(l+v);    // Half vector between both l and v
+            float scale = lightColor.a / distance2;
+
+            color.rgb += BRDF(lightColor.rgb * scale, v, n, l, h, perceptualRoughness, metallic, specularEnvironmentR0, specularEnvironmentR90, alphaRoughness, diffuseColor, specularColor, ambientOcclusion);
+        }
+    }
+
+    if (numSpotLights>0)
+    {
+        // spot light
+        for(int i = 0; i<numSpotLights; ++i)
+        {
+            vec4 lightColor = lightData.values[index++];
+            vec4 position_cosInnerAngle = lightData.values[index++];
+            vec4 lightDirection_cosOuterAngle = lightData.values[index++];
+
+            vec3 delta = position_cosInnerAngle.xyz - eyePos;
+            float distance2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+            vec3 direction = delta / sqrt(distance2);
+            float dot_lightdirection = -dot(lightDirection_cosOuterAngle.xyz, direction);
+
+            vec3 l = direction;        // Vector from surface point to light
+            vec3 h = normalize(l+v);    // Half vector between both l and v
+            float scale = (lightColor.a * smoothstep(lightDirection_cosOuterAngle.w, position_cosInnerAngle.w, dot_lightdirection)) / distance2;
+
+            color.rgb += BRDF(lightColor.rgb * scale, v, n, l, h, perceptualRoughness, metallic, specularEnvironmentR0, specularEnvironmentR90, alphaRoughness, diffuseColor, specularColor, ambientOcclusion);
+        }
+    }
+
+    outColor = LINEARtoSRGB(vec4(color, baseColor.a));
+}
+"
+                code 5168
+                 119734787 65536 524298 804 0 131089 1 393227 1 1280527431 1685353262 808793134
+                 0 196622 0 1 720911 4 4 1852399981 0 69 368 438
+                 598 788 803 196624 4 7 196611 2 450 589828 1096764487 1935622738
+                 1918988389 1600484449 1684105331 1868526181 1667590754 29556 262149 4 1852399981 0 458757 11
+                 1162758476 1869894209 1111970387 879130152 59 262149 10 1650946675 28233 327685 15 1316250983
+                 1634562671 10348 262149 17 1230127696 7300718 327686 17 0 1953457230 76 327686
+                 17 1 1953457230 86 327686 17 2 1953457230 72 327686 17 3
+                 1953457228 72 327686 17 4 1953457238 72 327686 17 5 1953457238 76
+                 524294 17 6 1668441456 1970565221 1867672673 1852335989 7566181 393222 17 7 1635018093
+                 1936027244 115 458758 17 8 1818649970 1635017573 811950958 0 458758 17 9
+                 1818649970 1635017573 962945902 48 458758 17 10 1752198241 1970229857 1701734503 29555 458758
+                 17 11 1717987684 1130722165 1919904879 0 458758 17 12 1667592307 1918987381 1869377347
+                 114 1441797 21 1178882626 1718174815 1702065510 1936278623 679044462 1970435187 1345156195 1850298946 1714253670
+                 828779825 758212141 1714237798 828779825 758212141 1982673254 1982673766 1714238310 1719020849 1719020851 3879219 327685
+                 20 1232233072 1953853550 115 1441797 24 1667592307 1918987381 1818649938 1769235301 1932029551 1668641396
+                 1112550772 1718503762 828779887 758212141 1714237798 828779825 758212141 1714237798 1719020849 1719020851 828779827 862352941
+                 862352941 15153 327685 23 1232233072 1953853550 115 1441797 28 1836016999 1769108581 1667452771
+                 1769174380 1932029551 1668641396 1112550772 1718503762 828779887 758212141 1714237798 828779825 758212141 1714237798 1719020849
+                 1719020851 828779827 862352941 862352941 15153 327685 27 1232233072 1953853550 115 1507333 31
+                 1919117677 1667327599 1766093925 1769108595 1769239906 1932029551 1668641396 1112550772 1718503762 828779887 758212141 1714237798
+                 828779825 758212141 1714237798 1719020849 1719020851 828779827 862352941 862352941 15153 327685 30 1232233072
+                 1953853550 115 1048581 49 1178882626 862352936 862352955 862352955 862352955 862352955 993093179 1983590758
+                 1983591270 1715155814 1719024433 1719024435 828783411 59 393221 36 1766612853 1131702375 1919904879 0
+                 196613 37 118 196613 38 110 196613 39 108 196613 40 104
+                 458757 41 1668441456 1970565221 1867672673 1852335989 7566181 327685 42 1635018093 1667853420 0
+                 524293 43 1667592307 1918987381 1769369157 1835954034 1383362149 48 524293 44 1667592307 1918987381
+                 1769369157 1835954034 1383362149 12345 393221 45 1752198241 1970229857 1701734503 29555 393221 46
+                 1717987684 1130722165 1919904879 0 393221 47 1667592307 1918987381 1869377347 114 196613 48
+                 28513 262149 51 1332636012 29813 327685 69 1836216174 1766091873 114 262149 74
+                 809067590 0 196613 90 12390 262149 93 1182166633 48 196613 98 7170404
+                 262149 110 1970496882 29804 262149 166 1953457230 76 262149 169 1953457230 86
+                 196613 172 114 393221 179 1702130785 1952544110 1282305897 0 393221 194 1702130785
+                 1952544110 1450078057 0 327685 214 1735749490 1936027240 7426931 196613 220 102 458757
+                 242 1818455669 1886413165 1314874469 1282699108 0 327685 246 1818649970 1769235301 28271 262149
+                 257 1953457230 76 262149 261 1953457230 86 262149 267 1953457230 72 262149
+                 273 1953457228 72 262149 278 1953457238 72 262149 283 1953457238 76 327685
+                 288 1232233072 1953853550 115 196613 303 70 262149 304 1634886000 109 196613
+                 307 71 262149 308 1634886000 109 196613 311 68 262149 312 1634886000
+                 109 393221 315 1717987684 1130722165 1920233071 25193 262149 319 1634886000 109 327685
+                 323 1667592307 1953394499 6449522 262149 336 1869377379 114 327685 347 1936289125 1702259059
+                 0 262149 348 1148346960 6386785 458758 348 0 1702060386 1869377347 1667319410 7499636
+                 458758 348 1 1936289125 1702259059 1952670022 29295 458758 348 2 1717987684 1181053813
+                 1869898593 114 458758 348 3 1667592307 1918987381 1952670022 29295 458758 348 4
+                 1635018093 1667853420 1952670022 29295 458758 348 5 1735749490 1936027240 1667319411 7499636 393222
+                 348 6 1752198241 1935756641 107 458758 348 7 1752198241 1935756641 1953842027 6710895
+                 196613 350 7496304 458757 361 1668441456 1970565221 1867672673 1852335989 7566181 458757 362
+                 1768058209 1333030501 1970037603 1852795251 0 196613 363 12390 327685 366 1702060386 1869377347
+                 114 327685 368 1953654134 1866692709 7499628 327685 392 1635018093 1667853420 0 393221
+                 395 1717987684 1130722165 1919904879 0 393221 405 1752198241 1970229857 1701734503 29555 393221
+                 409 1667592307 1918987381 1869377347 114 327685 416 1818649970 1635017573 6644590 393221 425
+                 1818649970 1635017573 962945902 48 524293 430 1667592307 1918987381 1769369157 1835954034 1383362149 48
+                 524293 432 1667592307 1918987381 1769369157 1835954034 1383362149 12345 196613 435 110 196613
+                 437 118 262149 438 2003134838 7498052 327685 441 1852401779 1936027241 115 262149
+                 443 1869377379 114 327685 445 1751607660 1836404340 115 327685 448 1751607628 1952531572
+                 97 327686 448 0 1970037110 29541 327685 450 1751607660 1952531572 97 458757
+                 454 1097692526 1701405293 1766618222 1937008743 0 524293 458 1148024174 1667592809 1852795252 1766616161
+                 1937008743 0 393221 462 1349350766 1953393007 1751607628 29556 393221 466 1399682414 1282699120
+                 1952999273 115 262149 470 1701080681 120 196613 475 105 393221 484 1768058209
+                 1601465957 1869377379 114 196613 507 105 327685 516 1751607660 1819231092 29295 327685
+                 521 1701996900 1869182051 110 196613 528 108 196613 530 104 262149 535
+                 1818321779 101 262149 542 1634886000 109 262149 543 1634886000 109 262149 545
+                 1634886000 109 262149 547 1634886000 109 262149 549 1634886000 109 262149 551
+                 1634886000 109 262149 553 1634886000 109 262149 555 1634886000 109 262149 557
+                 1634886000 109 262149 559 1634886000 109 262149 561 1634886000 109 262149 563
+                 1634886000 109 262149 565 1634886000 109 196613 576 105 327685 585 1751607660
+                 1819231092 29295 327685 590 1769172848 1852795252 0 262149 596 1953260900 97 262149
+                 598 1348827493 29551 327685 601 1953720676 1701015137 50 327685 619 1701996900 1869182051
+                 110 196613 625 108 196613 627 104 262149 632 1818321779 101 262149
+                 641 1634886000 109 262149 642 1634886000 109 262149 644 1634886000 109 262149
+                 646 1634886000 109 262149 648 1634886000 109 262149 650 1634886000 109 262149
+                 652 1634886000 109 262149 654 1634886000 109 262149 656 1634886000 109 262149
+                 658 1634886000 109 262149 660 1634886000 109 262149 662 1634886000 109 262149
+                 664 1634886000 109 196613 675 105 327685 684 1751607660 1819231092 29295 524293
+                 689 1769172848 1852795252 1936679775 1701736009 1735278962 25964 655365 694 1751607660 1919501428 1769235301
+                 1667198575 1968141167 1098016116 1701603182 0 262149 699 1953260900 97 327685 704 1953720676
+                 1701015137 50 327685 722 1701996900 1869182051 110 458757 728 1601466212 1751607660 1919509620
+                 1769235301 28271 196613 734 108 196613 736 104 262149 741 1818321779 101
+                 262149 757 1634886000 109 262149 758 1634886000 109 262149 760 1634886000 109
+                 262149 762 1634886000 109 262149 764 1634886000 109 262149 766 1634886000 109
+                 262149 768 1634886000 109 262149 770 1634886000 109 262149 772 1634886000 109
+                 262149 774 1634886000 109 262149 776 1634886000 109 262149 778 1634886000 109
+                 262149 780 1634886000 109 327685 788 1131705711 1919904879 0 262149 796 1634886000
+                 109 327685 803 1131963764 1685221231 48 262215 69 30 1 327752 348
+                 0 35 0 327752 348 1 35 16 327752 348 2 35
+                 32 327752 348 3 35 48 327752 348 4 35 64 327752
+                 348 5 35 68 327752 348 6 35 72 327752 348 7
+                 35 76 196679 348 2 262215 350 34 0 262215 350 33
+                 10 262215 368 30 2 262215 438 30 5 262215 447 6
+                 16 327752 448 0 35 0 196679 448 2 262215 450 34
+                 1 262215 450 33 0 262215 598 30 0 262215 788 30
+                 0 262215 803 30 3 131091 2 196641 3 2 196630 6
+                 32 262167 7 6 4 262176 8 7 7 262177 9 7
+                 8 262167 13 6 3 196641 14 13 983070 17 6 6
+                 6 6 6 6 6 6 13 13 6 13 13 262176
+                 18 7 17 262177 19 13 18 262177 26 6 18 262176
+                 33 7 13 262176 34 7 6 1048609 35 13 33 33
+                 33 33 33 34 34 33 33 34 33 33 34 262187
+                 6 54 1055439407 393260 13 55 54 54 54 262165 58 32
+                 0 262187 58 59 3 262176 68 1 13 262203 68 69
+                 1 262187 6 75 1056964608 262187 6 76 1073741824 262165 77 32
+                 1 262187 77 78 6 262187 77 82 4 262187 6 91
+                 1036831949 393260 13 92 91 91 91 262187 6 94 1065353216 393260
+                 13 95 94 94 94 262187 58 99 0 262187 58 102
+                 1 262187 58 105 2 262187 77 113 0 262187 6 117
+                 1084227584 262187 77 123 1 262187 77 133 11 262187 77 140
+                 8 262187 77 143 9 262187 6 152 3232874585 262187 6 156
+                 1088386572 262187 77 173 10 262187 77 221 2 262187 6 234
+                 1078530011 262187 6 252 3212836864 262187 6 259 981668463 262187 6 271
+                 0 262187 6 329 1082130432 655390 348 7 7 7 7 6
+                 6 6 6 262176 349 2 348 262203 349 350 2 262176
+                 351 2 7 262187 6 364 1025758986 393260 13 365 364 364
+                 364 262176 367 1 7 262203 367 368 1 262176 373 2
+                 6 131092 376 262187 77 382 7 262187 77 389 5 262187
+                 6 427 1103626240 262203 68 438 1 262187 6 442 1120403456 393260
+                 13 444 271 271 271 262187 58 446 64 262172 447 7
+                 446 196638 448 447 262176 449 2 448 262203 449 450 2
+                 262176 453 7 77 262203 68 598 1 262176 787 3 7
+                 262203 787 788 3 262187 6 798 1050868099 262187 6 799 1042479491
+                 262187 6 800 897988541 262167 801 6 2 262176 802 1 801
+                 262203 802 803 1 327734 2 4 0 3 131320 5 262203
+                 34 361 7 262203 34 362 7 262203 33 363 7 262203
+                 8 366 7 262203 34 392 7 262203 33 395 7 262203
+                 34 405 7 262203 33 409 7 262203 34 416 7 262203
+                 34 425 7 262203 33 430 7 262203 33 432 7 262203
+                 33 435 7 262203 33 437 7 262203 34 441 7 262203
+                 33 443 7 262203 8 445 7 262203 453 454 7 262203
+                 453 458 7 262203 453 462 7 262203 453 466 7 262203
+                 453 470 7 262203 453 475 7 262203 8 484 7 262203
+                 453 507 7 262203 8 516 7 262203 33 521 7 262203
+                 33 528 7 262203 33 530 7 262203 34 535 7 262203
+                 33 542 7 262203 33 543 7 262203 33 545 7 262203
+                 33 547 7 262203 33 549 7 262203 34 551 7 262203
+                 34 553 7 262203 33 555 7 262203 33 557 7 262203
+                 34 559 7 262203 33 561 7 262203 33 563 7 262203
+                 34 565 7 262203 453 576 7 262203 8 585 7 262203
+                 33 590 7 262203 33 596 7 262203 34 601 7 262203
+                 33 619 7 262203 33 625 7 262203 33 627 7 262203
+                 34 632 7 262203 33 641 7 262203 33 642 7 262203
+                 33 644 7 262203 33 646 7 262203 33 648 7 262203
+                 34 650 7 262203 34 652 7 262203 33 654 7 262203
+                 33 656 7 262203 34 658 7 262203 33 660 7 262203
+                 33 662 7 262203 34 664 7 262203 453 675 7 262203
+                 8 684 7 262203 8 689 7 262203 8 694 7 262203
+                 33 699 7 262203 34 704 7 262203 33 722 7 262203
+                 34 728 7 262203 33 734 7 262203 33 736 7 262203
+                 34 741 7 262203 33 757 7 262203 33 758 7 262203
+                 33 760 7 262203 33 762 7 262203 33 764 7 262203
+                 34 766 7 262203 34 768 7 262203 33 770 7 262203
+                 33 772 7 262203 34 774 7 262203 33 776 7 262203
+                 33 778 7 262203 34 780 7 262203 8 796 7 196670
+                 361 271 196670 362 94 196670 363 365 262205 7 369 368
+                 327745 351 370 350 113 262205 7 371 370 327813 7 372
+                 369 371 196670 366 372 327745 373 374 350 78 262205 6
+                 375 374 327860 376 377 375 94 196855 379 0 262394 377
+                 378 379 131320 378 327745 34 380 366 59 262205 6 381
+                 380 327745 373 383 350 382 262205 6 384 383 327864 376
+                 385 381 384 196855 387 0 262394 385 386 387 131320 386
+                 65788 131320 387 131321 379 131320 379 327745 373 390 350 389
+                 262205 6 391 390 196670 361 391 327745 373 393 350 82
+                 262205 6 394 393 196670 392 394 262205 7 396 366 524367
+                 13 397 396 396 0 1 2 262205 13 398 363 327811
+                 13 399 95 398 327813 13 400 397 399 196670 395 400
+                 262205 6 401 392 327811 6 402 94 401 262205 13 403
+                 395 327822 13 404 403 402 196670 395 404 262205 6 406
+                 361 262205 6 407 361 327813 6 408 406 407 196670 405
+                 408 262205 13 410 363 262205 7 411 366 524367 13 412
+                 411 411 0 1 2 262205 6 413 392 393296 13 414
+                 413 413 413 524300 13 415 1 46 410 412 414 196670
+                 409 415 327745 34 417 409 99 262205 6 418 417 327745
+                 34 419 409 102 262205 6 420 419 458764 6 421 1
+                 40 418 420 327745 34 422 409 105 262205 6 423 422
+                 458764 6 424 1 40 421 423 196670 416 424 262205 6
+                 426 416 327813 6 428 426 427 524300 6 429 1 43
+                 428 271 94 196670 425 429 262205 13 431 409 196670 430
+                 431 262205 6 433 425 327822 13 434 95 433 196670 432
+                 434 262201 13 436 15 196670 435 436 262205 13 439 438
+                 393228 13 440 1 69 439 196670 437 440 196670 441 442
+                 196670 443 444 393281 351 451 450 113 113 262205 7 452
+                 451 196670 445 452 327745 34 455 445 99 262205 6 456
+                 455 262254 77 457 456 196670 454 457 327745 34 459 445
+                 102 262205 6 460 459 262254 77 461 460 196670 458 461
+                 327745 34 463 445 105 262205 6 464 463 262254 77 465
+                 464 196670 462 465 327745 34 467 445 59 262205 6 468
+                 467 262254 77 469 468 196670 466 469 196670 470 123 262205
+                 77 471 454 327853 376 472 471 113 196855 474 0 262394
+                 472 473 474 131320 473 196670 475 113 131321 476 131320 476
+                 262390 478 479 0 131321 480 131320 480 262205 77 481 475
+                 262205 77 482 454 327857 376 483 481 482 262394 483 477
+                 478 131320 477 262205 77 485 470 327808 77 486 485 123
+                 196670 470 486 393281 351 487 450 113 485 262205 7 488
+                 487 196670 484 488 262205 7 489 366 524367 13 490 489
+                 489 0 1 2 262205 7 491 484 524367 13 492 491
+                 491 0 1 2 327813 13 493 490 492 327745 34 494
+                 484 59 262205 6 495 494 262205 6 496 362 327813 6
+                 497 495 496 327822 13 498 493 497 262205 13 499 443
+                 327809 13 500 499 498 196670 443 500 131321 479 131320 479
+                 262205 77 501 475 327808 77 502 501 123 196670 475 502
+                 131321 476 131320 478 131321 474 131320 474 262205 77 503 458
+                 327853 376 504 503 113 196855 506 0 262394 504 505 506
+                 131320 505 196670 507 113 131321 508 131320 508 262390 510 511
+                 0 131321 512 131320 512 262205 77 513 507 262205 77 514
+                 458 327857 376 515 513 514 262394 515 509 510 131320 509
+                 262205 77 517 470 327808 77 518 517 123 196670 470 518
+                 393281 351 519 450 113 517 262205 7 520 519 196670 516
+                 520 262205 77 522 470 327808 77 523 522 123 196670 470
+                 523 393281 351 524 450 113 522 262205 7 525 524 524367
+                 13 526 525 525 0 1 2 262271 13 527 526 196670
+                 521 527 262205 13 529 521 196670 528 529 262205 13 531
+                 528 262205 13 532 437 327809 13 533 531 532 393228 13
+                 534 1 69 533 196670 530 534 327745 34 536 516 59
+                 262205 6 537 536 196670 535 537 262205 7 538 516 524367
+                 13 539 538 538 0 1 2 262205 6 540 535 327822
+                 13 541 539 540 196670 542 541 262205 13 544 437 196670
+                 543 544 262205 13 546 435 196670 545 546 262205 13 548
+                 528 196670 547 548 262205 13 550 530 196670 549 550 262205
+                 6 552 361 196670 551 552 262205 6 554 392 196670 553
+                 554 262205 13 556 430 196670 555 556 262205 13 558 432
+                 196670 557 558 262205 6 560 405 196670 559 560 262205 13
+                 562 395 196670 561 562 262205 13 564 409 196670 563 564
+                 262205 6 566 362 196670 565 566 1114169 13 567 49 542
+                 543 545 547 549 551 553 555 557 559 561 563 565
+                 262205 13 568 443 327809 13 569 568 567 196670 443 569
+                 131321 511 131320 511 262205 77 570 507 327808 77 571 570
+                 123 196670 507 571 131321 508 131320 510 131321 506 131320 506
+                 262205 77 572 462 327853 376 573 572 113 196855 575 0
+                 262394 573 574 575 131320 574 196670 576 113 131321 577 131320
+                 577 262390 579 580 0 131321 581 131320 581 262205 77 582
+                 576 262205 77 583 462 327857 376 584 582 583 262394 584
+                 578 579 131320 578 262205 77 586 470 327808 77 587 586
+                 123 196670 470 587 393281 351 588 450 113 586 262205 7
+                 589 588 196670 585 589 262205 77 591 470 327808 77 592
+                 591 123 196670 470 592 393281 351 593 450 113 591 262205
+                 7 594 593 524367 13 595 594 594 0 1 2 196670
+                 590 595 262205 13 597 590 262205 13 599 598 327811 13
+                 600 597 599 196670 596 600 327745 34 602 596 99 262205
+                 6 603 602 327745 34 604 596 99 262205 6 605 604
+                 327813 6 606 603 605 327745 34 607 596 102 262205 6
+                 608 607 327745 34 609 596 102 262205 6 610 609 327813
+                 6 611 608 610 327809 6 612 606 611 327745 34 613
+                 596 105 262205 6 614 613 327745 34 615 596 105 262205
+                 6 616 615 327813 6 617 614 616 327809 6 618 612
+                 617 196670 601 618 262205 13 620 596 262205 6 621 601
+                 393228 6 622 1 31 621 393296 13 623 622 622 622
+                 327816 13 624 620 623 196670 619 624 262205 13 626 619
+                 196670 625 626 262205 13 628 625 262205 13 629 437 327809
+                 13 630 628 629 393228 13 631 1 69 630 196670 627
+                 631 327745 34 633 585 59 262205 6 634 633 262205 6
+                 635 601 327816 6 636 634 635 196670 632 636 262205 7
+                 637 585 524367 13 638 637 637 0 1 2 262205 6
+                 639 632 327822 13 640 638 639 196670 641 640 262205 13
+                 643 437 196670 642 643 262205 13 645 435 196670 644 645
+                 262205 13 647 625 196670 646 647 262205 13 649 627 196670
+                 648 649 262205 6 651 361 196670 650 651 262205 6 653
+                 392 196670 652 653 262205 13 655 430 196670 654 655 262205
+                 13 657 432 196670 656 657 262205 6 659 405 196670 658
+                 659 262205 13 661 395 196670 660 661 262205 13 663 409
+                 196670 662 663 262205 6 665 362 196670 664 665 1114169 13
+                 666 49 641 642 644 646 648 650 652 654 656 658
+                 660 662 664 262205 13 667 443 327809 13 668 667 666
+                 196670 443 668 131321 580 131320 580 262205 77 669 576 327808
+                 77 670 669 123 196670 576 670 131321 577 131320 579 131321
+                 575 131320 575 262205 77 671 466 327853 376 672 671 113
+                 196855 674 0 262394 672 673 674 131320 673 196670 675 113
+                 131321 676 131320 676 262390 678 679 0 131321 680 131320 680
+                 262205 77 681 675 262205 77 682 466 327857 376 683 681
+                 682 262394 683 677 678 131320 677 262205 77 685 470 327808
+                 77 686 685 123 196670 470 686 393281 351 687 450 113
+                 685 262205 7 688 687 196670 684 688 262205 77 690 470
+                 327808 77 691 690 123 196670 470 691 393281 351 692 450
+                 113 690 262205 7 693 692 196670 689 693 262205 77 695
+                 470 327808 77 696 695 123 196670 470 696 393281 351 697
+                 450 113 695 262205 7 698 697 196670 694 698 262205 7
+                 700 689 524367 13 701 700 700 0 1 2 262205 13
+                 702 598 327811 13 703 701 702 196670 699 703 327745 34
+                 705 699 99 262205 6 706 705 327745 34 707 699 99
+                 262205 6 708 707 327813 6 709 706 708 327745 34 710
+                 699 102 262205 6 711 710 327745 34 712 699 102 262205
+                 6 713 712 327813 6 714 711 713 327809 6 715 709
+                 714 327745 34 716 699 105 262205 6 717 716 327745 34
+                 718 699 105 262205 6 719 718 327813 6 720 717 719
+                 327809 6 721 715 720 196670 704 721 262205 13 723 699
+                 262205 6 724 704 393228 6 725 1 31 724 393296 13
+                 726 725 725 725 327816 13 727 723 726 196670 722 727
+                 262205 7 729 694 524367 13 730 729 729 0 1 2
+                 262205 13 731 722 327828 6 732 730 731 262271 6 733
+                 732 196670 728 733 262205 13 735 722 196670 734 735 262205
+                 13 737 734 262205 13 738 437 327809 13 739 737 738
+                 393228 13 740 1 69 739 196670 736 740 327745 34 742
+                 684 59 262205 6 743 742 327745 34 744 694 59 262205
+                 6 745 744 327745 34 746 689 59 262205 6 747 746
+                 262205 6 748 728 524300 6 749 1 49 745 747 748
+                 327813 6 750 743 749 262205 6 751 704 327816 6 752
+                 750 751 196670 741 752 262205 7 753 684 524367 13 754
+                 753 753 0 1 2 262205 6 755 741 327822 13 756
+                 754 755 196670 757 756 262205 13 759 437 196670 758 759
+                 262205 13 761 435 196670 760 761 262205 13 763 734 196670
+                 762 763 262205 13 765 736 196670 764 765 262205 6 767
+                 361 196670 766 767 262205 6 769 392 196670 768 769 262205
+                 13 771 430 196670 770 771 262205 13 773 432 196670 772
+                 773 262205 6 775 405 196670 774 775 262205 13 777 395
+                 196670 776 777 262205 13 779 409 196670 778 779 262205 6
+                 781 362 196670 780 781 1114169 13 782 49 757 758 760
+                 762 764 766 768 770 772 774 776 778 780 262205 13
+                 783 443 327809 13 784 783 782 196670 443 784 131321 679
+                 131320 679 262205 77 785 675 327808 77 786 785 123 196670
+                 675 786 131321 676 131320 678 131321 674 131320 674 262205 13
+                 789 443 327745 34 790 366 59 262205 6 791 790 327761
+                 6 792 789 0 327761 6 793 789 1 327761 6 794
+                 789 2 458832 7 795 792 793 794 791 196670 796 795
+                 327737 7 797 11 796 196670 788 797 65789 65592 327734 7
+                 11 0 9 196663 8 10 131320 12 262203 33 51 7
+                 262205 7 52 10 524367 13 53 52 52 0 1 2
+                 458764 13 56 1 26 53 55 196670 51 56 262205 13
+                 57 51 327745 34 60 10 59 262205 6 61 60 327761
+                 6 62 57 0 327761 6 63 57 1 327761 6 64
+                 57 2 458832 7 65 62 63 64 61 131326 65 65592
+                 327734 13 15 0 14 131320 16 262205 13 70 69 393228
+                 13 71 1 69 70 131326 71 65592 327734 13 21 0
+                 19 196663 18 20 131320 22 262203 34 74 7 262203 33
+                 90 7 262203 33 93 7 262203 34 98 7 262203 34
+                 110 7 327745 34 79 20 78 262205 6 80 79 327813
+                 6 81 76 80 327745 34 83 20 82 262205 6 84
+                 83 327813 6 85 81 84 327745 34 86 20 82 262205
+                 6 87 86 327813 6 88 85 87 327809 6 89 75
+                 88 196670 74 89 196670 90 92 262205 13 96 90 327811
+                 13 97 95 96 196670 93 97 327745 34 100 93 99
+                 262205 6 101 100 327745 34 103 93 102 262205 6 104
+                 103 327745 34 106 93 105 262205 6 107 106 458764 6
+                 108 1 37 104 107 458764 6 109 1 37 101 108
+                 196670 98 109 262205 6 111 74 327811 6 112 111 94
+                 327745 34 114 20 113 262205 6 115 114 327811 6 116
+                 94 115 458764 6 118 1 26 116 117 327813 6 119
+                 112 118 327809 6 120 94 119 262205 6 121 74 327811
+                 6 122 121 94 327745 34 124 20 123 262205 6 125
+                 124 327811 6 126 94 125 458764 6 127 1 26 126
+                 117 327813 6 128 122 127 327809 6 129 94 128 327813
+                 6 130 120 129 262205 6 131 98 327813 6 132 130
+                 131 196670 110 132 327745 33 134 20 133 262205 13 135
+                 134 262205 6 136 110 327822 13 137 135 136 131326 137
+                 65592 327734 13 24 0 19 196663 18 23 131320 25 327745
+                 33 141 23 140 262205 13 142 141 327745 33 144 23
+                 143 262205 13 145 144 327745 33 146 23 143 262205 13
+                 147 146 327745 33 148 23 140 262205 13 149 148 327813
+                 13 150 147 149 327811 13 151 145 150 327745 34 153
+                 23 82 262205 6 154 153 327813 6 155 152 154 327811
+                 6 157 155 156 327745 34 158 23 82 262205 6 159
+                 158 327813 6 160 157 159 393228 6 161 1 29 160
+                 327822 13 162 151 161 327809 13 163 142 162 131326 163
+                 65592 327734 6 28 0 26 196663 18 27 131320 29 262203
+                 34 166 7 262203 34 169 7 262203 34 172 7 262203
+                 34 179 7 262203 34 194 7 327745 34 167 27 113
+                 262205 6 168 167 196670 166 168 327745 34 170 27 123
+                 262205 6 171 170 196670 169 171 327745 34 174 27 173
+                 262205 6 175 174 327745 34 176 27 173 262205 6 177
+                 176 327813 6 178 175 177 196670 172 178 262205 6 180
+                 166 327813 6 181 76 180 262205 6 182 166 262205 6
+                 183 172 262205 6 184 172 327811 6 185 94 184 262205
+                 6 186 166 262205 6 187 166 327813 6 188 186 187
+                 327813 6 189 185 188 327809 6 190 183 189 393228 6
+                 191 1 31 190 327809 6 192 182 191 327816 6 193
+                 181 192 196670 179 193 262205 6 195 169 327813 6 196
+                 76 195 262205 6 197 169 262205 6 198 172 262205 6
+                 199 172 327811 6 200 94 199 262205 6 201 169 262205
+                 6 202 169 327813 6 203 201 202 327813 6 204 200
+                 203 327809 6 205 198 204 393228 6 206 1 31 205
+                 327809 6 207 197 206 327816 6 208 196 207 196670 194
+                 208 262205 6 209 179 262205 6 210 194 327813 6 211
+                 209 210 131326 211 65592 327734 6 31 0 26 196663 18
+                 30 131320 32 262203 34 214 7 262203 34 220 7 327745
+                 34 215 30 173 262205 6 216 215 327745 34 217 30
+                 173 262205 6 218 217 327813 6 219 216 218 196670 214
+                 219 327745 34 222 30 221 262205 6 223 222 262205 6
+                 224 214 327813 6 225 223 224 327745 34 226 30 221
+                 262205 6 227 226 327811 6 228 225 227 327745 34 229
+                 30 221 262205 6 230 229 327813 6 231 228 230 327809
+                 6 232 231 94 196670 220 232 262205 6 233 214 262205
+                 6 235 220 327813 6 236 234 235 262205 6 237 220
+                 327813 6 238 236 237 327816 6 239 233 238 131326 239
+                 65592 327734 13 49 0 35 196663 33 36 196663 33 37
+                 196663 33 38 196663 33 39 196663 33 40 196663 34 41
+                 196663 34 42 196663 33 43 196663 33 44 196663 34 45
+                 196663 33 46 196663 33 47 196663 34 48 131320 50 262203
+                 34 242 7 262203 33 246 7 262203 34 257 7 262203
+                 34 261 7 262203 34 267 7 262203 34 273 7 262203
+                 34 278 7 262203 34 283 7 262203 18 288 7 262203
+                 33 303 7 262203 18 304 7 262203 34 307 7 262203
+                 18 308 7 262203 34 311 7 262203 18 312 7 262203
+                 33 315 7 262203 18 319 7 262203 33 323 7 262203
+                 33 336 7 262203 33 347 7 262205 13 243 38 262205
+                 13 244 39 327828 6 245 243 244 196670 242 245 262205
+                 13 247 37 262205 13 248 38 458764 13 249 1 71
+                 247 248 393228 13 250 1 69 249 262271 13 251 250
+                 196670 246 251 327745 34 253 246 102 262205 6 254 253
+                 327813 6 255 254 252 327745 34 256 246 102 196670 256
+                 255 262205 6 258 242 524300 6 260 1 43 258 259
+                 94 196670 257 260 262205 13 262 38 262205 13 263 37
+                 327828 6 264 262 263 393228 6 265 1 4 264 524300
+                 6 266 1 43 265 259 94 196670 261 266 262205 13
+                 268 38 262205 13 269 40 327828 6 270 268 269 524300
+                 6 272 1 43 270 271 94 196670 267 272 262205 13
+                 274 39 262205 13 275 40 327828 6 276 274 275 524300
+                 6 277 1 43 276 271 94 196670 273 277 262205 13
+                 279 37 262205 13 280 40 327828 6 281 279 280 524300
+                 6 282 1 43 281 271 94 196670 278 282 262205 13
+                 284 37 262205 13 285 39 327828 6 286 284 285 524300
+                 6 287 1 43 286 271 94 196670 283 287 262205 6
+                 289 257 262205 6 290 261 262205 6 291 267 262205 6
+                 292 273 262205 6 293 278 262205 6 294 283 262205 6
+                 295 41 262205 6 296 42 262205 13 297 43 262205 13
+                 298 44 262205 6 299 45 262205 13 300 46 262205 13
+                 301 47 1048656 17 302 289 290 291 292 293 294 295
+                 296 297 298 299 300 301 196670 288 302 262205 17 305
+                 288 196670 304 305 327737 13 306 24 304 196670 303 306
+                 262205 17 309 288 196670 308 309 327737 6 310 28 308
+                 196670 307 310 262205 17 313 288 196670 312 313 327737 6
+                 314 31 312 196670 311 314 262205 13 316 303 393296 13
+                 317 94 94 94 327811 13 318 317 316 262205 17 320
+                 288 196670 319 320 327737 13 321 21 319 327813 13 322
+                 318 321 196670 315 322 262205 13 324 303 262205 6 325
+                 307 327822 13 326 324 325 262205 6 327 311 327822 13
+                 328 326 327 262205 6 330 257 327813 6 331 329 330
+                 262205 6 332 261 327813 6 333 331 332 393296 13 334
+                 333 333 333 327816 13 335 328 334 196670 323 335 262205
+                 6 337 257 262205 13 338 36 327822 13 339 338 337
+                 262205 13 340 315 262205 13 341 323 327809 13 342 340
+                 341 327813 13 343 339 342 196670 336 343 262205 6 344
+                 48 262205 13 345 336 327822 13 346 345 344 196670 336
+                 346 327745 351 352 350 123 262205 7 353 352 524367 13
+                 354 353 353 0 1 2 196670 347 354 262205 13 355
+                 347 262205 13 356 336 327809 13 357 356 355 196670 336
+                 357 262205 13 358 336 131326 358 65592
+              }
+              NumSpecializationConstants 0
+            }
+            pipelineStates 6
+            vsg::GraphicsPipelineState id=21 vsg::ColorBlendState
+            {
+              userObjects 0
+              logicOp 3
+              logicOpEnable 0
+              attachments 1
+              blendEnable 0
+              srcColorBlendFactor 0
+              dstColorBlendFactor 0
+              colorBlendOp 0
+              srcAlphaBlendFactor 0
+              dstAlphaBlendFactor 0
+              alphaBlendOp 0
+              colorWriteMask 15
+              blendConstants 0 0 0 0
+            }
+            vsg::GraphicsPipelineState id=22 vsg::DepthStencilState
+            {
+              userObjects 0
+              depthTestEnable 1
+              depthWriteEnable 1
+              depthCompareOp 4
+              depthBoundsTestEnable 0
+              stencilTestEnable 0
+              front.failOp 0
+              front.passOp 0
+              front.depthFailOp 0
+              front.compareOp 0
+              front.compareMask 0
+              front.writeMask 0
+              front.reference 0
+              back.failOp 0
+              back.passOp 0
+              back.depthFailOp 0
+              back.compareOp 0
+              back.compareMask 0
+              back.writeMask 0
+              back.reference 0
+              minDepthBounds 0
+              maxDepthBounds 1
+            }
+            vsg::GraphicsPipelineState id=23 vsg::InputAssemblyState
+            {
+              userObjects 0
+              topology 3
+              primitiveRestartEnable 0
+            }
+            vsg::GraphicsPipelineState id=24 vsg::MultisampleState
+            {
+              userObjects 0
+              rasterizationSamples 1
+              sampleShadingEnable 0
+              minSampleShading 0
+              sampleMasks 0
+              alphaToCoverageEnable 0
+              alphaToOneEnable 0
+            }
+            vsg::GraphicsPipelineState id=25 vsg::RasterizationState
+            {
+              userObjects 0
+              depthClampEnable 0
+              rasterizerDiscardEnable 0
+              polygonMode 0
+              cullMode 2
+              frontFace 0
+              depthBiasEnable 0
+              depthBiasConstantFactor 1
+              depthBiasClamp 0
+              depthBiasSlopeFactor 1
+              lineWidth 1
+            }
+            vsg::GraphicsPipelineState id=26 vsg::VertexInputState
+            {
+              userObjects 0
+              NumBindings 4
+              binding 0
+              stride 12
+              inputRate 0
+              binding 1
+              stride 12
+              inputRate 0
+              binding 2
+              stride 8
+              inputRate 0
+              binding 3
+              stride 0
+              inputRate 1
+              NumAttributes 4
+              location 0
+              binding 0
+              format 106
+              offset 0
+              location 1
+              binding 1
+              format 106
+              offset 0
+              location 2
+              binding 2
+              format 103
+              offset 0
+              location 3
+              binding 3
+              format 109
+              offset 0
+            }
+            subpass 0
+          }
+        }
+        vsg::StateCommand id=27 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=28 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=14
+            descriptors 1
+            vsg::Descriptor id=29 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=30 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.000607824 1 0.0829795 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.9 0.9 0.9 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 0
+                roughnessFactor 0.4
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=31 vsg::BindViewDescriptorSets
+        {
+          userObjects 0
+          slot 2
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 1
+        }
+        prototypeArrayState id=0
+      }
+      matrix -0.1 0 -1.50996e-08 0 0 2 0 0 1.50996e-08 0 -0.1 0
+       -2.01494 2 0.983509 1
+      subgraphRequiresLocalFrustum 1
+    }
+    vsg::Node id=32 vsg::MatrixTransform
+    {
+      userObjects 0
+      children 1
+      vsg::Node id=33 vsg::StateGroup
+      {
+        userObjects 0
+        children 1
+        vsg::Node id=34 vsg::VertexIndexDraw
+        {
+          userObjects 0
+          firstBinding 0
+          NumArrays 4
+          Array id=35 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+             1 -1 -1 1 -1 -1 1 1 1 1 1 1
+             1 1 1 1 -1 1 1 -1 1 1 -1 1
+             -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
+             -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
+             -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
+          }
+          Array id=36 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+             0 0 -1 1 0 -0 0 0 1 0 1 -0
+             1 0 -0 0 -1 -0 0 0 1 1 0 -0
+             -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
+             0 -1 -0 0 0 -1 -1 0 -0 0 0 1
+             0 1 -0 -1 0 -0 0 -1 -0 0 0 1
+          }
+          Array id=37 vsg::vec2Array
+          {
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+             0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
+             0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
+             0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
+          }
+          Array id=38 vsg::vec4Value
+          {
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
+          }
+          Indices id=39 vsg::ushortArray
+          {
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
+             16 3 9 16 9 22 10 6 19 10 19 23
+             1 20 7 1 14 20 21 18 12 21 12 15
+          }
+          indexCount 36
+          instanceCount 1
+          firstIndex 0
+          vertexOffset 0
+          firstInstance 0
+        }
+        stateCommands 3
+        vsg::StateCommand id=11
+        vsg::StateCommand id=40 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=41 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=42 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=43 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=44 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.259799 0.165466 0.00276839 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.9 0.9 0.9 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 0
+                roughnessFactor 0.4
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=31
+        prototypeArrayState id=0
+      }
+      matrix -0.1 0 -1.50996e-08 0 0 2 0 0 1.50996e-08 0 -0.1 0
+       1.98506 2 -1.01649 1
+      subgraphRequiresLocalFrustum 1
+    }
+    vsg::Node id=45 vsg::MatrixTransform
+    {
+      userObjects 0
+      children 1
+      vsg::Node id=46 vsg::StateGroup
+      {
+        userObjects 0
+        children 1
+        vsg::Node id=47 vsg::VertexIndexDraw
+        {
+          userObjects 0
+          firstBinding 0
+          NumArrays 4
+          Array id=48 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+             1 -1 -1 1 -1 -1 1 1 1 1 1 1
+             1 1 1 1 -1 1 1 -1 1 1 -1 1
+             -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
+             -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
+             -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
+          }
+          Array id=49 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+             0 0 -1 1 0 -0 0 0 1 0 1 -0
+             1 0 -0 0 -1 -0 0 0 1 1 0 -0
+             -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
+             0 -1 -0 0 0 -1 -1 0 -0 0 0 1
+             0 1 -0 -1 0 -0 0 -1 -0 0 0 1
+          }
+          Array id=50 vsg::vec2Array
+          {
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+             0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
+             0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
+             0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
+          }
+          Array id=51 vsg::vec4Value
+          {
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
+          }
+          Indices id=52 vsg::ushortArray
+          {
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
+             16 3 9 16 9 22 10 6 19 10 19 23
+             1 20 7 1 14 20 21 18 12 21 12 15
+          }
+          indexCount 36
+          instanceCount 1
+          firstIndex 0
+          vertexOffset 0
+          firstInstance 0
+        }
+        stateCommands 3
+        vsg::StateCommand id=11
+        vsg::StateCommand id=53 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=54 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=55 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=56 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=57 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.00319976 0.00940055 0.661864 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.9 0.9 0.9 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 0
+                roughnessFactor 0.4
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=31
+        prototypeArrayState id=0
+      }
+      matrix -0.1 0 -1.50996e-08 0 0 1 0 0 1.50996e-08 0 -0.1 0
+       -2.01494 1 -1.01649 1
+      subgraphRequiresLocalFrustum 1
+    }
+    vsg::Node id=58 vsg::MatrixTransform
+    {
+      userObjects 0
+      children 1
+      vsg::Node id=59 vsg::StateGroup
+      {
+        userObjects 0
+        children 1
+        vsg::Node id=60 vsg::VertexIndexDraw
+        {
+          userObjects 0
+          firstBinding 0
+          NumArrays 4
+          Array id=61 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
+             1 -1 -1 1 -1 -1 1 1 1 1 1 1
+             1 1 1 1 -1 1 1 -1 1 1 -1 1
+             -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
+             -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
+             -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
+          }
+          Array id=62 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
+             0 0 -1 1 0 -0 0 0 1 0 1 -0
+             1 0 -0 0 -1 -0 0 0 1 1 0 -0
+             -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
+             0 -1 -0 0 0 -1 -1 0 -0 0 0 1
+             0 1 -0 -1 0 -0 0 -1 -0 0 0 1
+          }
+          Array id=63 vsg::vec2Array
+          {
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 24
+            storage id=0
+            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
+             0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
+             0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
+             0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
+          }
+          Array id=64 vsg::vec4Value
+          {
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
+          }
+          Indices id=65 vsg::ushortArray
+          {
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 36
+            storage id=0
+            data 17 13 0 17 0 4 5 2 8 5 8 11
+             16 3 9 16 9 22 10 6 19 10 19 23
+             1 20 7 1 14 20 21 18 12 21 12 15
+          }
+          indexCount 36
+          instanceCount 1
+          firstIndex 0
+          vertexOffset 0
+          firstInstance 0
+        }
+        stateCommands 3
+        vsg::StateCommand id=11
+        vsg::StateCommand id=66 vsg::BindDescriptorSet
+        {
+          userObjects 0
+          slot 1
+          pipelineBindPoint 0
+          layout id=13
+          firstSet 0
+          descriptorSet id=67 vsg::DescriptorSet
+          {
+            userObjects 0
+            setLayout id=68 vsg::DescriptorSetLayout
+            {
+              userObjects 0
+              bindings 1
+              binding 10
+              descriptorType 6
+              descriptorCount 1
+              stageFlags 16
+            }
+            descriptors 1
+            vsg::Descriptor id=69 vsg::DescriptorBuffer
+            {
+              userObjects 0
+              dstBinding 10
+              dstArrayElement 0
+              dataList 1
+              data id=70 vsg::PbrMaterialValue
+              {
+                userObjects 0
+                properties 0 0 0 1 1 1 0 -1 0
+                value                baseColorFactor 0.377424 0.377424 0.377424 1
+                emissiveFactor 0 0 0 1
+                diffuseFactor 0.9 0.9 0.9 1
+                specularFactor 0.2 0.2 0.2 1
+                metallicFactor 0.772059
+                roughnessFactor 0.208824
+                alphaMask 1
+                alphaMaskCutoff 0.5
+
+              }
+            }
+          }
+          dynamicOffsets 0
+        }
+        vsg::StateCommand id=31
+        prototypeArrayState id=0
+      }
+      matrix -0.1 0 -1.50996e-08 0 0 1.5 0 0 1.50996e-08 0 -0.1 0
+       1.98506 1.5 0.98351 1
+      subgraphRequiresLocalFrustum 1
+    }
+    vsg::Node id=71 vsg::MatrixTransform
+    {
+      userObjects 0
+      children 1
+      vsg::Node id=72 vsg::PointLight
+      {
+        name "Light"
+        color 100 100 100
+        intensity 1
+        position 0 0 0
+      }
+      matrix 0.290864 -0.055189 0.955171 0 0.771101 0.604525 -0.199883 0 -0.566393 0.794672 0.218391 0
+       3.62173 10.3769 -0.0164907 1
+      subgraphRequiresLocalFrustum 1
+    }
+    vsg::Node id=73 vsg::MatrixTransform
+    {
+      userObjects 0
+      children 1
+      vsg::Node id=74 vsg::StateGroup
+      {
+        userObjects 0
+        children 1
+        vsg::Node id=75 vsg::VertexIndexDraw
+        {
+          userObjects 0
+          firstBinding 0
+          NumArrays 4
+          Array id=76 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 679
+            storage id=0
+            data 4.43 0 -0.336 4.201 0 -0.336 4.201 0 -0.248 4.332 0 -0.248
+             4.332 0 -0.108 4.32023 0 -0.104318 4.3084 0 -0.100792 4.2965 0 -0.0974531
+             4.28452 0 -0.0943333 4.27244 0 -0.0914636 4.26025 0 -0.088875 4.24794 0 -0.086599
+             4.23548 0 -0.0846667 4.22288 0 -0.0831094 4.2101 0 -0.0819583 4.19715 0 -0.0812448
+             4.184 0 -0.081 4.184 0 -0.081 4.14454 0 -0.0831933 4.10731 0 -0.0896296
+             4.10731 0 -0.0896296 4.07253 0 -0.100094 4.04044 0 -0.11437 4.04044 0 -0.11437
+             4.01127 0 -0.132244 4.01127 0 -0.132244 3.98525 0 -0.1535 3.98525 0 -0.1535
+             3.9626 0 -0.177922 3.9626 0 -0.177922 3.94356 0 -0.205296 3.92834 0 -0.235406
+             3.91719 0 -0.268037 3.91719 0 -0.268037 3.91034 0 -0.302973 3.908 0 -0.34
+             3.908 0 -0.34 3.91035 0 -0.376226 3.91035 0 -0.376226 3.9172 0 -0.410722
+             3.92828 0 -0.443219 3.9433 0 -0.473444 3.9433 0 -0.473444 3.96196 0 -0.501129
+             3.96196 0 -0.501129 3.984 0 -0.526 4.00912 0 -0.547788 4.03704 0 -0.566222
+             4.06747 0 -0.581031 4.10013 0 -0.591945 4.13474 0 -0.598691 4.13474 0 -0.598691
+             4.171 0 -0.601 4.171 0 -0.601 4.19152 0 -0.600522 4.21207 0 -0.599093
+             4.21207 0 -0.599093 4.23263 0 -0.596719 4.25319 0 -0.593407 4.27373 0 -0.589166
+             4.29425 0 -0.584 4.31473 0 -0.577918 4.33515 0 -0.570926 4.3555 0 -0.563031
+             4.37577 0 -0.554241 4.37577 0 -0.554241 4.39594 0 -0.544561 4.39594 0 -0.544561
+             4.416 0 -0.534 4.416 0 -0.633 4.416 0 -0.633 4.39027 0 -0.643594
+             4.3664 0 -0.652921 4.34414 0 -0.661047 4.32322 0 -0.668037 4.30339 0 -0.673958
+             4.28438 0 -0.678875 4.26593 0 -0.682855 4.24778 0 -0.685963 4.22967 0 -0.688266
+             4.21135 0 -0.689829 4.19254 0 -0.690718 4.173 0 -0.691 4.1221 0 -0.687873
+             4.07367 0 -0.678736 4.02806 0 -0.663953 3.98567 0 -0.643889 3.94685 0 -0.618908
+             3.94685 0 -0.618908 3.912 0 -0.589375 3.912 0 -0.589375 3.88148 0 -0.555655
+             3.85567 0 -0.518111 3.83494 0 -0.477109 3.83494 0 -0.477109 3.81967 0 -0.433014
+             3.81023 0 -0.386189 3.81023 0 -0.386189 3.807 0 -0.337 3.807 0 -0.337
+             3.81015 0 -0.288178 3.81015 0 -0.288178 3.81938 0 -0.241926 3.81938 0 -0.241926
+             3.83433 0 -0.198563 3.85467 0 -0.158407 3.85467 0 -0.158407 3.88005 0 -0.12178
+             3.88005 0 -0.12178 3.91013 0 -0.0890001 3.91013 0 -0.0890001 3.94456 0 -0.0603866
+             3.94456 0 -0.0603866 3.983 0 -0.0362593 4.02511 0 -0.0169376 4.07054 0 -0.00274082
+             4.07054 0 -0.00274082 4.11895 0 0.00601149 4.11895 0 0.00601149 4.17 0 0.009
+             4.17 0 0.009 4.19333 0 0.00866204 4.21593 0 0.00762963 4.21593 0 0.00762963
+             4.23791 0 0.005875 4.25941 0 0.00337037 4.28056 0 8.79632e-05 4.28056 0 8.79632e-05
+             4.3015 0 -0.004 4.32236 0 -0.0089213 4.34326 0 -0.0147037 4.36434 0 -0.021375
+             4.38574 0 -0.028963 4.40758 0 -0.0374954 4.43 0 -0.047 3.698 0 -0.643
+             3.68592 0 -0.650667 3.67369 0 -0.657667 3.66131 0 -0.664 3.64882 0 -0.669667
+             3.63621 0 -0.674667 3.63621 0 -0.674667 3.6235 0 -0.679 3.61071 0 -0.682667
+             3.59785 0 -0.685667 3.58494 0 -0.688 3.58494 0 -0.688 3.57198 0 -0.689667
+             3.57198 0 -0.689667 3.559 0 -0.690667 3.546 0 -0.691 3.51567 0 -0.689539
+             3.51567 0 -0.689539 3.48726 0 -0.685227 3.46092 0 -0.678172 3.46092 0 -0.678172
+             3.43678 0 -0.668482 3.43678 0 -0.668482 3.41497 0 -0.656263 3.39563 0 -0.641625
+             3.39563 0 -0.641625 3.37889 0 -0.624674 3.37889 0 -0.624674 3.36489 0 -0.605519
+             3.36489 0 -0.605519 3.35377 0 -0.584266 3.35377 0 -0.584266 3.34565 0 -0.561023
+             3.34069 0 -0.535899 3.34069 0 -0.535899 3.339 0 -0.509 3.3448 0 -0.465641
+             3.36085 0 -0.42838 3.38509 0 -0.396187 3.41548 0 -0.368037 3.44997 0 -0.3429
+             3.4865 0 -0.31975 3.52303 0 -0.297558 3.52303 0 -0.297558 3.55752 0 -0.275296
+             3.58791 0 -0.251937 3.58791 0 -0.251937 3.61215 0 -0.226454 3.61215 0 -0.226454
+             3.6282 0 -0.197817 3.634 0 -0.165 3.63327 0 -0.155325 3.63106 0 -0.145435
+             3.62734 0 -0.135531 3.62211 0 -0.125815 3.61534 0 -0.116487 3.61534 0 -0.116487
+             3.607 0 -0.10775 3.607 0 -0.10775 3.59708 0 -0.0998044 3.59708 0 -0.0998044
+             3.58556 0 -0.0928518 3.57241 0 -0.0870937 3.57241 0 -0.0870937 3.55761 0 -0.0827315
+             3.54115 0 -0.0799664 3.523 0 -0.079 3.523 0 -0.079 3.50634 0 -0.0797257
+             3.48988 0 -0.0818889 3.47364 0 -0.0854688 3.45767 0 -0.0904444 3.44198 0 -0.0967951
+             3.42663 0 -0.1045 3.41162 0 -0.113538 3.397 0 -0.123889 3.3828 0 -0.135531
+             3.36904 0 -0.148444 3.35577 0 -0.162608 3.343 0 -0.178 3.343 0 -0.054
+             3.343 0 -0.054 3.35732 0 -0.0437274 3.35732 0 -0.0437274 3.3718 0 -0.0344028
+             3.38648 0 -0.0260156 3.38648 0 -0.0260156 3.40141 0 -0.0185556 3.40141 0 -0.0185556
+             3.41661 0 -0.0120122 3.43213 0 -0.006375 3.448 0 -0.00163368 3.448 0 -0.00163368
+             3.46426 0 0.00222222 3.46426 0 0.00222222 3.48095 0 0.00520313 3.49812 0 0.00731945
+             3.51579 0 0.0085816 3.534 0 0.009 3.56087 0 0.00740336 3.58634 0 0.00272685
+             3.58634 0 0.00272685 3.61025 0 -0.00485938 3.61025 0 -0.00485938 3.63241 0 -0.0151852
+             3.63241 0 -0.0151852 3.65263 0 -0.0280804 3.67075 0 -0.043375 3.67075 0 -0.043375
+             3.68657 0 -0.0608987 3.68657 0 -0.0608987 3.69993 0 -0.0804815 3.69993 0 -0.0804815
+             3.71063 0 -0.101953 3.71063 0 -0.101953 3.71849 0 -0.125144 3.71849 0 -0.125144
+             3.72334 0 -0.149883 3.725 0 -0.176 3.7192 0 -0.225891 3.7192 0 -0.225891
+             3.70315 0 -0.26788 3.70315 0 -0.26788 3.67891 0 -0.303187 3.67891 0 -0.303187
+             3.64852 0 -0.333037 3.61403 0 -0.35865 3.5775 0 -0.38125 3.54097 0 -0.402058
+             3.50648 0 -0.422296 3.47609 0 -0.443187 3.45185 0 -0.465954 3.43581 0 -0.491817
+             3.43 0 -0.522 3.43092 0 -0.533677 3.43363 0 -0.544667 3.43363 0 -0.544667
+             3.43802 0 -0.554906 3.43802 0 -0.554906 3.444 0 -0.564333 3.45148 0 -0.572885
+             3.46038 0 -0.5805 3.47058 0 -0.587115 3.482 0 -0.592667 3.482 0 -0.592667
+             3.49455 0 -0.597094 3.49455 0 -0.597094 3.50813 0 -0.600333 3.52264 0 -0.602323
+             3.538 0 -0.603 3.538 0 -0.603 3.5497 0 -0.602653 3.5618 0 -0.60156
+             3.5618 0 -0.60156 3.57425 0 -0.599641 3.58704 0 -0.596815 3.60013 0 -0.593003
+             3.6135 0 -0.588125 3.62712 0 -0.582101 3.64096 0 -0.574852 3.655 0 -0.566297
+             3.6692 0 -0.556357 3.68355 0 -0.544951 3.698 0 -0.532 3.299 0 -0.682
+             3.202 0 -0.682 2.998 0 -0.203 2.793 0 -0.682 2.793 0 -0.682
+             2.695 0 -0.682 2.99 0 0.006 2.99 0 0.006 3.01 0 0.006
+             2.257 0 0.118 2.2759 0 0.111634 2.2931 0 0.103653 2.30861 0 0.0942344
+             2.32244 0 0.0835556 2.33461 0 0.0717934 2.34513 0 0.059125 2.35399 0 0.0457274
+             2.36122 0 0.0317778 2.36683 0 0.0174531 2.37082 0 0.00293056 2.37082 0 0.00293056
+             2.37321 0 -0.0116128 2.374 0 -0.026 2.374 0 -0.026 2.37342 0 -0.0403027
+             2.37173 0 -0.0536713 2.37173 0 -0.0536713 2.36895 0 -0.0660469 2.36515 0 -0.0773704
+             2.36036 0 -0.0875828 2.35463 0 -0.096625 2.348 0 -0.104438 2.348 0 -0.104438
+             2.34052 0 -0.110963 2.34052 0 -0.110963 2.33223 0 -0.116141 2.33223 0 -0.116141
+             2.32319 0 -0.119912 2.31343 0 -0.122218 2.31343 0 -0.122218 2.303 0 -0.123
+             2.2947 0 -0.122509 2.2947 0 -0.122509 2.28682 0 -0.121069 2.28682 0 -0.121069
+             2.27944 0 -0.118734 2.27944 0 -0.118734 2.27259 0 -0.115556 2.27259 0 -0.115556
+             2.26634 0 -0.111585 2.26634 0 -0.111585 2.26075 0 -0.106875 2.26075 0 -0.106875
+             2.25586 0 -0.101477 2.25586 0 -0.101477 2.25174 0 -0.0954444 2.24844 0 -0.0888281
+             2.24601 0 -0.0816806 2.24451 0 -0.0740538 2.244 0 -0.066 2.24441 0 -0.057985
+             2.24441 0 -0.057985 2.24562 0 -0.050463 2.24562 0 -0.050463 2.24758 0 -0.0434688
+             2.25026 0 -0.037037 2.25026 0 -0.037037 2.25362 0 -0.0312025 2.25362 0 -0.0312025
+             2.25762 0 -0.026 2.26223 0 -0.0214641 2.26741 0 -0.0176296 2.27311 0 -0.0145313
+             2.2793 0 -0.0122037 2.28594 0 -0.0106817 2.293 0 -0.01 2.293 0 -0.01
+             2.29481 0 -0.000712964 2.29481 0 -0.000712964 2.29575 0 0.0090463 2.29581 0 0.019125
+             2.295 0 0.0293704 2.29331 0 0.0396296 2.29075 0 0.04975 2.28731 0 0.0595787
+             2.283 0 0.068963 2.27781 0 0.07775 2.27175 0 0.085787 2.26481 0 0.0929213
+             2.257 0 0.099 1.919 0 -0.458 1.88619 0 -0.455958 1.85492 0 -0.449995
+             1.85492 0 -0.449995 1.82544 0 -0.440359 1.82544 0 -0.440359 1.798 0 -0.427296
+             1.77285 0 -0.411053 1.75025 0 -0.391875 1.73044 0 -0.37001 1.71367 0 -0.345704
+             1.71367 0 -0.345704 1.70019 0 -0.319203 1.70019 0 -0.319203 1.69025 0 -0.290755
+             1.69025 0 -0.290755 1.6841 0 -0.260605 1.6841 0 -0.260605 1.682 0 -0.229
+             1.682 0 -0.229 1.68403 0 -0.195328 1.68997 0 -0.163454 1.68997 0 -0.163454
+             1.69963 0 -0.133594 1.69963 0 -0.133594 1.71278 0 -0.105963 1.72922 0 -0.0807766
+             1.72922 0 -0.0807766 1.74875 0 -0.05825 1.74875 0 -0.05825 1.77115 0 -0.0385984
+             1.77115 0 -0.0385984 1.79622 0 -0.022037 1.79622 0 -0.022037 1.82375 0 -0.00878121
+             1.85353 0 0.000953747 1.88535 0 0.00695259 1.919 0 0.009 1.95403 0 0.00702894
+             1.987 0 0.00123148 2.01772 0 -0.00821875 2.046 0 -0.0211482 2.07166 0 -0.0373831
+             2.07166 0 -0.0373831 2.0945 0 -0.05675 2.0945 0 -0.05675 2.11434 0 -0.0790752
+             2.131 0 -0.104185 2.14428 0 -0.131906 2.14428 0 -0.131906 2.154 0 -0.162065
+             2.154 0 -0.162065 2.15997 0 -0.194487 2.162 0 -0.229 2.15991 0 -0.261445
+             2.15379 0 -0.292144 2.14386 0 -0.320891 2.13033 0 -0.347482 2.11343 0 -0.371711
+             2.09338 0 -0.393375 2.07038 0 -0.412268 2.04467 0 -0.428185 2.04467 0 -0.428185
+             2.01645 0 -0.440922 2.01645 0 -0.440922 1.98596 0 -0.450273 1.9534 0 -0.456034
+             1.918 0 -0.378 1.93971 0 -0.37671 1.96024 0 -0.372931 1.97945 0 -0.366797
+             1.99722 0 -0.358444 2.01341 0 -0.348009 2.02787 0 -0.335625 2.04049 0 -0.321429
+             2.05111 0 -0.305556 2.05961 0 -0.288141 2.06585 0 -0.26932 2.06969 0 -0.249227
+             2.071 0 -0.228 2.06978 0 -0.204534 2.06619 0 -0.18269 2.06031 0 -0.162547
+             2.05222 0 -0.144185 2.05222 0 -0.144185 2.04201 0 -0.127685 2.02975 0 -0.113125
+             2.01553 0 -0.100586 1.99944 0 -0.0901482 1.98156 0 -0.0818907 1.96197 0 -0.0758935
+             1.96197 0 -0.0758935 1.94076 0 -0.0722367 1.94076 0 -0.0722367 1.918 0 -0.071
+             1.918 0 -0.071 1.89708 0 -0.0722946 1.89708 0 -0.0722946 1.8774 0 -0.0761065
+             1.8774 0 -0.0761065 1.85906 0 -0.0823281 1.85906 0 -0.0823281 1.84219 0 -0.0908519
+             1.82688 0 -0.10157 1.82688 0 -0.10157 1.81325 0 -0.114375 1.80141 0 -0.129159
+             1.79148 0 -0.145815 1.79148 0 -0.145815 1.78356 0 -0.164234 1.78356 0 -0.164234
+             1.77777 0 -0.18431 1.77421 0 -0.205935 1.773 0 -0.229 1.773 0 -0.229
+             1.77425 0 -0.249998 1.77425 0 -0.249998 1.77791 0 -0.269898 1.78384 0 -0.288563
+             1.78384 0 -0.288563 1.79193 0 -0.305852 1.79193 0 -0.305852 1.80202 0 -0.321627
+             1.80202 0 -0.321627 1.814 0 -0.33575 1.814 0 -0.33575 1.82773 0 -0.348081
+             1.82773 0 -0.348081 1.84307 0 -0.358482 1.84307 0 -0.358482 1.85991 0 -0.366813
+             1.85991 0 -0.366813 1.87809 0 -0.372935 1.8975 0 -0.376711 1.581 0 -0.682
+             1.492 0 -0.682 1.492 0 -0 1.581 0 -0 1.362 0 -0.682
+             1.273 0 -0.682 1.273 0 -0 1.362 0 -0 1.167 0 -0.13
+             1.15402 0 -0.121795 1.14106 0 -0.114194 1.12812 0 -0.107219 1.11519 0 -0.100889
+             1.10223 0 -0.0952257 1.08925 0 -0.09025 1.07623 0 -0.0859826 1.06315 0 -0.0824444
+             1.05 0 -0.0796563 1.05 0 -0.0796563 1.03677 0 -0.0776389 1.03677 0 -0.0776389
+             1.02344 0 -0.0764132 1.01 0 -0.076 0.98923 0 -0.0769566 0.98923 0 -0.0769566
+             0.969926 0 -0.0798194 0.952094 0 -0.0845781 0.952094 0 -0.0845781 0.935741 0 -0.0912222
+             0.920874 0 -0.0997413 0.9075 0 -0.110125 0.9075 0 -0.110125 0.895626 0 -0.122363
+             0.885259 0 -0.136444 0.885259 0 -0.136444 0.876406 0 -0.152359 0.876406 0 -0.152359
+             0.869074 0 -0.170097 0.869074 0 -0.170097 0.86327 0 -0.189648 0.86327 0 -0.189648
+             0.859 0 -0.211 0.859 0 -0.211 1.175 0 -0.211 1.175 0 -0.211
+             1.17344 0 -0.250731 1.17344 0 -0.250731 1.16882 0 -0.286935 1.16127 0 -0.319625
+             1.16127 0 -0.319625 1.15089 0 -0.348815 1.15089 0 -0.348815 1.1378 0 -0.374519
+             1.1378 0 -0.374519 1.12212 0 -0.39675 1.12212 0 -0.39675 1.10397 0 -0.415523
+             1.08344 0 -0.430852 1.06067 0 -0.44275 1.06067 0 -0.44275 1.03576 0 -0.451232
+             1.00884 0 -0.45631 0.98 0 -0.458 0.949819 0 -0.456111 0.921389 0 -0.450556
+             0.921389 0 -0.450556 0.894875 0 -0.4415 0.894875 0 -0.4415 0.870444 0 -0.429111
+             0.848264 0 -0.413556 0.8285 0 -0.395 0.8285 0 -0.395 0.811319 0 -0.373611
+             0.796889 0 -0.349556 0.785375 0 -0.323 0.776944 0 -0.294111 0.771764 0 -0.263056
+             0.77 0 -0.23 0.77 0 -0.23 0.771616 0 -0.199249 0.771616 0 -0.199249
+             0.776426 0 -0.169241 0.776426 0 -0.169241 0.784375 0 -0.140344 0.784375 0 -0.140344
+             0.795407 0 -0.112926 0.795407 0 -0.112926 0.809468 0 -0.0873553 0.809468 0 -0.0873553
+             0.8265 0 -0.064 0.8265 0 -0.064 0.846449 0 -0.043228 0.869259 0 -0.0254074
+             0.894875 0 -0.0109063 0.923241 0 -9.26116e-05 0.954301 0 0.00666549 0.988 0 0.009
+             0.988 0 0.009 1.00646 0 0.00864468 1.0239 0 0.00757407 1.0239 0 0.00757407
+             1.04044 0 0.00578125 1.05619 0 0.00325926 1.07125 0 1.1567e-06 1.08575 0 -0.004
+             1.09979 0 -0.00875116 1.11348 0 -0.0142593 1.12694 0 -0.0205313 1.14027 0 -0.0275741
+             1.15359 0 -0.0353947 1.167 0 -0.044 1.167 0 -0.044 0.861 0 -0.27
+             0.864603 0 -0.287099 0.869407 0 -0.302875 0.875406 0 -0.317297 0.882593 0 -0.330333
+             0.89096 0 -0.341953 0.9005 0 -0.352125 0.911207 0 -0.360818 0.923074 0 -0.368
+             0.936094 0 -0.373641 0.950259 0 -0.377708 0.965564 0 -0.380172 0.982 0 -0.381
+             0.997243 0 -0.380115 1.01144 0 -0.3775 1.02456 0 -0.373219 1.03656 0 -0.367333
+             1.04738 0 -0.359906 1.057 0 -0.351 1.057 0 -0.351 1.06537 0 -0.340677
+             1.06537 0 -0.340677 1.07244 0 -0.329 1.07244 0 -0.329 1.07819 0 -0.316031
+             1.08256 0 -0.301833 1.08551 0 -0.286469 1.08551 0 -0.286469 1.087 0 -0.27
+             1.087 0 -0.27 0.653 0 -0.682 0.653 0 -0.682 0.555 0 -0.682
+             0.555 0 -0.385 0.555 0 -0.385 0.173 0 -0.385 0.173 0 -0.682
+             0.075 0 -0.682 0.075 0 -0 0.173 0 -0 0.173 0 -0.297
+             0.555 0 -0.297 0.555 0 -0 0.653 0 -0
+          }
+          Array id=77 vsg::vec3Array
+          {
+            userObjects 0
+            properties 0 12 0 1 1 1 0 -1 0
+            size 679
+            storage id=0
+            data 0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0 0 1 -0
+             0 1 -0 0 1 -0 0 1 -0
+          }
+          Array id=78 vsg::vec2Array
+          {
+            userObjects 0
+            properties 0 8 0 1 1 1 0 -1 0
+            size 679
+            storage id=0
+            data 0 1 0.00990099 1 0.019802 1 0.029703 1 0.039604 1 0.049505 1
+             0.0594059 1 0.0693069 1 0.0792079 1 0.0891089 1 0.0990099 1 0.108911 1
+             0.118812 1 0.128713 1 0.138614 1 0.148515 1 0.158416 1 0.158416 1
+             0.168317 1 0.178218 1 0.178218 1 0.188119 1 0.19802 1 0.19802 1
+             0.207921 1 0.207921 1 0.217822 1 0.217822 1 0.227723 1 0.227723 1
+             0.237624 1 0.247525 1 0.257426 1 0.257426 1 0.267327 1 0.277228 1
+             0.277228 1 0.287129 1 0.287129 1 0.29703 1 0.306931 1 0.316832 1
+             0.316832 1 0.326733 1 0.326733 1 0.336634 1 0.346535 1 0.356436 1
+             0.366337 1 0.376238 1 0.386139 1 0.386139 1 0.39604 1 0.39604 1
+             0.405941 1 0.415842 1 0.415842 1 0.425743 1 0.435644 1 0.445545 1
+             0.455446 1 0.465347 1 0.475248 1 0.485149 1 0.49505 1 0.49505 1
+             0.504951 1 0.504951 1 0.514852 1 0.524752 1 0.524752 1 0.534653 1
+             0.544554 1 0.554455 1 0.564356 1 0.574257 1 0.584158 1 0.594059 1
+             0.60396 1 0.613861 1 0.623762 1 0.633663 1 0.643564 1 0.653465 1
+             0.663366 1 0.673267 1 0.683168 1 0.693069 1 0.693069 1 0.70297 1
+             0.70297 1 0.712871 1 0.722772 1 0.732673 1 0.732673 1 0.742574 1
+             0.752475 1 0.752475 1 0.762376 1 0.762376 1 0.772277 1 0.772277 1
+             0.782178 1 0.782178 1 0.792079 1 0.80198 1 0.80198 1 0.811881 1
+             0.811881 1 0.821782 1 0.821782 1 0.831683 1 0.831683 1 0.841584 1
+             0.851485 1 0.861386 1 0.861386 1 0.871287 1 0.871287 1 0.881188 1
+             0.881188 1 0.891089 1 0.90099 1 0.90099 1 0.910891 1 0.920792 1
+             0.930693 1 0.930693 1 0.940594 1 0.950495 1 0.960396 1 0.970297 1
+             0.980198 1 0.990099 1 1 1 0 1 0.00826446 1 0.0165289 1
+             0.0247934 1 0.0330578 1 0.0413223 1 0.0413223 1 0.0495868 1 0.0578512 1
+             0.0661157 1 0.0743802 1 0.0743802 1 0.0826446 1 0.0826446 1 0.0909091 1
+             0.0991736 1 0.107438 1 0.107438 1 0.115702 1 0.123967 1 0.123967 1
+             0.132231 1 0.132231 1 0.140496 1 0.14876 1 0.14876 1 0.157025 1
+             0.157025 1 0.165289 1 0.165289 1 0.173554 1 0.173554 1 0.181818 1
+             0.190083 1 0.190083 1 0.198347 1 0.206612 1 0.214876 1 0.22314 1
+             0.231405 1 0.239669 1 0.247934 1 0.256198 1 0.256198 1 0.264463 1
+             0.272727 1 0.272727 1 0.280992 1 0.280992 1 0.289256 1 0.297521 1
+             0.305785 1 0.31405 1 0.322314 1 0.330579 1 0.338843 1 0.338843 1
+             0.347107 1 0.347107 1 0.355372 1 0.355372 1 0.363636 1 0.371901 1
+             0.371901 1 0.380165 1 0.38843 1 0.396694 1 0.396694 1 0.404959 1
+             0.413223 1 0.421488 1 0.429752 1 0.438017 1 0.446281 1 0.454545 1
+             0.46281 1 0.471074 1 0.479339 1 0.487603 1 0.495868 1 0.504132 1
+             0.504132 1 0.512397 1 0.512397 1 0.520661 1 0.528926 1 0.528926 1
+             0.53719 1 0.53719 1 0.545455 1 0.553719 1 0.561983 1 0.561983 1
+             0.570248 1 0.570248 1 0.578512 1 0.586777 1 0.595041 1 0.603306 1
+             0.61157 1 0.619835 1 0.619835 1 0.628099 1 0.628099 1 0.636364 1
+             0.636364 1 0.644628 1 0.652893 1 0.652893 1 0.661157 1 0.661157 1
+             0.669421 1 0.669421 1 0.677686 1 0.677686 1 0.68595 1 0.68595 1
+             0.694215 1 0.702479 1 0.710744 1 0.710744 1 0.719008 1 0.719008 1
+             0.727273 1 0.727273 1 0.735537 1 0.743802 1 0.752066 1 0.760331 1
+             0.768595 1 0.77686 1 0.785124 1 0.793388 1 0.801653 1 0.809917 1
+             0.818182 1 0.818182 1 0.826446 1 0.826446 1 0.834711 1 0.842975 1
+             0.85124 1 0.859504 1 0.867769 1 0.867769 1 0.876033 1 0.876033 1
+             0.884298 1 0.892562 1 0.900826 1 0.900826 1 0.909091 1 0.917355 1
+             0.917355 1 0.92562 1 0.933884 1 0.942149 1 0.950413 1 0.958678 1
+             0.966942 1 0.975207 1 0.983471 1 0.991736 1 1 1 0 1
+             0.166667 1 0.333333 1 0.5 1 0.5 1 0.666667 1 0.833333 1
+             0.833333 1 1 1 0 1 0.0166667 1 0.0333333 1 0.05 1
+             0.0666667 1 0.0833333 1 0.1 1 0.116667 1 0.133333 1 0.15 1
+             0.166667 1 0.166667 1 0.183333 1 0.2 1 0.2 1 0.216667 1
+             0.233333 1 0.233333 1 0.25 1 0.266667 1 0.283333 1 0.3 1
+             0.316667 1 0.316667 1 0.333333 1 0.333333 1 0.35 1 0.35 1
+             0.366667 1 0.383333 1 0.383333 1 0.4 1 0.416667 1 0.416667 1
+             0.433333 1 0.433333 1 0.45 1 0.45 1 0.466667 1 0.466667 1
+             0.483333 1 0.483333 1 0.5 1 0.5 1 0.516667 1 0.516667 1
+             0.533333 1 0.55 1 0.566667 1 0.583333 1 0.6 1 0.616667 1
+             0.616667 1 0.633333 1 0.633333 1 0.65 1 0.666667 1 0.666667 1
+             0.683333 1 0.683333 1 0.7 1 0.716667 1 0.733333 1 0.75 1
+             0.766667 1 0.783333 1 0.8 1 0.8 1 0.816667 1 0.816667 1
+             0.833333 1 0.85 1 0.866667 1 0.883333 1 0.9 1 0.916667 1
+             0.933333 1 0.95 1 0.966667 1 0.983333 1 1 1 0 1
+             0.0105263 1 0.0210526 1 0.0210526 1 0.0315789 1 0.0315789 1 0.0421053 1
+             0.0526316 1 0.0631579 1 0.0736842 1 0.0842105 1 0.0842105 1 0.0947368 1
+             0.0947368 1 0.105263 1 0.105263 1 0.115789 1 0.115789 1 0.126316 1
+             0.126316 1 0.136842 1 0.147368 1 0.147368 1 0.157895 1 0.157895 1
+             0.168421 1 0.178947 1 0.178947 1 0.189474 1 0.189474 1 0.2 1
+             0.2 1 0.210526 1 0.210526 1 0.221053 1 0.231579 1 0.242105 1
+             0.252632 1 0.263158 1 0.273684 1 0.284211 1 0.294737 1 0.305263 1
+             0.305263 1 0.315789 1 0.315789 1 0.326316 1 0.336842 1 0.347368 1
+             0.347368 1 0.357895 1 0.357895 1 0.368421 1 0.378947 1 0.389474 1
+             0.4 1 0.410526 1 0.421053 1 0.431579 1 0.442105 1 0.452632 1
+             0.463158 1 0.463158 1 0.473684 1 0.473684 1 0.484211 1 0.494737 1
+             0.505263 1 0.515789 1 0.526316 1 0.536842 1 0.547368 1 0.557895 1
+             0.568421 1 0.578947 1 0.589474 1 0.6 1 0.610526 1 0.621053 1
+             0.631579 1 0.642105 1 0.652632 1 0.663158 1 0.673684 1 0.673684 1
+             0.684211 1 0.694737 1 0.705263 1 0.715789 1 0.726316 1 0.736842 1
+             0.736842 1 0.747368 1 0.747368 1 0.757895 1 0.757895 1 0.768421 1
+             0.768421 1 0.778947 1 0.778947 1 0.789474 1 0.789474 1 0.8 1
+             0.810526 1 0.810526 1 0.821053 1 0.831579 1 0.842105 1 0.842105 1
+             0.852632 1 0.852632 1 0.863158 1 0.873684 1 0.884211 1 0.884211 1
+             0.894737 1 0.894737 1 0.905263 1 0.915789 1 0.915789 1 0.926316 1
+             0.926316 1 0.936842 1 0.936842 1 0.947368 1 0.947368 1 0.957895 1
+             0.957895 1 0.968421 1 0.968421 1 0.978947 1 0.978947 1 0.989474 1
+             1 1 0 1 0.333333 1 0.666667 1 1 1 0 1
+             0.333333 1 0.666667 1 1 1 0 1 0.0102041 1 0.0204082 1
+             0.0306122 1 0.0408163 1 0.0510204 1 0.0612245 1 0.0714286 1 0.0816327 1
+             0.0918367 1 0.0918367 1 0.102041 1 0.102041 1 0.112245 1 0.122449 1
+             0.132653 1 0.132653 1 0.142857 1 0.153061 1 0.153061 1 0.163265 1
+             0.173469 1 0.183673 1 0.183673 1 0.193878 1 0.204082 1 0.204082 1
+             0.214286 1 0.214286 1 0.22449 1 0.22449 1 0.234694 1 0.234694 1
+             0.244898 1 0.244898 1 0.255102 1 0.255102 1 0.265306 1 0.265306 1
+             0.27551 1 0.285714 1 0.285714 1 0.295918 1 0.295918 1 0.306122 1
+             0.306122 1 0.316327 1 0.316327 1 0.326531 1 0.336735 1 0.346939 1
+             0.346939 1 0.357143 1 0.367347 1 0.377551 1 0.387755 1 0.397959 1
+             0.397959 1 0.408163 1 0.408163 1 0.418367 1 0.428571 1 0.438776 1
+             0.438776 1 0.44898 1 0.459184 1 0.469388 1 0.479592 1 0.489796 1
+             0.5 1 0.5 1 0.510204 1 0.510204 1 0.520408 1 0.520408 1
+             0.530612 1 0.530612 1 0.540816 1 0.540816 1 0.55102 1 0.55102 1
+             0.561224 1 0.561224 1 0.571429 1 0.581633 1 0.591837 1 0.602041 1
+             0.612245 1 0.622449 1 0.622449 1 0.632653 1 0.642857 1 0.642857 1
+             0.653061 1 0.663265 1 0.673469 1 0.683673 1 0.693878 1 0.704082 1
+             0.714286 1 0.72449 1 0.734694 1 0.744898 1 0.744898 1 0.755102 1
+             0.765306 1 0.77551 1 0.785714 1 0.795918 1 0.806122 1 0.816327 1
+             0.826531 1 0.836735 1 0.846939 1 0.857143 1 0.867347 1 0.877551 1
+             0.887755 1 0.897959 1 0.908163 1 0.918367 1 0.928571 1 0.938776 1
+             0.938776 1 0.94898 1 0.94898 1 0.959184 1 0.959184 1 0.969388 1
+             0.979592 1 0.989796 1 0.989796 1 1 1 1 1 0 1
+             0 1 0.0909091 1 0.181818 1 0.181818 1 0.272727 1 0.363636 1
+             0.454545 1 0.545455 1 0.636364 1 0.727273 1 0.818182 1 0.909091 1
+             1 1
+          }
+          Array id=79 vsg::vec4Value
+          {
+            userObjects 0
+            properties 0 0 0 1 1 1 0 -1 0
+            value 1 1 1 1
+          }
+          Indices id=80 vsg::ushortArray
+          {
+            userObjects 0
+            properties 0 2 0 1 1 1 0 -1 0
+            size 1479
+            storage id=0
+            data 2 0 1 2 3 0 3 134 0 4 134 3
+             5 134 4 6 134 5 7 134 6 8 134 7
+             9 134 8 10 134 9 11 134 10 12 134 11
+             13 134 12 14 134 13 15 134 14 17 134 15
+             112 134 17 113 134 112 113 133 134 113 132 133
+             114 132 113 114 131 132 114 130 131 116 130 114
+             116 129 130 116 128 129 116 127 128 118 125 127
+             118 124 125 118 123 124 120 121 123 111 16 18
+             111 18 109 109 18 19 110 20 21 110 23 108
+             110 21 23 108 27 106 108 25 27 106 29 104
+             104 29 30 104 31 103 104 30 31 103 31 33
+             101 33 34 101 34 99 99 34 36 107 22 24
+             105 26 28 102 32 100 98 35 37 98 37 96
+             97 38 39 97 39 95 95 39 40 95 42 94
+             95 40 42 94 44 92 92 44 45 92 46 91
+             92 45 46 91 46 47 91 48 90 91 47 48
+             90 48 49 90 53 88 90 49 51 53 54 88
+             88 71 86 88 70 71 54 56 88 86 71 72
+             86 73 85 86 72 73 85 73 74 85 75 84
+             85 74 75 84 75 76 84 78 83 84 77 78
+             84 76 77 83 78 79 83 81 82 83 80 81
+             83 79 80 56 57 70 57 58 70 58 59 70
+             59 60 70 60 61 70 61 62 70 62 63 70
+             63 65 70 67 68 70 93 41 43 89 50 52
+             87 55 69 64 66 69 117 126 115 119 122 117
+             160 135 136 160 290 135 290 291 135 291 292 135
+             292 293 135 293 294 135 294 295 135 295 296 135
+             296 297 135 297 298 135 289 290 160 288 289 160
+             160 136 158 158 136 137 158 138 157 158 137 138
+             157 138 139 157 139 141 155 141 142 155 143 153
+             155 142 143 153 143 144 153 146 152 153 144 146
+             152 149 150 152 148 149 286 288 162 285 286 162
+             283 285 164 166 283 164 166 282 283 166 281 282
+             166 277 279 166 276 277 167 276 166 167 275 276
+             167 274 275 167 273 274 169 273 167 169 269 271
+             170 269 169 170 268 269 170 267 268 171 267 170
+             171 266 267 171 265 266 172 265 171 172 264 265
+             173 264 172 173 263 264 173 262 263 174 262 173
+             174 261 262 175 261 174 175 260 261 176 260 175
+             176 259 260 178 259 176 179 257 178 181 257 179
+             181 255 257 184 255 183 184 253 255 185 253 184
+             185 252 253 186 252 185 187 252 186 187 251 252
+             188 251 187 189 251 188 191 251 189 156 140 154
+             151 145 147 161 287 159 163 284 161 165 278 280
+             168 270 272 177 256 258 182 254 180 190 248 250
+             192 248 190 195 249 193 195 247 249 199 247 198
+             200 247 199 200 245 247 202 245 200 216 202 203
+             216 203 204 216 204 205 216 205 206 216 206 207
+             216 207 208 216 208 209 216 209 210 216 210 211
+             216 211 212 216 212 213 216 213 214 196 246 194
+             197 246 196 215 244 201 215 242 244 217 242 215
+             219 243 218 219 241 243 221 241 219 221 240 241
+             224 240 223 224 238 240 225 238 224 227 238 225
+             222 239 220 226 235 237 228 235 226 230 236 229
+             230 234 236 231 234 230 232 234 231 232 233 234
+             301 299 300 301 307 299 306 301 303 306 307 301
+             305 302 304 308 310 388 308 309 310 388 310 311
+             388 311 387 386 311 312 387 311 386 386 312 385
+             385 312 313 385 313 384 383 313 314 384 313 383
+             383 314 382 382 314 315 382 315 381 381 315 316
+             381 316 380 379 316 317 380 316 379 379 317 378
+             378 317 319 378 319 377 375 319 320 373 375 320
+             369 320 322 370 320 369 371 320 370 372 320 371
+             373 320 372 369 322 368 365 322 323 368 322 367
+             365 323 363 362 323 325 363 323 362 358 325 326
+             360 325 358 358 326 357 357 326 327 357 327 356
+             356 327 328 356 328 355 354 328 329 355 328 354
+             354 329 353 353 329 331 351 331 333 351 333 349
+             347 333 335 345 335 336 345 336 343 343 336 338
+             341 338 339 376 318 374 366 321 364 361 324 359
+             352 330 350 348 332 346 346 334 344 342 337 340
+             390 455 389 390 454 455 392 454 390 392 453 454
+             393 452 391 393 450 452 395 451 394 395 449 451
+             396 449 395 396 448 449 397 448 396 397 447 448
+             398 456 397 456 447 397 457 447 456 458 447 457
+             459 447 458 459 446 447 398 522 456 398 521 522
+             398 520 521 400 520 398 400 516 518 402 514 400
+             402 512 514 404 510 402 406 508 404 406 506 508
+             406 505 506 460 446 459 461 446 460 462 446 461
+             462 445 446 463 445 462 464 445 463 464 444 445
+             465 444 464 465 443 444 466 443 465 467 443 466
+             467 442 443 468 442 467 468 441 442 469 441 468
+             470 441 469 470 440 441 471 440 470 473 440 471
+             474 438 473 474 436 438 475 436 474 476 436 475
+             476 435 436 477 435 476 478 435 477 480 435 478
+             480 434 435 484 434 482 420 434 418 418 484 486
+             399 517 519 399 513 515 401 509 511 403 507 509
+             407 504 405 407 502 504 409 503 408 409 501 503
+             409 500 501 411 500 409 411 499 500 410 496 498
+             412 496 410 413 495 497 414 495 413 414 494 495
+             414 493 494 416 493 414 416 488 490 415 491 492
+             415 489 491 417 487 415 417 485 487 417 433 483
+             481 433 479 419 431 433 421 431 419 422 430 432
+             423 430 422 423 429 430 424 429 423 424 428 429
+             425 428 424 425 427 428 426 427 425 472 437 439
+             525 523 524 525 526 523 529 527 528 529 530 527
+             532 634 531 533 634 532 534 634 533 535 634 534
+             536 634 535 537 634 536 538 634 537 539 634 538
+             541 634 539 544 634 543 545 634 544 613 634 545
+             614 634 613 614 632 634 613 545 547 613 550 611
+             611 550 551 611 552 554 611 551 552 609 554 555
+             609 555 557 607 557 559 607 559 605 605 561 563
+             603 563 565 603 565 601 601 569 599 601 567 569
+             662 569 570 599 569 664 599 636 598 599 635 636
+             599 664 635 598 636 637 598 638 597 598 637 638
+             597 638 639 597 640 596 597 639 640 596 640 641
+             596 643 595 596 642 643 596 641 642 595 643 644
+             595 647 594 595 646 647 595 645 646 595 644 645
+             647 576 594 648 576 647 594 578 592 592 578 579
+             592 579 591 591 579 580 591 580 590 590 580 582
+             588 582 583 588 583 586 586 583 584 586 584 585
+             649 576 648 650 576 649 650 574 576 651 574 650
+             652 574 651 654 574 652 656 572 574 659 572 658
+             659 570 572 660 570 659 662 570 660 615 632 614
+             615 631 632 615 630 631 616 630 615 616 629 630
+             616 628 629 617 628 616 617 627 628 617 626 627
+             618 626 617 618 625 626 618 624 625 618 623 624
+             620 623 618 542 633 540 612 546 548 612 548 549
+             610 553 608 608 556 606 604 558 560 604 562 602
+             564 566 600 663 568 661 657 571 655 655 573 653
+             593 575 577 589 581 587 619 621 622 668 665 667
+             669 678 666 675 669 670 675 676 669 676 678 669
+             677 678 676 673 675 670 673 674 675 673 670 671
+             673 671 672
+          }
+          indexCount 1479
+          instanceCount 1
+          firstIndex 0
+          vertexOffset 0
+          firstInstance 0
+        }
+        stateCommands 3
+        vsg::StateCommand id=81 vsg::BindGraphicsPipeline
+        {
+          userObjects 0
+          slot 0
+          pipeline id=82 vsg::GraphicsPipeline
+          {
+            userObjects 0
+            layout id=83 vsg::PipelineLayout
+            {
+              userObjects 0
+              flags 0
+              setLayouts 2
+              descriptorLayout id=84 vsg::DescriptorSetLayout
+              {
+                userObjects 0
+                bindings 1
+                binding 10
+                descriptorType 6
+                descriptorCount 1
+                stageFlags 16
+              }
+              descriptorLayout id=15
+              pushConstantRanges 1
+              stageFlags 1
+              offset 0
+              size 128
+            }
+            stages 2
+            vsg::ShaderStage id=85 vsg::ShaderStage
+            {
+              userObjects 0
+              stage 1
+              entryPointName "main"
+              module id=86 vsg::ShaderModule
+              {
+                userObjects 0
+                hints id=87 vsg::ShaderCompileSettings
+                {
+                  vulkanVersion 4194304
+                  clientInputVersion 100
+                  language 0
+                  defaultVersion 450
+                  target 65536
+                  forwardCompatible 0
+                  defines 1
+                  element "VSG_TWO_SIDED_LIGHTING"
+                }
+                source "#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+#pragma import_defines (VSG_INSTANCE_POSITIONS, VSG_DISPLACEMENT_MAP)
+
+layout(push_constant) uniform PushConstants {
+    mat4 projection;
+    mat4 modelView;
+} pc;
+
+#ifdef VSG_DISPLACEMENT_MAP
+layout(binding = 6) uniform sampler2D displacementMap;
+#endif
+
+layout(location = 0) in vec3 vsg_Vertex;
+layout(location = 1) in vec3 vsg_Normal;
+layout(location = 2) in vec2 vsg_TexCoord0;
+layout(location = 3) in vec4 vsg_Color;
+
+#ifdef VSG_INSTANCE_POSITIONS
+layout(location = 4) in vec3 vsg_position;
+#endif
+
+layout(location = 0) out vec3 eyePos;
+layout(location = 1) out vec3 normalDir;
+layout(location = 2) out vec4 vertexColor;
+layout(location = 3) out vec2 texCoord0;
+
+layout(location = 5) out vec3 viewDir;
+
+out gl_PerVertex{ vec4 gl_Position; };
+
+void main()
+{
+    vec4 vertex = vec4(vsg_Vertex, 1.0);
+    vec4 normal = vec4(vsg_Normal, 0.0);
+
+#ifdef VSG_DISPLACEMENT_MAP
+    // TODO need to pass as as uniform or per instance attributes
+    vec3 scale = vec3(1.0, 1.0, 1.0);
+
+    vertex.xyz = vertex.xyz + vsg_Normal * (texture(displacementMap, vsg_TexCoord0.st).s * scale.z);
+
+    float s_delta = 0.01;
+    float width = 0.0;
+
+    float s_left = max(vsg_TexCoord0.s - s_delta, 0.0);
+    float s_right = min(vsg_TexCoord0.s + s_delta, 1.0);
+    float t_center = vsg_TexCoord0.t;
+    float delta_left_right = (s_right - s_left) * scale.x;
+    float dz_left_right = (texture(displacementMap, vec2(s_right, t_center)).s - texture(displacementMap, vec2(s_left, t_center)).s) * scale.z;
+
+    // TODO need to handle different origins of displacementMap vs diffuseMap etc,
+    float t_delta = s_delta;
+    float t_bottom = max(vsg_TexCoord0.t - t_delta, 0.0);
+    float t_top = min(vsg_TexCoord0.t + t_delta, 1.0);
+    float s_center = vsg_TexCoord0.s;
+    float delta_bottom_top = (t_top - t_bottom) * scale.y;
+    float dz_bottom_top = (texture(displacementMap, vec2(s_center, t_top)).s - texture(displacementMap, vec2(s_center, t_bottom)).s) * scale.z;
+
+    vec3 dx = normalize(vec3(delta_left_right, 0.0, dz_left_right));
+    vec3 dy = normalize(vec3(0.0, delta_bottom_top, -dz_bottom_top));
+    vec3 dz = normalize(cross(dx, dy));
+
+    normal.xyz = normalize(dx * vsg_Normal.x + dy * vsg_Normal.y + dz * vsg_Normal.z);
+#endif
+
+
+#ifdef VSG_INSTANCE_POSITIONS
+   vertex.xyz = vertex.xyz + vsg_position;
+#endif
+
+    gl_Position = (pc.projection * pc.modelView) * vertex;
+
+    eyePos = (pc.modelView * vertex).xyz;
+
+    vec4 lpos = /*vsg_LightSource.position*/ vec4(0.0, 0.0, 1.0, 0.0);
+    viewDir = - (pc.modelView * vertex).xyz;
+    normalDir = (pc.modelView * normal).xyz;
+
+    vertexColor = vsg_Color;
+    texCoord0 = vsg_TexCoord0;
+}
+"
+                code 583
+                 119734787 65536 524298 79 0 131089 1 393227 1 1280527431 1685353262 808793134
+                 0 196622 0 1 983055 0 4 1852399981 0 12 20 29
+                 48 56 63 69 71 75 77 196611 2 450 589828 1096764487
+                 1935622738 1918988389 1600484449 1684105331 1868526181 1667590754 29556 262149 4 1852399981 0 262149
+                 9 1953654134 30821 327685 12 1600615286 1953654102 30821 262149 19 1836216174 27745
+                 327685 20 1600615286 1836216142 27745 393221 27 1348430951 1700164197 2019914866 0 393222
+                 27 0 1348430951 1953067887 7237481 196613 29 0 393221 33 1752397136 1936617283
+                 1953390964 115 393222 33 0 1785688688 1769235301 28271 393222 33 1 1701080941
+                 1701402220 119 196613 35 25456 262149 48 1348827493 29551 262149 54 1936683116
+                 0 262149 56 2003134838 7498052 327685 63 1836216174 1766091873 114 327685 69
+                 1953654134 1866692709 7499628 327685 71 1600615286 1869377347 114 327685 75 1131963764 1685221231
+                 48 393221 77 1600615286 1131963732 1685221231 48 262215 12 30 0 262215
+                 20 30 1 327752 27 0 11 0 196679 27 2 262216
+                 33 0 5 327752 33 0 35 0 327752 33 0 7
+                 16 262216 33 1 5 327752 33 1 35 64 327752 33
+                 1 7 16 196679 33 2 262215 48 30 0 262215 56
+                 30 5 262215 63 30 1 262215 69 30 2 262215 71
+                 30 3 262215 75 30 3 262215 77 30 2 131091 2
+                 196641 3 2 196630 6 32 262167 7 6 4 262176 8
+                 7 7 262167 10 6 3 262176 11 1 10 262203 11
+                 12 1 262187 6 14 1065353216 262203 11 20 1 262187 6
+                 22 0 196638 27 7 262176 28 3 27 262203 28 29
+                 3 262165 30 32 1 262187 30 31 0 262168 32 7
+                 4 262174 33 32 32 262176 34 9 33 262203 34 35
+                 9 262176 36 9 32 262187 30 39 1 262176 45 3
+                 7 262176 47 3 10 262203 47 48 3 458796 7 55
+                 22 22 14 22 262203 47 56 3 262203 47 63 3
+                 262203 45 69 3 262176 70 1 7 262203 70 71 1
+                 262167 73 6 2 262176 74 3 73 262203 74 75 3
+                 262176 76 1 73 262203 76 77 1 327734 2 4 0
+                 3 131320 5 262203 8 9 7 262203 8 19 7 262203
+                 8 54 7 262205 10 13 12 327761 6 15 13 0
+                 327761 6 16 13 1 327761 6 17 13 2 458832 7
+                 18 15 16 17 14 196670 9 18 262205 10 21 20
+                 327761 6 23 21 0 327761 6 24 21 1 327761 6
+                 25 21 2 458832 7 26 23 24 25 22 196670 19
+                 26 327745 36 37 35 31 262205 32 38 37 327745 36
+                 40 35 39 262205 32 41 40 327826 32 42 38 41
+                 262205 7 43 9 327825 7 44 42 43 327745 45 46
+                 29 31 196670 46 44 327745 36 49 35 39 262205 32
+                 50 49 262205 7 51 9 327825 7 52 50 51 524367
+                 10 53 52 52 0 1 2 196670 48 53 196670 54
+                 55 327745 36 57 35 39 262205 32 58 57 262205 7
+                 59 9 327825 7 60 58 59 524367 10 61 60 60
+                 0 1 2 262271 10 62 61 196670 56 62 327745 36
+                 64 35 39 262205 32 65 64 262205 7 66 19 327825
+                 7 67 65 66 524367 10 68 67 67 0 1 2
+                 196670 63 68 262205 7 72 71 196670 69 72 262205 73
+                 78 77 196670 75 78 65789 65592
+              }
+              NumSpecializationConstants 0
+            }
+            vsg::ShaderStage id=88 vsg::ShaderStage
+            {
+              userObjects 0
+              stage 16
+              entryPointName "main"
+              module id=89 vsg::ShaderModule
+              {
+                userObjects 0
+                hints id=87
                 source "#version 450
 #extension GL_ARB_separate_shader_objects : enable
 #pragma import_defines (VSG_DIFFUSE_MAP, VSG_GREYSACLE_DIFFUSE_MAP, VSG_EMISSIVE_MAP, VSG_LIGHTMAP_MAP, VSG_NORMAL_MAP, VSG_METALLROUGHNESS_MAP, VSG_SPECULAR_MAP, VSG_TWO_SIDED_LIGHTING, VSG_WORKFLOW_SPECGLOSS, VSG_VIEW_LIGHT_DATA)
@@ -1186,7 +3464,7 @@ void main()
               NumSpecializationConstants 0
             }
             pipelineStates 6
-            vsg::GraphicsPipelineState id=21 vsg::ColorBlendState
+            vsg::GraphicsPipelineState id=90 vsg::ColorBlendState
             {
               userObjects 0
               logicOp 3
@@ -1202,7 +3480,7 @@ void main()
               colorWriteMask 15
               blendConstants 0 0 0 0
             }
-            vsg::GraphicsPipelineState id=22 vsg::DepthStencilState
+            vsg::GraphicsPipelineState id=91 vsg::DepthStencilState
             {
               userObjects 0
               depthTestEnable 1
@@ -1227,13 +3505,13 @@ void main()
               minDepthBounds 0
               maxDepthBounds 1
             }
-            vsg::GraphicsPipelineState id=23 vsg::InputAssemblyState
+            vsg::GraphicsPipelineState id=92 vsg::InputAssemblyState
             {
               userObjects 0
               topology 3
               primitiveRestartEnable 0
             }
-            vsg::GraphicsPipelineState id=24 vsg::MultisampleState
+            vsg::GraphicsPipelineState id=93 vsg::MultisampleState
             {
               userObjects 0
               rasterizationSamples 1
@@ -1243,7 +3521,7 @@ void main()
               alphaToCoverageEnable 0
               alphaToOneEnable 0
             }
-            vsg::GraphicsPipelineState id=25 vsg::RasterizationState
+            vsg::GraphicsPipelineState id=94 vsg::RasterizationState
             {
               userObjects 0
               depthClampEnable 0
@@ -1257,7 +3535,7 @@ void main()
               depthBiasSlopeFactor 1
               lineWidth 1
             }
-            vsg::GraphicsPipelineState id=26 vsg::VertexInputState
+            vsg::GraphicsPipelineState id=95 vsg::VertexInputState
             {
               userObjects 0
               NumBindings 4
@@ -1294,1114 +3572,25 @@ void main()
             subpass 0
           }
         }
-        vsg::StateCommand id=27 vsg::BindDescriptorSet
+        vsg::StateCommand id=96 vsg::BindDescriptorSet
         {
           userObjects 0
           slot 1
           pipelineBindPoint 0
-          layout id=13
+          layout id=83
           firstSet 0
-          descriptorSet id=28 vsg::DescriptorSet
+          descriptorSet id=97 vsg::DescriptorSet
           {
             userObjects 0
-            setLayout id=14
+            setLayout id=84
             descriptors 1
-            vsg::Descriptor id=29 vsg::DescriptorBuffer
+            vsg::Descriptor id=98 vsg::DescriptorBuffer
             {
               userObjects 0
               dstBinding 10
               dstArrayElement 0
               dataList 1
-              data id=30 vsg::PbrMaterialValue
-              {
-                userObjects 0
-                properties 0 0 0 1 1 1 0 -1 0
-                value                baseColorFactor 0.000607824 1 0.0829795 1
-                emissiveFactor 0 0 0 1
-                diffuseFactor 0.9 0.9 0.9 1
-                specularFactor 0.2 0.2 0.2 1
-                metallicFactor 0
-                roughnessFactor 0.4
-                alphaMask 1
-                alphaMaskCutoff 0.5
-
-              }
-            }
-          }
-          dynamicOffsets 0
-        }
-        vsg::StateCommand id=31 vsg::BindViewDescriptorSets
-        {
-          userObjects 0
-          slot 2
-          pipelineBindPoint 0
-          layout id=13
-          firstSet 1
-        }
-        prototypeArrayState id=0
-      }
-      matrix -0.1 0 -1.50996e-08 0 0 2 0 0 1.50996e-08 0 -0.1 0
-       -2.01494 2 0.983509 1
-      subgraphRequiresLocalFrustum 1
-    }
-    vsg::Node id=32 vsg::MatrixTransform
-    {
-      userObjects 0
-      children 1
-      vsg::Node id=33 vsg::StateGroup
-      {
-        userObjects 0
-        children 1
-        vsg::Node id=34 vsg::VertexIndexDraw
-        {
-          userObjects 0
-          firstBinding 0
-          NumArrays 4
-          Array id=35 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
-             1 -1 -1 1 -1 -1 1 1 1 1 1 1
-             1 1 1 1 -1 1 1 -1 1 1 -1 1
-             -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
-             -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
-             -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
-          }
-          Array id=36 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
-             0 0 -1 1 0 -0 0 0 1 0 1 -0
-             1 0 -0 0 -1 -0 0 0 1 1 0 -0
-             -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
-             0 -1 -0 0 0 -1 -1 0 -0 0 0 1
-             0 1 -0 -1 0 -0 0 -1 -0 0 0 1
-          }
-          Array id=37 vsg::vec2Array
-          {
-            userObjects 0
-            properties 0 8 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
-             0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
-             0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
-             0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
-          }
-          Array id=38 vsg::vec4Value
-          {
-            userObjects 0
-            properties 0 0 0 1 1 1 0 -1 0
-            value 1 1 1 1
-          }
-          Indices id=39 vsg::ushortArray
-          {
-            userObjects 0
-            properties 0 2 0 1 1 1 0 -1 0
-            size 36
-            storage id=0
-            data 17 13 0 17 0 4 5 2 8 5 8 11
-             16 3 9 16 9 22 10 6 19 10 19 23
-             1 20 7 1 14 20 21 18 12 21 12 15
-          }
-          indexCount 36
-          instanceCount 1
-          firstIndex 0
-          vertexOffset 0
-          firstInstance 0
-        }
-        stateCommands 3
-        vsg::StateCommand id=11
-        vsg::StateCommand id=40 vsg::BindDescriptorSet
-        {
-          userObjects 0
-          slot 1
-          pipelineBindPoint 0
-          layout id=13
-          firstSet 0
-          descriptorSet id=41 vsg::DescriptorSet
-          {
-            userObjects 0
-            setLayout id=42 vsg::DescriptorSetLayout
-            {
-              userObjects 0
-              bindings 1
-              binding 10
-              descriptorType 6
-              descriptorCount 1
-              stageFlags 16
-            }
-            descriptors 1
-            vsg::Descriptor id=43 vsg::DescriptorBuffer
-            {
-              userObjects 0
-              dstBinding 10
-              dstArrayElement 0
-              dataList 1
-              data id=44 vsg::PbrMaterialValue
-              {
-                userObjects 0
-                properties 0 0 0 1 1 1 0 -1 0
-                value                baseColorFactor 0.259799 0.165466 0.00276839 1
-                emissiveFactor 0 0 0 1
-                diffuseFactor 0.9 0.9 0.9 1
-                specularFactor 0.2 0.2 0.2 1
-                metallicFactor 0
-                roughnessFactor 0.4
-                alphaMask 1
-                alphaMaskCutoff 0.5
-
-              }
-            }
-          }
-          dynamicOffsets 0
-        }
-        vsg::StateCommand id=31
-        prototypeArrayState id=0
-      }
-      matrix -0.1 0 -1.50996e-08 0 0 2 0 0 1.50996e-08 0 -0.1 0
-       1.98506 2 -1.01649 1
-      subgraphRequiresLocalFrustum 1
-    }
-    vsg::Node id=45 vsg::MatrixTransform
-    {
-      userObjects 0
-      children 1
-      vsg::Node id=46 vsg::StateGroup
-      {
-        userObjects 0
-        children 1
-        vsg::Node id=47 vsg::VertexIndexDraw
-        {
-          userObjects 0
-          firstBinding 0
-          NumArrays 4
-          Array id=48 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
-             1 -1 -1 1 -1 -1 1 1 1 1 1 1
-             1 1 1 1 -1 1 1 -1 1 1 -1 1
-             -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
-             -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
-             -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
-          }
-          Array id=49 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
-             0 0 -1 1 0 -0 0 0 1 0 1 -0
-             1 0 -0 0 -1 -0 0 0 1 1 0 -0
-             -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
-             0 -1 -0 0 0 -1 -1 0 -0 0 0 1
-             0 1 -0 -1 0 -0 0 -1 -0 0 0 1
-          }
-          Array id=50 vsg::vec2Array
-          {
-            userObjects 0
-            properties 0 8 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
-             0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
-             0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
-             0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
-          }
-          Array id=51 vsg::vec4Value
-          {
-            userObjects 0
-            properties 0 0 0 1 1 1 0 -1 0
-            value 1 1 1 1
-          }
-          Indices id=52 vsg::ushortArray
-          {
-            userObjects 0
-            properties 0 2 0 1 1 1 0 -1 0
-            size 36
-            storage id=0
-            data 17 13 0 17 0 4 5 2 8 5 8 11
-             16 3 9 16 9 22 10 6 19 10 19 23
-             1 20 7 1 14 20 21 18 12 21 12 15
-          }
-          indexCount 36
-          instanceCount 1
-          firstIndex 0
-          vertexOffset 0
-          firstInstance 0
-        }
-        stateCommands 3
-        vsg::StateCommand id=11
-        vsg::StateCommand id=53 vsg::BindDescriptorSet
-        {
-          userObjects 0
-          slot 1
-          pipelineBindPoint 0
-          layout id=13
-          firstSet 0
-          descriptorSet id=54 vsg::DescriptorSet
-          {
-            userObjects 0
-            setLayout id=55 vsg::DescriptorSetLayout
-            {
-              userObjects 0
-              bindings 1
-              binding 10
-              descriptorType 6
-              descriptorCount 1
-              stageFlags 16
-            }
-            descriptors 1
-            vsg::Descriptor id=56 vsg::DescriptorBuffer
-            {
-              userObjects 0
-              dstBinding 10
-              dstArrayElement 0
-              dataList 1
-              data id=57 vsg::PbrMaterialValue
-              {
-                userObjects 0
-                properties 0 0 0 1 1 1 0 -1 0
-                value                baseColorFactor 0.00319976 0.00940055 0.661864 1
-                emissiveFactor 0 0 0 1
-                diffuseFactor 0.9 0.9 0.9 1
-                specularFactor 0.2 0.2 0.2 1
-                metallicFactor 0
-                roughnessFactor 0.4
-                alphaMask 1
-                alphaMaskCutoff 0.5
-
-              }
-            }
-          }
-          dynamicOffsets 0
-        }
-        vsg::StateCommand id=31
-        prototypeArrayState id=0
-      }
-      matrix -0.1 0 -1.50996e-08 0 0 1 0 0 1.50996e-08 0 -0.1 0
-       -2.01494 1 -1.01649 1
-      subgraphRequiresLocalFrustum 1
-    }
-    vsg::Node id=58 vsg::MatrixTransform
-    {
-      userObjects 0
-      children 1
-      vsg::Node id=59 vsg::StateGroup
-      {
-        userObjects 0
-        children 1
-        vsg::Node id=60 vsg::VertexIndexDraw
-        {
-          userObjects 0
-          firstBinding 0
-          NumArrays 4
-          Array id=61 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 1 1 -1 1 1 -1 1 1 -1 1 -1 -1
-             1 -1 -1 1 -1 -1 1 1 1 1 1 1
-             1 1 1 1 -1 1 1 -1 1 1 -1 1
-             -1 1 -1 -1 1 -1 -1 1 -1 -1 -1 -1
-             -1 -1 -1 -1 -1 -1 -1 1 1 -1 1 1
-             -1 1 1 -1 -1 1 -1 -1 1 -1 -1 1
-          }
-          Array id=62 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 0 0 -1 0 1 -0 1 0 -0 0 -1 -0
-             0 0 -1 1 0 -0 0 0 1 0 1 -0
-             1 0 -0 0 -1 -0 0 0 1 1 0 -0
-             -1 0 -0 0 0 -1 0 1 -0 -1 0 -0
-             0 -1 -0 0 0 -1 -1 0 -0 0 0 1
-             0 1 -0 -1 0 -0 0 -1 -0 0 0 1
-          }
-          Array id=63 vsg::vec2Array
-          {
-            userObjects 0
-            properties 0 8 0 1 1 1 0 -1 0
-            size 24
-            storage id=0
-            data 0.625 0.5 0.625 0.5 0.625 0.5 0.375 0.5 0.375 0.5 0.375 0.5
-             0.625 0.25 0.625 0.25 0.625 0.25 0.375 0.25 0.375 0.25 0.375 0.25
-             0.625 0.75 0.625 0.75 0.875 0.5 0.375 0.75 0.125 0.5 0.375 0.75
-             0.625 1 0.625 0 0.875 0.25 0.375 1 0.125 0.25 0.375 0
-          }
-          Array id=64 vsg::vec4Value
-          {
-            userObjects 0
-            properties 0 0 0 1 1 1 0 -1 0
-            value 1 1 1 1
-          }
-          Indices id=65 vsg::ushortArray
-          {
-            userObjects 0
-            properties 0 2 0 1 1 1 0 -1 0
-            size 36
-            storage id=0
-            data 17 13 0 17 0 4 5 2 8 5 8 11
-             16 3 9 16 9 22 10 6 19 10 19 23
-             1 20 7 1 14 20 21 18 12 21 12 15
-          }
-          indexCount 36
-          instanceCount 1
-          firstIndex 0
-          vertexOffset 0
-          firstInstance 0
-        }
-        stateCommands 3
-        vsg::StateCommand id=11
-        vsg::StateCommand id=66 vsg::BindDescriptorSet
-        {
-          userObjects 0
-          slot 1
-          pipelineBindPoint 0
-          layout id=13
-          firstSet 0
-          descriptorSet id=67 vsg::DescriptorSet
-          {
-            userObjects 0
-            setLayout id=68 vsg::DescriptorSetLayout
-            {
-              userObjects 0
-              bindings 1
-              binding 10
-              descriptorType 6
-              descriptorCount 1
-              stageFlags 16
-            }
-            descriptors 1
-            vsg::Descriptor id=69 vsg::DescriptorBuffer
-            {
-              userObjects 0
-              dstBinding 10
-              dstArrayElement 0
-              dataList 1
-              data id=70 vsg::PbrMaterialValue
-              {
-                userObjects 0
-                properties 0 0 0 1 1 1 0 -1 0
-                value                baseColorFactor 0.603469 0 1 1
-                emissiveFactor 0 0 0 1
-                diffuseFactor 0.9 0.9 0.9 1
-                specularFactor 0.2 0.2 0.2 1
-                metallicFactor 0.772059
-                roughnessFactor 0.208824
-                alphaMask 1
-                alphaMaskCutoff 0.5
-
-              }
-            }
-          }
-          dynamicOffsets 0
-        }
-        vsg::StateCommand id=31
-        prototypeArrayState id=0
-      }
-      matrix -0.1 0 -1.50996e-08 0 0 1.5 0 0 1.50996e-08 0 -0.1 0
-       1.98506 1.5 0.98351 1
-      subgraphRequiresLocalFrustum 1
-    }
-    vsg::Node id=71 vsg::MatrixTransform
-    {
-      userObjects 0
-      children 1
-      vsg::Node id=72 vsg::MatrixTransform
-      {
-        userObjects 0
-        children 1
-        vsg::Node id=73 vsg::PointLight
-        {
-          name "Light_Orientation"
-          color 100 100 100
-          intensity 1
-          position 0 0 0
-        }
-        matrix 1 0 0 0 0 5.96046e-08 -1 0 0 1 5.96046e-08 0
-         0 0 0 1
-        subgraphRequiresLocalFrustum 1
-      }
-      matrix 0.290864 -0.0551891 0.955171 0 -0.566393 0.794672 0.218391 0 -0.771101 -0.604525 0.199883 0
-       3.62173 10.3769 -0.0164907 1
-      subgraphRequiresLocalFrustum 1
-    }
-    vsg::Node id=74 vsg::MatrixTransform
-    {
-      userObjects 0
-      children 1
-      vsg::Node id=75 vsg::StateGroup
-      {
-        userObjects 0
-        children 1
-        vsg::Node id=76 vsg::VertexIndexDraw
-        {
-          userObjects 0
-          firstBinding 0
-          NumArrays 4
-          Array id=77 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 679
-            storage id=0
-            data 4.43 0 -0.336 4.201 0 -0.336 4.201 0 -0.248 4.332 0 -0.248
-             4.332 0 -0.108 4.32023 0 -0.104318 4.3084 0 -0.100792 4.2965 0 -0.0974531
-             4.28452 0 -0.0943333 4.27244 0 -0.0914636 4.26025 0 -0.088875 4.24794 0 -0.086599
-             4.23548 0 -0.0846667 4.22288 0 -0.0831094 4.2101 0 -0.0819583 4.19715 0 -0.0812448
-             4.184 0 -0.081 4.184 0 -0.081 4.14454 0 -0.0831933 4.10731 0 -0.0896296
-             4.10731 0 -0.0896296 4.07253 0 -0.100094 4.04044 0 -0.11437 4.04044 0 -0.11437
-             4.01127 0 -0.132244 4.01127 0 -0.132244 3.98525 0 -0.1535 3.98525 0 -0.1535
-             3.9626 0 -0.177922 3.9626 0 -0.177922 3.94356 0 -0.205296 3.92834 0 -0.235406
-             3.91719 0 -0.268037 3.91719 0 -0.268037 3.91034 0 -0.302973 3.908 0 -0.34
-             3.908 0 -0.34 3.91035 0 -0.376226 3.91035 0 -0.376226 3.9172 0 -0.410722
-             3.92828 0 -0.443219 3.9433 0 -0.473444 3.9433 0 -0.473444 3.96196 0 -0.501129
-             3.96196 0 -0.501129 3.984 0 -0.526 4.00912 0 -0.547788 4.03704 0 -0.566222
-             4.06747 0 -0.581031 4.10013 0 -0.591945 4.13474 0 -0.598691 4.13474 0 -0.598691
-             4.171 0 -0.601 4.171 0 -0.601 4.19152 0 -0.600522 4.21207 0 -0.599093
-             4.21207 0 -0.599093 4.23263 0 -0.596719 4.25319 0 -0.593407 4.27373 0 -0.589166
-             4.29425 0 -0.584 4.31473 0 -0.577918 4.33515 0 -0.570926 4.3555 0 -0.563031
-             4.37577 0 -0.554241 4.37577 0 -0.554241 4.39594 0 -0.544561 4.39594 0 -0.544561
-             4.416 0 -0.534 4.416 0 -0.633 4.416 0 -0.633 4.39027 0 -0.643594
-             4.3664 0 -0.652921 4.34414 0 -0.661047 4.32322 0 -0.668037 4.30339 0 -0.673958
-             4.28438 0 -0.678875 4.26593 0 -0.682855 4.24778 0 -0.685963 4.22967 0 -0.688266
-             4.21135 0 -0.689829 4.19254 0 -0.690718 4.173 0 -0.691 4.1221 0 -0.687873
-             4.07367 0 -0.678736 4.02806 0 -0.663953 3.98567 0 -0.643889 3.94685 0 -0.618908
-             3.94685 0 -0.618908 3.912 0 -0.589375 3.912 0 -0.589375 3.88148 0 -0.555655
-             3.85567 0 -0.518111 3.83494 0 -0.477109 3.83494 0 -0.477109 3.81967 0 -0.433014
-             3.81023 0 -0.386189 3.81023 0 -0.386189 3.807 0 -0.337 3.807 0 -0.337
-             3.81015 0 -0.288178 3.81015 0 -0.288178 3.81938 0 -0.241926 3.81938 0 -0.241926
-             3.83433 0 -0.198563 3.85467 0 -0.158407 3.85467 0 -0.158407 3.88005 0 -0.12178
-             3.88005 0 -0.12178 3.91013 0 -0.0890001 3.91013 0 -0.0890001 3.94456 0 -0.0603866
-             3.94456 0 -0.0603866 3.983 0 -0.0362593 4.02511 0 -0.0169376 4.07054 0 -0.00274082
-             4.07054 0 -0.00274082 4.11895 0 0.00601149 4.11895 0 0.00601149 4.17 0 0.009
-             4.17 0 0.009 4.19333 0 0.00866204 4.21593 0 0.00762963 4.21593 0 0.00762963
-             4.23791 0 0.005875 4.25941 0 0.00337037 4.28056 0 8.79632e-05 4.28056 0 8.79632e-05
-             4.3015 0 -0.004 4.32236 0 -0.0089213 4.34326 0 -0.0147037 4.36434 0 -0.021375
-             4.38574 0 -0.028963 4.40758 0 -0.0374954 4.43 0 -0.047 3.698 0 -0.643
-             3.68592 0 -0.650667 3.67369 0 -0.657667 3.66131 0 -0.664 3.64882 0 -0.669667
-             3.63621 0 -0.674667 3.63621 0 -0.674667 3.6235 0 -0.679 3.61071 0 -0.682667
-             3.59785 0 -0.685667 3.58494 0 -0.688 3.58494 0 -0.688 3.57198 0 -0.689667
-             3.57198 0 -0.689667 3.559 0 -0.690667 3.546 0 -0.691 3.51567 0 -0.689539
-             3.51567 0 -0.689539 3.48726 0 -0.685227 3.46092 0 -0.678172 3.46092 0 -0.678172
-             3.43678 0 -0.668482 3.43678 0 -0.668482 3.41497 0 -0.656263 3.39563 0 -0.641625
-             3.39563 0 -0.641625 3.37889 0 -0.624674 3.37889 0 -0.624674 3.36489 0 -0.605519
-             3.36489 0 -0.605519 3.35377 0 -0.584266 3.35377 0 -0.584266 3.34565 0 -0.561023
-             3.34069 0 -0.535899 3.34069 0 -0.535899 3.339 0 -0.509 3.3448 0 -0.465641
-             3.36085 0 -0.42838 3.38509 0 -0.396187 3.41548 0 -0.368037 3.44997 0 -0.3429
-             3.4865 0 -0.31975 3.52303 0 -0.297558 3.52303 0 -0.297558 3.55752 0 -0.275296
-             3.58791 0 -0.251937 3.58791 0 -0.251937 3.61215 0 -0.226454 3.61215 0 -0.226454
-             3.6282 0 -0.197817 3.634 0 -0.165 3.63327 0 -0.155325 3.63106 0 -0.145435
-             3.62734 0 -0.135531 3.62211 0 -0.125815 3.61534 0 -0.116487 3.61534 0 -0.116487
-             3.607 0 -0.10775 3.607 0 -0.10775 3.59708 0 -0.0998044 3.59708 0 -0.0998044
-             3.58556 0 -0.0928518 3.57241 0 -0.0870937 3.57241 0 -0.0870937 3.55761 0 -0.0827315
-             3.54115 0 -0.0799664 3.523 0 -0.079 3.523 0 -0.079 3.50634 0 -0.0797257
-             3.48988 0 -0.0818889 3.47364 0 -0.0854688 3.45767 0 -0.0904444 3.44198 0 -0.0967951
-             3.42663 0 -0.1045 3.41162 0 -0.113538 3.397 0 -0.123889 3.3828 0 -0.135531
-             3.36904 0 -0.148444 3.35577 0 -0.162608 3.343 0 -0.178 3.343 0 -0.054
-             3.343 0 -0.054 3.35732 0 -0.0437274 3.35732 0 -0.0437274 3.3718 0 -0.0344028
-             3.38648 0 -0.0260156 3.38648 0 -0.0260156 3.40141 0 -0.0185556 3.40141 0 -0.0185556
-             3.41661 0 -0.0120122 3.43213 0 -0.006375 3.448 0 -0.00163368 3.448 0 -0.00163368
-             3.46426 0 0.00222222 3.46426 0 0.00222222 3.48095 0 0.00520313 3.49812 0 0.00731945
-             3.51579 0 0.0085816 3.534 0 0.009 3.56087 0 0.00740336 3.58634 0 0.00272685
-             3.58634 0 0.00272685 3.61025 0 -0.00485938 3.61025 0 -0.00485938 3.63241 0 -0.0151852
-             3.63241 0 -0.0151852 3.65263 0 -0.0280804 3.67075 0 -0.043375 3.67075 0 -0.043375
-             3.68657 0 -0.0608987 3.68657 0 -0.0608987 3.69993 0 -0.0804815 3.69993 0 -0.0804815
-             3.71063 0 -0.101953 3.71063 0 -0.101953 3.71849 0 -0.125144 3.71849 0 -0.125144
-             3.72334 0 -0.149883 3.725 0 -0.176 3.7192 0 -0.225891 3.7192 0 -0.225891
-             3.70315 0 -0.26788 3.70315 0 -0.26788 3.67891 0 -0.303187 3.67891 0 -0.303187
-             3.64852 0 -0.333037 3.61403 0 -0.35865 3.5775 0 -0.38125 3.54097 0 -0.402058
-             3.50648 0 -0.422296 3.47609 0 -0.443187 3.45185 0 -0.465954 3.43581 0 -0.491817
-             3.43 0 -0.522 3.43092 0 -0.533677 3.43363 0 -0.544667 3.43363 0 -0.544667
-             3.43802 0 -0.554906 3.43802 0 -0.554906 3.444 0 -0.564333 3.45148 0 -0.572885
-             3.46038 0 -0.5805 3.47058 0 -0.587115 3.482 0 -0.592667 3.482 0 -0.592667
-             3.49455 0 -0.597094 3.49455 0 -0.597094 3.50813 0 -0.600333 3.52264 0 -0.602323
-             3.538 0 -0.603 3.538 0 -0.603 3.5497 0 -0.602653 3.5618 0 -0.60156
-             3.5618 0 -0.60156 3.57425 0 -0.599641 3.58704 0 -0.596815 3.60013 0 -0.593003
-             3.6135 0 -0.588125 3.62712 0 -0.582101 3.64096 0 -0.574852 3.655 0 -0.566297
-             3.6692 0 -0.556357 3.68355 0 -0.544951 3.698 0 -0.532 3.299 0 -0.682
-             3.202 0 -0.682 2.998 0 -0.203 2.793 0 -0.682 2.793 0 -0.682
-             2.695 0 -0.682 2.99 0 0.006 2.99 0 0.006 3.01 0 0.006
-             2.257 0 0.118 2.2759 0 0.111634 2.2931 0 0.103653 2.30861 0 0.0942344
-             2.32244 0 0.0835556 2.33461 0 0.0717934 2.34513 0 0.059125 2.35399 0 0.0457274
-             2.36122 0 0.0317778 2.36683 0 0.0174531 2.37082 0 0.00293056 2.37082 0 0.00293056
-             2.37321 0 -0.0116128 2.374 0 -0.026 2.374 0 -0.026 2.37342 0 -0.0403027
-             2.37173 0 -0.0536713 2.37173 0 -0.0536713 2.36895 0 -0.0660469 2.36515 0 -0.0773704
-             2.36036 0 -0.0875828 2.35463 0 -0.096625 2.348 0 -0.104438 2.348 0 -0.104438
-             2.34052 0 -0.110963 2.34052 0 -0.110963 2.33223 0 -0.116141 2.33223 0 -0.116141
-             2.32319 0 -0.119912 2.31343 0 -0.122218 2.31343 0 -0.122218 2.303 0 -0.123
-             2.2947 0 -0.122509 2.2947 0 -0.122509 2.28682 0 -0.121069 2.28682 0 -0.121069
-             2.27944 0 -0.118734 2.27944 0 -0.118734 2.27259 0 -0.115556 2.27259 0 -0.115556
-             2.26634 0 -0.111585 2.26634 0 -0.111585 2.26075 0 -0.106875 2.26075 0 -0.106875
-             2.25586 0 -0.101477 2.25586 0 -0.101477 2.25174 0 -0.0954444 2.24844 0 -0.0888281
-             2.24601 0 -0.0816806 2.24451 0 -0.0740538 2.244 0 -0.066 2.24441 0 -0.057985
-             2.24441 0 -0.057985 2.24562 0 -0.050463 2.24562 0 -0.050463 2.24758 0 -0.0434688
-             2.25026 0 -0.037037 2.25026 0 -0.037037 2.25362 0 -0.0312025 2.25362 0 -0.0312025
-             2.25762 0 -0.026 2.26223 0 -0.0214641 2.26741 0 -0.0176296 2.27311 0 -0.0145313
-             2.2793 0 -0.0122037 2.28594 0 -0.0106817 2.293 0 -0.01 2.293 0 -0.01
-             2.29481 0 -0.000712964 2.29481 0 -0.000712964 2.29575 0 0.0090463 2.29581 0 0.019125
-             2.295 0 0.0293704 2.29331 0 0.0396296 2.29075 0 0.04975 2.28731 0 0.0595787
-             2.283 0 0.068963 2.27781 0 0.07775 2.27175 0 0.085787 2.26481 0 0.0929213
-             2.257 0 0.099 1.919 0 -0.458 1.88619 0 -0.455958 1.85492 0 -0.449995
-             1.85492 0 -0.449995 1.82544 0 -0.440359 1.82544 0 -0.440359 1.798 0 -0.427296
-             1.77285 0 -0.411053 1.75025 0 -0.391875 1.73044 0 -0.37001 1.71367 0 -0.345704
-             1.71367 0 -0.345704 1.70019 0 -0.319203 1.70019 0 -0.319203 1.69025 0 -0.290755
-             1.69025 0 -0.290755 1.6841 0 -0.260605 1.6841 0 -0.260605 1.682 0 -0.229
-             1.682 0 -0.229 1.68403 0 -0.195328 1.68997 0 -0.163454 1.68997 0 -0.163454
-             1.69963 0 -0.133594 1.69963 0 -0.133594 1.71278 0 -0.105963 1.72922 0 -0.0807766
-             1.72922 0 -0.0807766 1.74875 0 -0.05825 1.74875 0 -0.05825 1.77115 0 -0.0385984
-             1.77115 0 -0.0385984 1.79622 0 -0.022037 1.79622 0 -0.022037 1.82375 0 -0.00878121
-             1.85353 0 0.000953747 1.88535 0 0.00695259 1.919 0 0.009 1.95403 0 0.00702894
-             1.987 0 0.00123148 2.01772 0 -0.00821875 2.046 0 -0.0211482 2.07166 0 -0.0373831
-             2.07166 0 -0.0373831 2.0945 0 -0.05675 2.0945 0 -0.05675 2.11434 0 -0.0790752
-             2.131 0 -0.104185 2.14428 0 -0.131906 2.14428 0 -0.131906 2.154 0 -0.162065
-             2.154 0 -0.162065 2.15997 0 -0.194487 2.162 0 -0.229 2.15991 0 -0.261445
-             2.15379 0 -0.292144 2.14386 0 -0.320891 2.13033 0 -0.347482 2.11343 0 -0.371711
-             2.09338 0 -0.393375 2.07038 0 -0.412268 2.04467 0 -0.428185 2.04467 0 -0.428185
-             2.01645 0 -0.440922 2.01645 0 -0.440922 1.98596 0 -0.450273 1.9534 0 -0.456034
-             1.918 0 -0.378 1.93971 0 -0.37671 1.96024 0 -0.372931 1.97945 0 -0.366797
-             1.99722 0 -0.358444 2.01341 0 -0.348009 2.02787 0 -0.335625 2.04049 0 -0.321429
-             2.05111 0 -0.305556 2.05961 0 -0.288141 2.06585 0 -0.26932 2.06969 0 -0.249227
-             2.071 0 -0.228 2.06978 0 -0.204534 2.06619 0 -0.18269 2.06031 0 -0.162547
-             2.05222 0 -0.144185 2.05222 0 -0.144185 2.04201 0 -0.127685 2.02975 0 -0.113125
-             2.01553 0 -0.100586 1.99944 0 -0.0901482 1.98156 0 -0.0818907 1.96197 0 -0.0758935
-             1.96197 0 -0.0758935 1.94076 0 -0.0722367 1.94076 0 -0.0722367 1.918 0 -0.071
-             1.918 0 -0.071 1.89708 0 -0.0722946 1.89708 0 -0.0722946 1.8774 0 -0.0761065
-             1.8774 0 -0.0761065 1.85906 0 -0.0823281 1.85906 0 -0.0823281 1.84219 0 -0.0908519
-             1.82688 0 -0.10157 1.82688 0 -0.10157 1.81325 0 -0.114375 1.80141 0 -0.129159
-             1.79148 0 -0.145815 1.79148 0 -0.145815 1.78356 0 -0.164234 1.78356 0 -0.164234
-             1.77777 0 -0.18431 1.77421 0 -0.205935 1.773 0 -0.229 1.773 0 -0.229
-             1.77425 0 -0.249998 1.77425 0 -0.249998 1.77791 0 -0.269898 1.78384 0 -0.288563
-             1.78384 0 -0.288563 1.79193 0 -0.305852 1.79193 0 -0.305852 1.80202 0 -0.321627
-             1.80202 0 -0.321627 1.814 0 -0.33575 1.814 0 -0.33575 1.82773 0 -0.348081
-             1.82773 0 -0.348081 1.84307 0 -0.358482 1.84307 0 -0.358482 1.85991 0 -0.366813
-             1.85991 0 -0.366813 1.87809 0 -0.372935 1.8975 0 -0.376711 1.581 0 -0.682
-             1.492 0 -0.682 1.492 0 -0 1.581 0 -0 1.362 0 -0.682
-             1.273 0 -0.682 1.273 0 -0 1.362 0 -0 1.167 0 -0.13
-             1.15402 0 -0.121795 1.14106 0 -0.114194 1.12812 0 -0.107219 1.11519 0 -0.100889
-             1.10223 0 -0.0952257 1.08925 0 -0.09025 1.07623 0 -0.0859826 1.06315 0 -0.0824444
-             1.05 0 -0.0796563 1.05 0 -0.0796563 1.03677 0 -0.0776389 1.03677 0 -0.0776389
-             1.02344 0 -0.0764132 1.01 0 -0.076 0.98923 0 -0.0769566 0.98923 0 -0.0769566
-             0.969926 0 -0.0798194 0.952094 0 -0.0845781 0.952094 0 -0.0845781 0.935741 0 -0.0912222
-             0.920874 0 -0.0997413 0.9075 0 -0.110125 0.9075 0 -0.110125 0.895626 0 -0.122363
-             0.885259 0 -0.136444 0.885259 0 -0.136444 0.876406 0 -0.152359 0.876406 0 -0.152359
-             0.869074 0 -0.170097 0.869074 0 -0.170097 0.86327 0 -0.189648 0.86327 0 -0.189648
-             0.859 0 -0.211 0.859 0 -0.211 1.175 0 -0.211 1.175 0 -0.211
-             1.17344 0 -0.250731 1.17344 0 -0.250731 1.16882 0 -0.286935 1.16127 0 -0.319625
-             1.16127 0 -0.319625 1.15089 0 -0.348815 1.15089 0 -0.348815 1.1378 0 -0.374519
-             1.1378 0 -0.374519 1.12212 0 -0.39675 1.12212 0 -0.39675 1.10397 0 -0.415523
-             1.08344 0 -0.430852 1.06067 0 -0.44275 1.06067 0 -0.44275 1.03576 0 -0.451232
-             1.00884 0 -0.45631 0.98 0 -0.458 0.949819 0 -0.456111 0.921389 0 -0.450556
-             0.921389 0 -0.450556 0.894875 0 -0.4415 0.894875 0 -0.4415 0.870444 0 -0.429111
-             0.848264 0 -0.413556 0.8285 0 -0.395 0.8285 0 -0.395 0.811319 0 -0.373611
-             0.796889 0 -0.349556 0.785375 0 -0.323 0.776944 0 -0.294111 0.771764 0 -0.263056
-             0.77 0 -0.23 0.77 0 -0.23 0.771616 0 -0.199249 0.771616 0 -0.199249
-             0.776426 0 -0.169241 0.776426 0 -0.169241 0.784375 0 -0.140344 0.784375 0 -0.140344
-             0.795407 0 -0.112926 0.795407 0 -0.112926 0.809468 0 -0.0873553 0.809468 0 -0.0873553
-             0.8265 0 -0.064 0.8265 0 -0.064 0.846449 0 -0.043228 0.869259 0 -0.0254074
-             0.894875 0 -0.0109063 0.923241 0 -9.26116e-05 0.954301 0 0.00666549 0.988 0 0.009
-             0.988 0 0.009 1.00646 0 0.00864468 1.0239 0 0.00757407 1.0239 0 0.00757407
-             1.04044 0 0.00578125 1.05619 0 0.00325926 1.07125 0 1.1567e-06 1.08575 0 -0.004
-             1.09979 0 -0.00875116 1.11348 0 -0.0142593 1.12694 0 -0.0205313 1.14027 0 -0.0275741
-             1.15359 0 -0.0353947 1.167 0 -0.044 1.167 0 -0.044 0.861 0 -0.27
-             0.864603 0 -0.287099 0.869407 0 -0.302875 0.875406 0 -0.317297 0.882593 0 -0.330333
-             0.89096 0 -0.341953 0.9005 0 -0.352125 0.911207 0 -0.360818 0.923074 0 -0.368
-             0.936094 0 -0.373641 0.950259 0 -0.377708 0.965564 0 -0.380172 0.982 0 -0.381
-             0.997243 0 -0.380115 1.01144 0 -0.3775 1.02456 0 -0.373219 1.03656 0 -0.367333
-             1.04738 0 -0.359906 1.057 0 -0.351 1.057 0 -0.351 1.06537 0 -0.340677
-             1.06537 0 -0.340677 1.07244 0 -0.329 1.07244 0 -0.329 1.07819 0 -0.316031
-             1.08256 0 -0.301833 1.08551 0 -0.286469 1.08551 0 -0.286469 1.087 0 -0.27
-             1.087 0 -0.27 0.653 0 -0.682 0.653 0 -0.682 0.555 0 -0.682
-             0.555 0 -0.385 0.555 0 -0.385 0.173 0 -0.385 0.173 0 -0.682
-             0.075 0 -0.682 0.075 0 -0 0.173 0 -0 0.173 0 -0.297
-             0.555 0 -0.297 0.555 0 -0 0.653 0 -0
-          }
-          Array id=78 vsg::vec3Array
-          {
-            userObjects 0
-            properties 0 12 0 1 1 1 0 -1 0
-            size 679
-            storage id=0
-            data 0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0 0 1 -0
-             0 1 -0 0 1 -0 0 1 -0
-          }
-          Array id=79 vsg::vec2Array
-          {
-            userObjects 0
-            properties 0 8 0 1 1 1 0 -1 0
-            size 679
-            storage id=0
-            data 0 1 0.00990099 1 0.019802 1 0.029703 1 0.039604 1 0.049505 1
-             0.0594059 1 0.0693069 1 0.0792079 1 0.0891089 1 0.0990099 1 0.108911 1
-             0.118812 1 0.128713 1 0.138614 1 0.148515 1 0.158416 1 0.158416 1
-             0.168317 1 0.178218 1 0.178218 1 0.188119 1 0.19802 1 0.19802 1
-             0.207921 1 0.207921 1 0.217822 1 0.217822 1 0.227723 1 0.227723 1
-             0.237624 1 0.247525 1 0.257426 1 0.257426 1 0.267327 1 0.277228 1
-             0.277228 1 0.287129 1 0.287129 1 0.29703 1 0.306931 1 0.316832 1
-             0.316832 1 0.326733 1 0.326733 1 0.336634 1 0.346535 1 0.356436 1
-             0.366337 1 0.376238 1 0.386139 1 0.386139 1 0.39604 1 0.39604 1
-             0.405941 1 0.415842 1 0.415842 1 0.425743 1 0.435644 1 0.445545 1
-             0.455446 1 0.465347 1 0.475248 1 0.485149 1 0.49505 1 0.49505 1
-             0.504951 1 0.504951 1 0.514852 1 0.524752 1 0.524752 1 0.534653 1
-             0.544554 1 0.554455 1 0.564356 1 0.574257 1 0.584158 1 0.594059 1
-             0.60396 1 0.613861 1 0.623762 1 0.633663 1 0.643564 1 0.653465 1
-             0.663366 1 0.673267 1 0.683168 1 0.693069 1 0.693069 1 0.70297 1
-             0.70297 1 0.712871 1 0.722772 1 0.732673 1 0.732673 1 0.742574 1
-             0.752475 1 0.752475 1 0.762376 1 0.762376 1 0.772277 1 0.772277 1
-             0.782178 1 0.782178 1 0.792079 1 0.80198 1 0.80198 1 0.811881 1
-             0.811881 1 0.821782 1 0.821782 1 0.831683 1 0.831683 1 0.841584 1
-             0.851485 1 0.861386 1 0.861386 1 0.871287 1 0.871287 1 0.881188 1
-             0.881188 1 0.891089 1 0.90099 1 0.90099 1 0.910891 1 0.920792 1
-             0.930693 1 0.930693 1 0.940594 1 0.950495 1 0.960396 1 0.970297 1
-             0.980198 1 0.990099 1 1 1 0 1 0.00826446 1 0.0165289 1
-             0.0247934 1 0.0330578 1 0.0413223 1 0.0413223 1 0.0495868 1 0.0578512 1
-             0.0661157 1 0.0743802 1 0.0743802 1 0.0826446 1 0.0826446 1 0.0909091 1
-             0.0991736 1 0.107438 1 0.107438 1 0.115702 1 0.123967 1 0.123967 1
-             0.132231 1 0.132231 1 0.140496 1 0.14876 1 0.14876 1 0.157025 1
-             0.157025 1 0.165289 1 0.165289 1 0.173554 1 0.173554 1 0.181818 1
-             0.190083 1 0.190083 1 0.198347 1 0.206612 1 0.214876 1 0.22314 1
-             0.231405 1 0.239669 1 0.247934 1 0.256198 1 0.256198 1 0.264463 1
-             0.272727 1 0.272727 1 0.280992 1 0.280992 1 0.289256 1 0.297521 1
-             0.305785 1 0.31405 1 0.322314 1 0.330579 1 0.338843 1 0.338843 1
-             0.347107 1 0.347107 1 0.355372 1 0.355372 1 0.363636 1 0.371901 1
-             0.371901 1 0.380165 1 0.38843 1 0.396694 1 0.396694 1 0.404959 1
-             0.413223 1 0.421488 1 0.429752 1 0.438017 1 0.446281 1 0.454545 1
-             0.46281 1 0.471074 1 0.479339 1 0.487603 1 0.495868 1 0.504132 1
-             0.504132 1 0.512397 1 0.512397 1 0.520661 1 0.528926 1 0.528926 1
-             0.53719 1 0.53719 1 0.545455 1 0.553719 1 0.561983 1 0.561983 1
-             0.570248 1 0.570248 1 0.578512 1 0.586777 1 0.595041 1 0.603306 1
-             0.61157 1 0.619835 1 0.619835 1 0.628099 1 0.628099 1 0.636364 1
-             0.636364 1 0.644628 1 0.652893 1 0.652893 1 0.661157 1 0.661157 1
-             0.669421 1 0.669421 1 0.677686 1 0.677686 1 0.68595 1 0.68595 1
-             0.694215 1 0.702479 1 0.710744 1 0.710744 1 0.719008 1 0.719008 1
-             0.727273 1 0.727273 1 0.735537 1 0.743802 1 0.752066 1 0.760331 1
-             0.768595 1 0.77686 1 0.785124 1 0.793388 1 0.801653 1 0.809917 1
-             0.818182 1 0.818182 1 0.826446 1 0.826446 1 0.834711 1 0.842975 1
-             0.85124 1 0.859504 1 0.867769 1 0.867769 1 0.876033 1 0.876033 1
-             0.884298 1 0.892562 1 0.900826 1 0.900826 1 0.909091 1 0.917355 1
-             0.917355 1 0.92562 1 0.933884 1 0.942149 1 0.950413 1 0.958678 1
-             0.966942 1 0.975207 1 0.983471 1 0.991736 1 1 1 0 1
-             0.166667 1 0.333333 1 0.5 1 0.5 1 0.666667 1 0.833333 1
-             0.833333 1 1 1 0 1 0.0166667 1 0.0333333 1 0.05 1
-             0.0666667 1 0.0833333 1 0.1 1 0.116667 1 0.133333 1 0.15 1
-             0.166667 1 0.166667 1 0.183333 1 0.2 1 0.2 1 0.216667 1
-             0.233333 1 0.233333 1 0.25 1 0.266667 1 0.283333 1 0.3 1
-             0.316667 1 0.316667 1 0.333333 1 0.333333 1 0.35 1 0.35 1
-             0.366667 1 0.383333 1 0.383333 1 0.4 1 0.416667 1 0.416667 1
-             0.433333 1 0.433333 1 0.45 1 0.45 1 0.466667 1 0.466667 1
-             0.483333 1 0.483333 1 0.5 1 0.5 1 0.516667 1 0.516667 1
-             0.533333 1 0.55 1 0.566667 1 0.583333 1 0.6 1 0.616667 1
-             0.616667 1 0.633333 1 0.633333 1 0.65 1 0.666667 1 0.666667 1
-             0.683333 1 0.683333 1 0.7 1 0.716667 1 0.733333 1 0.75 1
-             0.766667 1 0.783333 1 0.8 1 0.8 1 0.816667 1 0.816667 1
-             0.833333 1 0.85 1 0.866667 1 0.883333 1 0.9 1 0.916667 1
-             0.933333 1 0.95 1 0.966667 1 0.983333 1 1 1 0 1
-             0.0105263 1 0.0210526 1 0.0210526 1 0.0315789 1 0.0315789 1 0.0421053 1
-             0.0526316 1 0.0631579 1 0.0736842 1 0.0842105 1 0.0842105 1 0.0947368 1
-             0.0947368 1 0.105263 1 0.105263 1 0.115789 1 0.115789 1 0.126316 1
-             0.126316 1 0.136842 1 0.147368 1 0.147368 1 0.157895 1 0.157895 1
-             0.168421 1 0.178947 1 0.178947 1 0.189474 1 0.189474 1 0.2 1
-             0.2 1 0.210526 1 0.210526 1 0.221053 1 0.231579 1 0.242105 1
-             0.252632 1 0.263158 1 0.273684 1 0.284211 1 0.294737 1 0.305263 1
-             0.305263 1 0.315789 1 0.315789 1 0.326316 1 0.336842 1 0.347368 1
-             0.347368 1 0.357895 1 0.357895 1 0.368421 1 0.378947 1 0.389474 1
-             0.4 1 0.410526 1 0.421053 1 0.431579 1 0.442105 1 0.452632 1
-             0.463158 1 0.463158 1 0.473684 1 0.473684 1 0.484211 1 0.494737 1
-             0.505263 1 0.515789 1 0.526316 1 0.536842 1 0.547368 1 0.557895 1
-             0.568421 1 0.578947 1 0.589474 1 0.6 1 0.610526 1 0.621053 1
-             0.631579 1 0.642105 1 0.652632 1 0.663158 1 0.673684 1 0.673684 1
-             0.684211 1 0.694737 1 0.705263 1 0.715789 1 0.726316 1 0.736842 1
-             0.736842 1 0.747368 1 0.747368 1 0.757895 1 0.757895 1 0.768421 1
-             0.768421 1 0.778947 1 0.778947 1 0.789474 1 0.789474 1 0.8 1
-             0.810526 1 0.810526 1 0.821053 1 0.831579 1 0.842105 1 0.842105 1
-             0.852632 1 0.852632 1 0.863158 1 0.873684 1 0.884211 1 0.884211 1
-             0.894737 1 0.894737 1 0.905263 1 0.915789 1 0.915789 1 0.926316 1
-             0.926316 1 0.936842 1 0.936842 1 0.947368 1 0.947368 1 0.957895 1
-             0.957895 1 0.968421 1 0.968421 1 0.978947 1 0.978947 1 0.989474 1
-             1 1 0 1 0.333333 1 0.666667 1 1 1 0 1
-             0.333333 1 0.666667 1 1 1 0 1 0.0102041 1 0.0204082 1
-             0.0306122 1 0.0408163 1 0.0510204 1 0.0612245 1 0.0714286 1 0.0816327 1
-             0.0918367 1 0.0918367 1 0.102041 1 0.102041 1 0.112245 1 0.122449 1
-             0.132653 1 0.132653 1 0.142857 1 0.153061 1 0.153061 1 0.163265 1
-             0.173469 1 0.183673 1 0.183673 1 0.193878 1 0.204082 1 0.204082 1
-             0.214286 1 0.214286 1 0.22449 1 0.22449 1 0.234694 1 0.234694 1
-             0.244898 1 0.244898 1 0.255102 1 0.255102 1 0.265306 1 0.265306 1
-             0.27551 1 0.285714 1 0.285714 1 0.295918 1 0.295918 1 0.306122 1
-             0.306122 1 0.316327 1 0.316327 1 0.326531 1 0.336735 1 0.346939 1
-             0.346939 1 0.357143 1 0.367347 1 0.377551 1 0.387755 1 0.397959 1
-             0.397959 1 0.408163 1 0.408163 1 0.418367 1 0.428571 1 0.438776 1
-             0.438776 1 0.44898 1 0.459184 1 0.469388 1 0.479592 1 0.489796 1
-             0.5 1 0.5 1 0.510204 1 0.510204 1 0.520408 1 0.520408 1
-             0.530612 1 0.530612 1 0.540816 1 0.540816 1 0.55102 1 0.55102 1
-             0.561224 1 0.561224 1 0.571429 1 0.581633 1 0.591837 1 0.602041 1
-             0.612245 1 0.622449 1 0.622449 1 0.632653 1 0.642857 1 0.642857 1
-             0.653061 1 0.663265 1 0.673469 1 0.683673 1 0.693878 1 0.704082 1
-             0.714286 1 0.72449 1 0.734694 1 0.744898 1 0.744898 1 0.755102 1
-             0.765306 1 0.77551 1 0.785714 1 0.795918 1 0.806122 1 0.816327 1
-             0.826531 1 0.836735 1 0.846939 1 0.857143 1 0.867347 1 0.877551 1
-             0.887755 1 0.897959 1 0.908163 1 0.918367 1 0.928571 1 0.938776 1
-             0.938776 1 0.94898 1 0.94898 1 0.959184 1 0.959184 1 0.969388 1
-             0.979592 1 0.989796 1 0.989796 1 1 1 1 1 0 1
-             0 1 0.0909091 1 0.181818 1 0.181818 1 0.272727 1 0.363636 1
-             0.454545 1 0.545455 1 0.636364 1 0.727273 1 0.818182 1 0.909091 1
-             1 1
-          }
-          Array id=80 vsg::vec4Value
-          {
-            userObjects 0
-            properties 0 0 0 1 1 1 0 -1 0
-            value 1 1 1 1
-          }
-          Indices id=81 vsg::ushortArray
-          {
-            userObjects 0
-            properties 0 2 0 1 1 1 0 -1 0
-            size 1479
-            storage id=0
-            data 2 0 1 2 3 0 3 134 0 4 134 3
-             5 134 4 6 134 5 7 134 6 8 134 7
-             9 134 8 10 134 9 11 134 10 12 134 11
-             13 134 12 14 134 13 15 134 14 17 134 15
-             112 134 17 113 134 112 113 133 134 113 132 133
-             114 132 113 114 131 132 114 130 131 116 130 114
-             116 129 130 116 128 129 116 127 128 118 125 127
-             118 124 125 118 123 124 120 121 123 111 16 18
-             111 18 109 109 18 19 110 20 21 110 23 108
-             110 21 23 108 27 106 108 25 27 106 29 104
-             104 29 30 104 31 103 104 30 31 103 31 33
-             101 33 34 101 34 99 99 34 36 107 22 24
-             105 26 28 102 32 100 98 35 37 98 37 96
-             97 38 39 97 39 95 95 39 40 95 42 94
-             95 40 42 94 44 92 92 44 45 92 46 91
-             92 45 46 91 46 47 91 48 90 91 47 48
-             90 48 49 90 53 88 90 49 51 53 54 88
-             88 71 86 88 70 71 54 56 88 86 71 72
-             86 73 85 86 72 73 85 73 74 85 75 84
-             85 74 75 84 75 76 84 78 83 84 77 78
-             84 76 77 83 78 79 83 81 82 83 80 81
-             83 79 80 56 57 70 57 58 70 58 59 70
-             59 60 70 60 61 70 61 62 70 62 63 70
-             63 65 70 67 68 70 93 41 43 89 50 52
-             87 55 69 64 66 69 117 126 115 119 122 117
-             160 135 136 160 290 135 290 291 135 291 292 135
-             292 293 135 293 294 135 294 295 135 295 296 135
-             296 297 135 297 298 135 289 290 160 288 289 160
-             160 136 158 158 136 137 158 138 157 158 137 138
-             157 138 139 157 139 141 155 141 142 155 143 153
-             155 142 143 153 143 144 153 146 152 153 144 146
-             152 149 150 152 148 149 286 288 162 285 286 162
-             283 285 164 166 283 164 166 282 283 166 281 282
-             166 277 279 166 276 277 167 276 166 167 275 276
-             167 274 275 167 273 274 169 273 167 169 269 271
-             170 269 169 170 268 269 170 267 268 171 267 170
-             171 266 267 171 265 266 172 265 171 172 264 265
-             173 264 172 173 263 264 173 262 263 174 262 173
-             174 261 262 175 261 174 175 260 261 176 260 175
-             176 259 260 178 259 176 179 257 178 181 257 179
-             181 255 257 184 255 183 184 253 255 185 253 184
-             185 252 253 186 252 185 187 252 186 187 251 252
-             188 251 187 189 251 188 191 251 189 156 140 154
-             151 145 147 161 287 159 163 284 161 165 278 280
-             168 270 272 177 256 258 182 254 180 190 248 250
-             192 248 190 195 249 193 195 247 249 199 247 198
-             200 247 199 200 245 247 202 245 200 216 202 203
-             216 203 204 216 204 205 216 205 206 216 206 207
-             216 207 208 216 208 209 216 209 210 216 210 211
-             216 211 212 216 212 213 216 213 214 196 246 194
-             197 246 196 215 244 201 215 242 244 217 242 215
-             219 243 218 219 241 243 221 241 219 221 240 241
-             224 240 223 224 238 240 225 238 224 227 238 225
-             222 239 220 226 235 237 228 235 226 230 236 229
-             230 234 236 231 234 230 232 234 231 232 233 234
-             301 299 300 301 307 299 306 301 303 306 307 301
-             305 302 304 308 310 388 308 309 310 388 310 311
-             388 311 387 386 311 312 387 311 386 386 312 385
-             385 312 313 385 313 384 383 313 314 384 313 383
-             383 314 382 382 314 315 382 315 381 381 315 316
-             381 316 380 379 316 317 380 316 379 379 317 378
-             378 317 319 378 319 377 375 319 320 373 375 320
-             369 320 322 370 320 369 371 320 370 372 320 371
-             373 320 372 369 322 368 365 322 323 368 322 367
-             365 323 363 362 323 325 363 323 362 358 325 326
-             360 325 358 358 326 357 357 326 327 357 327 356
-             356 327 328 356 328 355 354 328 329 355 328 354
-             354 329 353 353 329 331 351 331 333 351 333 349
-             347 333 335 345 335 336 345 336 343 343 336 338
-             341 338 339 376 318 374 366 321 364 361 324 359
-             352 330 350 348 332 346 346 334 344 342 337 340
-             390 455 389 390 454 455 392 454 390 392 453 454
-             393 452 391 393 450 452 395 451 394 395 449 451
-             396 449 395 396 448 449 397 448 396 397 447 448
-             398 456 397 456 447 397 457 447 456 458 447 457
-             459 447 458 459 446 447 398 522 456 398 521 522
-             398 520 521 400 520 398 400 516 518 402 514 400
-             402 512 514 404 510 402 406 508 404 406 506 508
-             406 505 506 460 446 459 461 446 460 462 446 461
-             462 445 446 463 445 462 464 445 463 464 444 445
-             465 444 464 465 443 444 466 443 465 467 443 466
-             467 442 443 468 442 467 468 441 442 469 441 468
-             470 441 469 470 440 441 471 440 470 473 440 471
-             474 438 473 474 436 438 475 436 474 476 436 475
-             476 435 436 477 435 476 478 435 477 480 435 478
-             480 434 435 484 434 482 420 434 418 418 484 486
-             399 517 519 399 513 515 401 509 511 403 507 509
-             407 504 405 407 502 504 409 503 408 409 501 503
-             409 500 501 411 500 409 411 499 500 410 496 498
-             412 496 410 413 495 497 414 495 413 414 494 495
-             414 493 494 416 493 414 416 488 490 415 491 492
-             415 489 491 417 487 415 417 485 487 417 433 483
-             481 433 479 419 431 433 421 431 419 422 430 432
-             423 430 422 423 429 430 424 429 423 424 428 429
-             425 428 424 425 427 428 426 427 425 472 437 439
-             525 523 524 525 526 523 529 527 528 529 530 527
-             532 634 531 533 634 532 534 634 533 535 634 534
-             536 634 535 537 634 536 538 634 537 539 634 538
-             541 634 539 544 634 543 545 634 544 613 634 545
-             614 634 613 614 632 634 613 545 547 613 550 611
-             611 550 551 611 552 554 611 551 552 609 554 555
-             609 555 557 607 557 559 607 559 605 605 561 563
-             603 563 565 603 565 601 601 569 599 601 567 569
-             662 569 570 599 569 664 599 636 598 599 635 636
-             599 664 635 598 636 637 598 638 597 598 637 638
-             597 638 639 597 640 596 597 639 640 596 640 641
-             596 643 595 596 642 643 596 641 642 595 643 644
-             595 647 594 595 646 647 595 645 646 595 644 645
-             647 576 594 648 576 647 594 578 592 592 578 579
-             592 579 591 591 579 580 591 580 590 590 580 582
-             588 582 583 588 583 586 586 583 584 586 584 585
-             649 576 648 650 576 649 650 574 576 651 574 650
-             652 574 651 654 574 652 656 572 574 659 572 658
-             659 570 572 660 570 659 662 570 660 615 632 614
-             615 631 632 615 630 631 616 630 615 616 629 630
-             616 628 629 617 628 616 617 627 628 617 626 627
-             618 626 617 618 625 626 618 624 625 618 623 624
-             620 623 618 542 633 540 612 546 548 612 548 549
-             610 553 608 608 556 606 604 558 560 604 562 602
-             564 566 600 663 568 661 657 571 655 655 573 653
-             593 575 577 589 581 587 619 621 622 668 665 667
-             669 678 666 675 669 670 675 676 669 676 678 669
-             677 678 676 673 675 670 673 674 675 673 670 671
-             673 671 672
-          }
-          indexCount 1479
-          instanceCount 1
-          firstIndex 0
-          vertexOffset 0
-          firstInstance 0
-        }
-        stateCommands 3
-        vsg::StateCommand id=11
-        vsg::StateCommand id=82 vsg::BindDescriptorSet
-        {
-          userObjects 0
-          slot 1
-          pipelineBindPoint 0
-          layout id=13
-          firstSet 0
-          descriptorSet id=83 vsg::DescriptorSet
-          {
-            userObjects 0
-            setLayout id=84 vsg::DescriptorSetLayout
-            {
-              userObjects 0
-              bindings 1
-              binding 10
-              descriptorType 6
-              descriptorCount 1
-              stageFlags 16
-            }
-            descriptors 1
-            vsg::Descriptor id=85 vsg::DescriptorBuffer
-            {
-              userObjects 0
-              dstBinding 10
-              dstArrayElement 0
-              dataList 1
-              data id=86 vsg::PbrMaterialValue
+              data id=99 vsg::PbrMaterialValue
               {
                 userObjects 0
                 properties 0 0 0 1 1 1 0 -1 0
@@ -2422,24 +3611,24 @@ void main()
         vsg::StateCommand id=31
         prototypeArrayState id=0
       }
-      matrix 0.8 0 0 0 0 1.72057e-07 2.88664 0 0 -0.8 4.76837e-08 0
+      matrix 0.8 0 0 0 0 5.16172e-07 2.88664 0 0 -0.8 1.43051e-07 0
        -1.79571 1.3531 -2.01649 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=87 vsg::MatrixTransform
+    vsg::Node id=100 vsg::MatrixTransform
     {
       userObjects 0
       children 1
-      vsg::Node id=88 vsg::StateGroup
+      vsg::Node id=101 vsg::StateGroup
       {
         userObjects 0
         children 1
-        vsg::Node id=89 vsg::VertexIndexDraw
+        vsg::Node id=102 vsg::VertexIndexDraw
         {
           userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=90 vsg::vec3Array
+          Array id=103 vsg::vec3Array
           {
             userObjects 0
             properties 0 12 0 1 1 1 0 -1 0
@@ -2938,7 +4127,7 @@ void main()
              0.859375 0.382812 -0.382812 0.859375 0.382812 -0.382812 -0.859375 0.382812 -0.382812 -0.859375 0.382812 -0.382812
              -0.859375 0.382812 -0.382812 -0.859375 0.382812 -0.382812
           }
-          Array id=91 vsg::vec3Array
+          Array id=104 vsg::vec3Array
           {
             userObjects 0
             properties 0 12 0 1 1 1 0 -1 0
@@ -3437,7 +4626,7 @@ void main()
              -0.449919 0.883769 -0.128548 0.542773 -0.206254 -0.81416 -0.542773 -0.206254 -0.81416 0.449919 0.883769 -0.128548
              0.538364 -0.00975296 -0.842656 0.781868 0.623133 0.0196779
           }
-          Array id=92 vsg::vec2Array
+          Array id=105 vsg::vec2Array
           {
             userObjects 0
             properties 0 8 0 1 1 1 0 -1 0
@@ -3772,13 +4961,13 @@ void main()
              0.276936 0.374933 0.276936 0.374933 0.834705 0.793041 0.671403 0.407344 0.671403 0.407344 0.671403 0.407344
              0.09282 0.410138 0.09282 0.410138 0.09282 0.410138 0.09282 0.410138
           }
-          Array id=93 vsg::vec4Value
+          Array id=106 vsg::vec4Value
           {
             userObjects 0
             properties 0 0 0 1 1 1 0 -1 0
             value 1 1 1 1
           }
-          Indices id=94 vsg::ushortArray
+          Indices id=107 vsg::ushortArray
           {
             userObjects 0
             properties 0 2 0 1 1 1 0 -1 0
@@ -4035,17 +5224,17 @@ void main()
         }
         stateCommands 3
         vsg::StateCommand id=11
-        vsg::StateCommand id=95 vsg::BindDescriptorSet
+        vsg::StateCommand id=108 vsg::BindDescriptorSet
         {
           userObjects 0
           slot 1
           pipelineBindPoint 0
           layout id=13
           firstSet 0
-          descriptorSet id=96 vsg::DescriptorSet
+          descriptorSet id=109 vsg::DescriptorSet
           {
             userObjects 0
-            setLayout id=97 vsg::DescriptorSetLayout
+            setLayout id=110 vsg::DescriptorSetLayout
             {
               userObjects 0
               bindings 1
@@ -4055,17 +5244,17 @@ void main()
               stageFlags 16
             }
             descriptors 1
-            vsg::Descriptor id=98 vsg::DescriptorBuffer
+            vsg::Descriptor id=111 vsg::DescriptorBuffer
             {
               userObjects 0
               dstBinding 10
               dstArrayElement 0
               dataList 1
-              data id=99 vsg::PbrMaterialValue
+              data id=112 vsg::PbrMaterialValue
               {
                 userObjects 0
                 properties 0 0 0 1 1 1 0 -1 0
-                value                baseColorFactor 0.118926 0.8 0 1
+                value                baseColorFactor 0.5 0.186413 0.00581716 1
                 emissiveFactor 0 0 0 1
                 diffuseFactor 0.9 0.9 0.9 1
                 specularFactor 0.2 0.2 0.2 1
@@ -4082,24 +5271,24 @@ void main()
         vsg::StateCommand id=31
         prototypeArrayState id=0
       }
-      matrix 5.25273e-08 0 -0.293754 0 0 0.293754 0 0 0.293754 0 5.25273e-08 0
+      matrix 1.05055e-07 0 -0.293754 0 0 0.293754 0 0 0.293754 0 1.05055e-07 0
        -1.52547 0.954521 -0.0164909 1
       subgraphRequiresLocalFrustum 1
     }
-    vsg::Node id=100 vsg::MatrixTransform
+    vsg::Node id=113 vsg::MatrixTransform
     {
       userObjects 0
       children 1
-      vsg::Node id=101 vsg::StateGroup
+      vsg::Node id=114 vsg::StateGroup
       {
         userObjects 0
         children 1
-        vsg::Node id=102 vsg::VertexIndexDraw
+        vsg::Node id=115 vsg::VertexIndexDraw
         {
           userObjects 0
           firstBinding 0
           NumArrays 4
-          Array id=103 vsg::vec3Array
+          Array id=116 vsg::vec3Array
           {
             userObjects 0
             properties 0 12 0 1 1 1 0 -1 0
@@ -4112,7 +5301,7 @@ void main()
              1 1 1 1 1 1 1 -1 -1 1 -1 -1
              1 -1 -1 1 1 -1 1 1 -1 1 1 -1
           }
-          Array id=104 vsg::vec3Array
+          Array id=117 vsg::vec3Array
           {
             userObjects 0
             properties 0 12 0 1 1 1 0 -1 0
@@ -4125,7 +5314,7 @@ void main()
              0 1 -0 1 0 -0 0 -1 -0 0 0 -1
              1 0 -0 0 0 -1 0 1 -0 1 0 -0
           }
-          Array id=105 vsg::vec2Array
+          Array id=118 vsg::vec2Array
           {
             userObjects 0
             properties 0 8 0 1 1 1 0 -1 0
@@ -4136,13 +5325,13 @@ void main()
              0.375 0.25 0.375 0.25 0.375 0.25 0.625 0.25 0.625 0.25 0.625 0.25
              0.375 0.5 0.375 0.5 0.375 0.5 0.625 0.5 0.625 0.5 0.625 0.5
           }
-          Array id=106 vsg::vec4Value
+          Array id=119 vsg::vec4Value
           {
             userObjects 0
             properties 0 0 0 1 1 1 0 -1 0
             value 1 1 1 1
           }
-          Indices id=107 vsg::ushortArray
+          Indices id=120 vsg::ushortArray
           {
             userObjects 0
             properties 0 2 0 1 1 1 0 -1 0
