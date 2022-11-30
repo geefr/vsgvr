@@ -42,9 +42,9 @@ target_include_directories(
 target_link_libraries( vsgvr PUBLIC vsg::vsg ${OpenXR_LIBRARY} )
 
 if(WIN32 AND BUILD_SHARED_LIBS)
-  target_compile_definitions(vsgvr PRIVATE VSGVR_DECLSPEC="__declspec(dllexport)")
-  target_compile_definitions(vsgvr INTERFACE VSGVR_DECLSPEC="__declspec(dllimport)")
+  target_compile_definitions(vsgvr PRIVATE "VSGVR_DECLSPEC=__declspec(dllexport)")
+  target_compile_definitions(vsgvr INTERFACE "VSGVR_DECLSPEC=__declspec(dllimport)")
 else()
-  target_compile_definitions( vsgvr PUBLIC VSGVR_DECLSPEC= )
+  target_compile_definitions( vsgvr PUBLIC "VSGVR_DECLSPEC=" )
 endif()
 
