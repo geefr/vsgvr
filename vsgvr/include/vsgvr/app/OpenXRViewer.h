@@ -175,3 +175,4 @@ namespace vsgvr {
             std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
 }
+

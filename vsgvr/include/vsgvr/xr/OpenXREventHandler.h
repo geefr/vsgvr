@@ -37,3 +37,4 @@ namespace vsgvr {
             void pollEvents(OpenXRInstance* instance, OpenXRSession* session);
     };
 }
+

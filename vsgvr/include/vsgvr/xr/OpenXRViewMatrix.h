@@ -81,3 +81,4 @@ namespace vsgvr {
     vsg::dmat4 matrix;
   };
 }
+

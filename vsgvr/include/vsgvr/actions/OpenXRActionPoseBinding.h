@@ -55,3 +55,4 @@ namespace vsgvr {
             vsg::mat4 _transform;
     };
 }
+

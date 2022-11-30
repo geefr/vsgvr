@@ -49,3 +49,4 @@ namespace vsgvr {
             XrAction _action;
     };
 }
+

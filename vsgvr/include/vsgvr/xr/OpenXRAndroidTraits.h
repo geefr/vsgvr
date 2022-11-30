@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <jni.h>
 
 namespace vsgvr {
-  class VSG_DECLSPEC OpenXrAndroidTraits : public vsg::Inherit<vsgvr::OpenXrTraits, OpenXrAndroidTraits> {
+  class VSGVR_DECLSPEC OpenXrAndroidTraits : public vsg::Inherit<vsgvr::OpenXrTraits, OpenXrAndroidTraits> {
   public:
     OpenXrAndroidTraits();
 
@@ -36,3 +36,4 @@ namespace vsgvr {
     virtual ~OpenXrAndroidTraits();
   };
 }
+

@@ -60,3 +60,4 @@ namespace vsgvr {
       virtual ~OpenXrTraits();
   };
 }
+

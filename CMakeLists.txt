@@ -2,12 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 
 project(VSGVR)
 
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-
-include(GNUInstallDirs)
-
-include(FetchContent)
-
+option( BUILD_SHARED_LIBS "Build shared libraries" OFF )
 option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples or not" ON )
 
 if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
@@ -22,7 +17,7 @@ endif()
 
 # Compiler/Tool requirements
 set( CMAKE_CXX_STANDARD 17 )
-set(OpenGL_GL_PREFERENCE GLVND)
+set( OpenGL_GL_PREFERENCE GLVND )
 
 # Package/System requirements
 if(ANDROID)
@@ -54,12 +49,7 @@ endif()
 
 add_subdirectory( vsgvr )
 
-
 if( VSGVR_BUILD_EXAMPLES )
   add_subdirectory( examples )
 endif()
 
-# Copy models into the build dir
-configure_file(models/world/world.vsgt ${CMAKE_CURRENT_BINARY_DIR}/world.vsgt COPYONLY)
-configure_file(models/controller/controller.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller.vsgt COPYONLY)
-configure_file(models/controller/controller2.vsgt ${CMAKE_CURRENT_BINARY_DIR}/controller2.vsgt COPYONLY)

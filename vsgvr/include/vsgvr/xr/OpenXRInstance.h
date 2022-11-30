@@ -64,3 +64,4 @@ namespace vsgvr {
             XrSystemProperties _systemProperties;
     };
 }
+

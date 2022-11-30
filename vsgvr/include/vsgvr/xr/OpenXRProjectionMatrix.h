@@ -68,3 +68,4 @@ namespace vsgvr
         vsg::dmat4 mat;
     };
 }
+

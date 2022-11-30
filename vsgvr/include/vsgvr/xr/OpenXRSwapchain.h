@@ -29,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr
 {
 
-  class SwapchainImage : public vsg::Inherit<vsg::Image, SwapchainImage>
+  class VSGVR_DECLSPEC SwapchainImage : public vsg::Inherit<vsg::Image, SwapchainImage>
   {
   public:
     SwapchainImage(VkImage image, vsg::Device *device);
@@ -70,3 +70,4 @@ namespace vsgvr
     vsg::ImageViews _imageViews;
   };
 }
+

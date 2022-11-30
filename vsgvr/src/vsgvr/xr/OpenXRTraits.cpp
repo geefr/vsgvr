@@ -36,3 +36,4 @@ namespace vsgvr
     engineVersion = XR_MAKE_VERSION(maj, min, patch);
   }
 }
+

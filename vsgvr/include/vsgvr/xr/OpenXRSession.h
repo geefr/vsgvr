@@ -92,3 +92,4 @@ namespace vsgvr {
             std::vector<PerViewData> _viewData;
     };
 }
+
