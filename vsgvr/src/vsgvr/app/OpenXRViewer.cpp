@@ -92,7 +92,6 @@ namespace vsgvr
       syncActions();
       return PollEventsResult::RunningDoRender;
     case XR_SESSION_STATE_STOPPING:
-      std::cerr << "Ending Session" << std::endl;
       _session->endSession();
       return PollEventsResult::NotRunning;
     case XR_SESSION_STATE_LOSS_PENDING:

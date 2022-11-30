@@ -21,7 +21,6 @@ set( SOURCES
   src/vsgvr/xr/OpenXREventHandler.cpp
   src/vsgvr/xr/OpenXRGraphicsBindingVulkan.cpp
   src/vsgvr/xr/OpenXRInstance.cpp
-  src/vsgvr/xr/OpenXRMacros.cpp
   src/vsgvr/xr/OpenXRSession.cpp
   src/vsgvr/xr/OpenXRSwapchain.cpp
   src/vsgvr/xr/OpenXRTraits.cpp
@@ -46,6 +45,6 @@ if(WIN32 AND BUILD_SHARED_LIBS)
   target_compile_definitions(vsgvr PRIVATE VSGVR_DECLSPEC="__declspec(dllexport)")
   target_compile_definitions(vsgvr INTERFACE VSGVR_DECLSPEC="__declspec(dllimport)")
 else()
-  target_compile_definitions( vsgvr PUBLIC VSGVR_DECLSPEC )
+  target_compile_definitions( vsgvr PUBLIC VSGVR_DECLSPEC= )
 endif()
 
