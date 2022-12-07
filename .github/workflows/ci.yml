@@ -34,7 +34,8 @@ jobs:
 
     - name: Checkout vsg
       uses: actions/checkout@v2
-      ref: ${{matrix.vsg-tag}}
+      with:
+        ref: ${{matrix.vsg-tag}}
 
     - name: Build and Install VSG
       shell: bash
