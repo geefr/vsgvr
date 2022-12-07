@@ -16,6 +16,8 @@ jobs:
           
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v1.12
@@ -38,6 +40,7 @@ jobs:
         repository: vsg-dev/VulkanSceneGraph
         ref: ${{matrix.vsg-tag}}
         path: vsg
+        submodules: true
 
     - name: Build and Install VSG
       shell: bash
