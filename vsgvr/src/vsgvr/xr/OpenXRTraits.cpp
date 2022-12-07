@@ -23,15 +23,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  OpenXrTraits::OpenXrTraits() {}
+  OpenXRTraits::OpenXRTraits() {}
 
-  OpenXrTraits::~OpenXrTraits() {}
+  OpenXRTraits::~OpenXRTraits() {}
 
-  void OpenXrTraits::setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch)
+  void OpenXRTraits::setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch)
   {
     applicationVersion = XR_MAKE_VERSION(maj, min, patch);
   }
-  void OpenXrTraits::setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch)
+  void OpenXRTraits::setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch)
   {
     engineVersion = XR_MAKE_VERSION(maj, min, patch);
   }

@@ -41,7 +41,7 @@ using namespace vsg;
 
 namespace vsgvr
 {
-  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<OpenXrTraits> xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
+  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<OpenXRTraits> xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
     , _xrTraits(xrTraits)
     , _graphicsBinding(graphicsBinding)

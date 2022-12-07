@@ -59,7 +59,7 @@ static int vsg_init(struct AppData* appData)
     // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
     //       This should be improved in the future, at least to query what form factors are available.
     // TODO: Some parameters on xrTraits are non-functional at the moment
-    auto xrTraits = vsgvr::OpenXrAndroidTraits::create();
+    auto xrTraits = vsgvr::OpenXRAndroidTraits::create();
     xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     xrTraits->vm = appData->app->activity->vm;

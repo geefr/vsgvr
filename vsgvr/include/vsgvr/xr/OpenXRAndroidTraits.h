@@ -26,14 +26,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <jni.h>
 
 namespace vsgvr {
-  class VSGVR_DECLSPEC OpenXrAndroidTraits : public vsg::Inherit<vsgvr::OpenXrTraits, OpenXrAndroidTraits> {
+  class VSGVR_DECLSPEC OpenXRAndroidTraits : public vsg::Inherit<vsgvr::OpenXRTraits, OpenXRAndroidTraits> {
   public:
-    OpenXrAndroidTraits();
+    OpenXRAndroidTraits();
 
     JavaVM* vm = nullptr;
     jobject activity = nullptr;
   protected:
-    virtual ~OpenXrAndroidTraits();
+    virtual ~OpenXRAndroidTraits();
   };
 }
 
