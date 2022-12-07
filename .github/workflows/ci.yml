@@ -47,10 +47,10 @@ jobs:
       run: |
         cd vsg
         cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
-        cmake --build . --target install --config Release
+        cmake --build . --target install --config Release --parallel 4
 
     - name: Build and Install VSGVR
       shell: bash
       run: |
         cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=./install
-        cmake --build . --target install --config Release
+        cmake --build . --target install --config Release --parallel 4
