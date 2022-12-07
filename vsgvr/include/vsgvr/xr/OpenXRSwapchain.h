@@ -71,3 +71,4 @@ namespace vsgvr
   };
 }
 
+EVSG_type_name(vsgvr::SwapchainImage);
