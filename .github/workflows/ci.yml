@@ -15,12 +15,12 @@ jobs:
         vulkan-version: [1.3.224.1]
           
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: Setup cmake
-      uses: jwlawson/actions-setup-cmake@v1.12
+      uses: jwlawson/actions-setup-cmake@v1.13
       with:
         cmake-version: ${{ env.CMakeVersion }}
 
@@ -35,7 +35,7 @@ jobs:
       if: startsWith(matrix.os, 'windows')
 
     - name: Checkout vsg
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: vsg-dev/VulkanSceneGraph
         ref: ${{matrix.vsg-tag}}
