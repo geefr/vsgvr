@@ -1,4 +1,4 @@
-name: CI Android
+name: Compile Check (Android)
 on:
   push:
   pull_request:
