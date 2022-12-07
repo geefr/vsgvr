@@ -45,12 +45,22 @@ jobs:
     - name: Build and Install VSG
       shell: bash
       run: |
+      if [ "$RUNNER_OS" == "Windows" ]; then
+        cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install -A x64
+        MSBuild.exe INSTALL.vcxproj -p:Configuration=Release
+      else
         cd vsg
         cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
         cmake --build . --target install --config Release --parallel 4
+      fi
 
     - name: Build and Install VSGVR
       shell: bash
       run: |
+      if [ "$RUNNER_OS" == "Windows" ]; then
+        cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install -A x64
+        MSBuild.exe INSTALL.vcxproj -p:Configuration=Release
+      else
         cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=./install
         cmake --build . --target install --config Release --parallel 4
+      fi
