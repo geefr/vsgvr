@@ -37,4 +37,4 @@ namespace vsgvr {
   };
 }
 
-EVSG_type_name(vsgvr::OpenXRAndroidTraits);
+EVSG_type_name(vsgvr::OpenXrAndroidTraits);
