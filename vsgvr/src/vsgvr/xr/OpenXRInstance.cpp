@@ -32,7 +32,7 @@ using namespace vsg;
 
 namespace vsgvr
 {
-    OpenXRInstance::OpenXRInstance(vsg::ref_ptr<OpenXrTraits> xrTraits)
+    OpenXRInstance::OpenXRInstance(vsg::ref_ptr<OpenXRTraits> xrTraits)
         : _xrTraits(xrTraits)
     {
         createInstance();
@@ -70,7 +70,7 @@ namespace vsgvr
         auto fn = (PFN_xrInitializeLoaderKHR)xr_pfn_noexcept(XR_NULL_HANDLE, "xrInitializeLoaderKHR");
         if( fn )
         {
-            auto androidTraits = _xrTraits.cast<vsgvr::OpenXrAndroidTraits>();
+            auto androidTraits = _xrTraits.cast<vsgvr::OpenXRAndroidTraits>();
             if( androidTraits && androidTraits->vm && androidTraits->activity )
             {
                 XrLoaderInitInfoAndroidKHR loaderInitInfo;
@@ -112,7 +112,7 @@ namespace vsgvr
         info.applicationInfo.engineVersion = _xrTraits->engineVersion;
 
 #ifdef ANDROID
-        auto androidTraits = _xrTraits.cast<vsgvr::OpenXrAndroidTraits>();
+        auto androidTraits = _xrTraits.cast<vsgvr::OpenXRAndroidTraits>();
         if( androidTraits && androidTraits->vm && androidTraits->activity )
         {
             XrInstanceCreateInfoAndroidKHR androidCreateInfo;

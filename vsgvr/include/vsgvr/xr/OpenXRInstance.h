@@ -33,7 +33,7 @@ namespace vsgvr {
     {
         public:
             OpenXRInstance() = delete;
-            OpenXRInstance(vsg::ref_ptr<OpenXrTraits> xrTraits);
+            OpenXRInstance(vsg::ref_ptr<OpenXRTraits> xrTraits);
             ~OpenXRInstance();
 
             XrInstance getInstance() const { return _instance; }
@@ -55,7 +55,7 @@ namespace vsgvr {
             // TODO: Support/validation of xr layers - Debug/validation, view type extensions
             void validateTraits();
 
-            vsg::ref_ptr<OpenXrTraits> _xrTraits;
+            vsg::ref_ptr<OpenXRTraits> _xrTraits;
 
             XrInstance _instance = 0;
             XrInstanceProperties _instanceProperties;

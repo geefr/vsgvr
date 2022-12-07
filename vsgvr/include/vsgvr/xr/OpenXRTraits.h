@@ -29,9 +29,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 
 namespace vsgvr {
-  class VSGVR_DECLSPEC OpenXrTraits : public vsg::Inherit<vsg::Object, OpenXrTraits> {
+  class VSGVR_DECLSPEC OpenXRTraits : public vsg::Inherit<vsg::Object, OpenXRTraits> {
   public:
-    OpenXrTraits();
+    OpenXRTraits();
     std::vector<std::string> xrExtensions = {
       // "XR_EXT_debug_utils"
     };
@@ -57,8 +57,8 @@ namespace vsgvr {
     uint32_t swapchainSampleCount = 4;
 
     protected:
-      virtual ~OpenXrTraits();
+      virtual ~OpenXRTraits();
   };
 }
 
-EVSG_type_name(vsgvr::OpenXrTraits);
+EVSG_type_name(vsgvr::OpenXRTraits);
