@@ -73,31 +73,52 @@ namespace vsgvr
         {
             case XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT:
             {
-                if( !XR_SUCCEEDED(xrGetActionStateBoolean(
-                    session->getSession(), &info, &_stateBool)))
+                _stateBool.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+                auto getActionResult =xrGetActionStateBoolean(session->getSession(), &info, &_stateBool);
+                if( XR_SUCCEEDED(getActionResult) )
                 {
-                    vsg::error("Failed to read input state for action ", _localisedName );
+                    _stateValid = true;
+                }
+                else
+                {
+                    vsg::error("Failed to read input state for action ", _localisedName, ": ", to_string(getActionResult));
+                    _stateValid = false;
                 }
                 break;
             }
             case XrActionType::XR_ACTION_TYPE_FLOAT_INPUT:
             {
-                if( !XR_SUCCEEDED(xrGetActionStateFloat(
-                    session->getSession(), &info, &_stateFloat )))
+                _stateBool.type = XR_TYPE_ACTION_STATE_FLOAT;
+                auto getActionResult =xrGetActionStateFloat(session->getSession(), &info, &_stateFloat);
+                if( XR_SUCCEEDED(getActionResult) )
                 {
-                    vsg::error("Failed to read input state for action ", _localisedName );
+                    _stateValid = true;
+                }
+                else
+                {
+                    vsg::error("Failed to read input state for action ", _localisedName, ": ", to_string(getActionResult));
+                    _stateValid = false;
                 }
                 break;
             }
             case XrActionType::XR_ACTION_TYPE_VECTOR2F_INPUT:
             {
-                if( !XR_SUCCEEDED(xrGetActionStateVector2f(
-                    session->getSession(), &info, &_stateVec2f )))
+                _stateBool.type = XR_TYPE_ACTION_STATE_VECTOR2F;
+                auto getActionResult =xrGetActionStateVector2f(session->getSession(), &info, &_stateVec2f);
+                if( XR_SUCCEEDED(getActionResult) )
                 {
-                    vsg::error("Failed to read input state for action ", _localisedName );
+                    _stateValid = true;
+                }
+                else
+                {
+                    vsg::error("Failed to read input state for action ", _localisedName, ": ", to_string(getActionResult));
+                    _stateValid = false;
                 }
                 break;
             }
+            default:
+                // Polled in a different manner (TODO: Will be reworked and error handled better, this function probably deleted
+                break;
         }
     }
 

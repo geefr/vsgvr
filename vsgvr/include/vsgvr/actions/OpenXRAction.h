@@ -48,6 +48,7 @@ namespace vsgvr {
             XrActionStateBoolean getStateBool() const { return _stateBool; }
             XrActionStateFloat getStateFloat() const { return _stateFloat; }
             XrActionStateVector2f getStateVec2f() const { return _stateVec2f; }
+            bool getStateValid() const { return _stateValid; }
 
         private:
             void createAction(OpenXRActionSet* actionSet);
@@ -62,6 +63,7 @@ namespace vsgvr {
             XrActionStateBoolean _stateBool;
             XrActionStateFloat _stateFloat;
             XrActionStateVector2f _stateVec2f;
+            bool _stateValid = false;
     };
 }
 
