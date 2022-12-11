@@ -30,7 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr
 {
     OpenXRActionSet::OpenXRActionSet(OpenXRInstance *instance, std::string name, std::string localisedName, uint32_t priority)
-        : _name(name), _priority(priority), _localisedName(localisedName)
+        : _name(name), _localisedName(localisedName), _priority(priority)
     {
         if (_localisedName.empty())
             _localisedName = name;

@@ -601,6 +601,8 @@ namespace vsgvr
           xr_check(xrLocateSpace(a->getActionSpace(), _session->getSpace(), _frameState.predictedDisplayTime, &location));
           a->setSpaceLocation(location);
         }
+
+        action->syncInputState(_session);
       }
     }
   }

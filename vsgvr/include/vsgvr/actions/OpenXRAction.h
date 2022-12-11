@@ -26,8 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/OpenXRCommon.h>
 
 namespace vsgvr {
-    class OpenXRInstance;
     class OpenXRActionSet;
+    class OpenXRSession;
     class VSGVR_DECLSPEC OpenXRAction : public vsg::Inherit<vsg::Object, OpenXRAction>
     {
         public:
@@ -38,6 +38,17 @@ namespace vsgvr {
             XrActionType getActionType() const { return _actionType; }
             std::string getName() const { return _name; }
             std::string getLocalisedName() const { return _localisedName; }
+             
+            void syncInputState(vsg::ref_ptr<OpenXRSession> session);
+
+            // TODO: Writing lots of wrappers on openxr api isn't great,
+            // but this is worse. Rework to subclasses for each type,
+            // perhaps allow custom actions by the app providing a
+            // lambda that makes the appropriate OpenXR state update?
+            XrActionStateBoolean getStateBool() const { return _stateBool; }
+            XrActionStateFloat getStateFloat() const { return _stateFloat; }
+            XrActionStateVector2f getStateVec2f() const { return _stateVec2f; }
+
         private:
             void createAction(OpenXRActionSet* actionSet);
             void destroyAction();
@@ -47,6 +58,10 @@ namespace vsgvr {
             std::string _name;
             std::string _localisedName;
             XrAction _action;
+
+            XrActionStateBoolean _stateBool;
+            XrActionStateFloat _stateFloat;
+            XrActionStateVector2f _stateVec2f;
     };
 }
 

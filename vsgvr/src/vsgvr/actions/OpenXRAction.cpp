@@ -21,9 +21,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/actions/OpenXRAction.h>
 #include <vsgvr/actions/OpenXRActionSet.h>
+#include <vsgvr/xr/OpenXRSession.h>
 
 #include <vsg/core/Exception.h>
 #include "../xr/OpenXRMacros.cpp"
+
+#include <vsg/io/Logger.h>
 
 #include <iostream>
 
@@ -55,6 +58,47 @@ namespace vsgvr
         info.subactionPaths = nullptr;
         strncpy(info.localizedActionName, _localisedName.c_str(), std::min(static_cast<uint32_t>(_localisedName.size()), static_cast<uint32_t>(XR_MAX_LOCALIZED_ACTION_NAME_SIZE)));
         xr_check(xrCreateAction(actionSet->getActionSet(), &info, &_action), "Failed to create action: " + _name);
+    }
+
+    void OpenXRAction::syncInputState(vsg::ref_ptr<OpenXRSession> session)
+    {
+        XrActionStateGetInfo info;
+        info.type = XR_TYPE_ACTION_STATE_GET_INFO;
+        info.next = nullptr;
+        info.action = _action;
+        // TODO: Subaction support
+        info.subactionPath = XR_NULL_PATH;
+
+        switch(_actionType)
+        {
+            case XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT:
+            {
+                if( !XR_SUCCEEDED(xrGetActionStateBoolean(
+                    session->getSession(), &info, &_stateBool)))
+                {
+                    vsg::error("Failed to read input state for action ", _localisedName );
+                }
+                break;
+            }
+            case XrActionType::XR_ACTION_TYPE_FLOAT_INPUT:
+            {
+                if( !XR_SUCCEEDED(xrGetActionStateFloat(
+                    session->getSession(), &info, &_stateFloat )))
+                {
+                    vsg::error("Failed to read input state for action ", _localisedName );
+                }
+                break;
+            }
+            case XrActionType::XR_ACTION_TYPE_VECTOR2F_INPUT:
+            {
+                if( !XR_SUCCEEDED(xrGetActionStateVector2f(
+                    session->getSession(), &info, &_stateVec2f )))
+                {
+                    vsg::error("Failed to read input state for action ", _localisedName );
+                }
+                break;
+            }
+        }
     }
 
     void OpenXRAction::destroyAction()
