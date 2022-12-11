@@ -70,7 +70,7 @@ namespace vsgvr
 
     if( _firstUpdate )
     {
-      createActionSpaces();
+      createActionSpacesAndAttachActionSets();
       _firstUpdate = false;
     }
 
@@ -601,11 +601,13 @@ namespace vsgvr
           xr_check(xrLocateSpace(a->getActionSpace(), _session->getSpace(), _frameState.predictedDisplayTime, &location));
           a->setSpaceLocation(location);
         }
+
+        action->syncInputState(_session);
       }
     }
   }
 
-  void OpenXRViewer::createActionSpaces()
+  void OpenXRViewer::createActionSpacesAndAttachActionSets()
   {
     if( !_attachedActionSets.empty() ) throw vsg::Exception({"Action spaces have already been attached"});
     // Attach action sets to the session

@@ -181,15 +181,27 @@ int main(int argc, char **argv) {
     
     // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
     // along with binding the OpenXR input subsystem through to usable actions.
+    
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
     auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
-    baseActionSet->actions.push_back(leftHandPoseBinding);
+    auto leftHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "left_hand_select", "Left Hand Select");
+
     auto rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "right_hand", "Right Hand");
-    baseActionSet->actions.push_back(rightHandPoseBinding);
+    auto rightHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "right_hand_select", "Right Hand Select");
+
+    baseActionSet->actions = {
+      leftHandPoseBinding,
+      leftHandButtonPress,
+      rightHandPoseBinding,
+      rightHandButtonPress,
+    };
+
     // Ask OpenXR to bind the actions in the set
     if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
           {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
+          {leftHandButtonPress, "/user/hand/left/input/select/click"},
           {rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
+          {rightHandButtonPress, "/user/hand/right/input/select/click"},
        }))
     {
       // All action sets, which will be initialised in the viewer's session
@@ -208,6 +220,9 @@ int main(int argc, char **argv) {
 
     // add close handler to respond the close window button and pressing escape
     desktopViewer->addEventHandler(vsg::CloseHandler::create(desktopViewer));
+
+    double leftRot = 0.0;
+    double rightRot = 0.0;
 
     // Render loop
     for(;;)
@@ -244,11 +259,24 @@ int main(int argc, char **argv) {
         controllerNodeRight->matrix = rightHandPoseBinding->getTransform();
       }
 
+      // Quick input test - When triggers pressed (select action binding) make controllers spin
+      // Note coordinate space of controllers - Z is forward
+      if (leftHandButtonPress->getStateBool().currentState)
+      {
+        leftRot -= 0.1;
+      }
+      if (rightHandButtonPress->getStateBool().currentState)
+      {
+        rightRot += 0.1;
+      }
+      controllerNodeLeft->matrix = controllerNodeLeft->matrix * vsg::rotate(leftRot, { 0.0, 0.0, 1.0 });
+      controllerNodeRight->matrix = controllerNodeRight->matrix * vsg::rotate(rightRot, { 0.0, 0.0, 1.0 });
+
       // Match the desktop camera to the HMD view
       // Ideally OpenXR would provide /user/head as a pose, but at least in the simple_controller profile it won't be available
       // Instead place the camera on one of the user's eyes, it'll be close enough
       desktopCamera->viewMatrix = xrCameras.front()->viewMatrix;
-      // TODO: Just mirroring the projection matrix here isn't quite right - We would need to correct for aspect
+      // TODO: Just mirroring the projection matrix here isn't quite right but works as a desktop mirror window
       //       What may be better is placing the camera at the average of the xr cameras (between the eyes)
       desktopCamera->projectionMatrix = xrCameras.front()->projectionMatrix;
 

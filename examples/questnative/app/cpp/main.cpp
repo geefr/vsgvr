@@ -37,10 +37,15 @@ struct AppData
     vsg::ref_ptr<vsg::Viewer> viewer;
     vsg::ref_ptr<vsgvr::OpenXRViewer> vr;
     vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> leftHandPoseBinding;
+    vsg::ref_ptr<vsgvr::OpenXRAction> leftHandButtonPress;
     vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> rightHandPoseBinding;
+    vsg::ref_ptr<vsgvr::OpenXRAction> rightHandButtonPress;
     vsg::ref_ptr<vsg::MatrixTransform> controllerNodeLeft;
     vsg::ref_ptr<vsg::MatrixTransform> controllerNodeRight;
     vsg::ref_ptr<vsgAndroid::Android_Window> window;
+
+    double leftRot = 0.0f;
+    double rightRot = 0.0f;
 };
 
 //
@@ -160,16 +165,37 @@ static int vsg_init(struct AppData* appData)
     vr->compile();
     // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
     // along with binding the OpenXR input subsystem through to usable actions.
+
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
     appData->leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
-    baseActionSet->actions.push_back(appData->leftHandPoseBinding);
+    appData->leftHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "left_hand_select", "Left Hand Select");
+
     appData->rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "right_hand", "Right Hand");
-    baseActionSet->actions.push_back(appData->rightHandPoseBinding);
+    appData->rightHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "right_hand_select", "Right Hand Select");
+    baseActionSet->actions = {
+            appData->leftHandPoseBinding,
+            appData->leftHandButtonPress,
+            appData->rightHandPoseBinding,
+            appData->rightHandButtonPress,
+    };
+
     // Ask OpenXR to bind the actions in the set
-    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
-            {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
+    // Note: While the Khronos simple controller profile works, it's generally
+    //       best to use the platform-specific bindings if you know what you're running on (i.e. quest)
+    //       For full portability suggestInteractionBindings should be called for all configurations you've tested on.
+    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/oculus/touch_controller", {
             {appData->rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
-    }))
+            {appData->rightHandButtonPress, "/user/hand/right/input/a/touch"},
+            {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
+            {appData->leftHandButtonPress, "/user/hand/left/input/x/touch"},
+        })
+    )
+//    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
+//            {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
+//            {appData->leftHandButtonPress, "/user/hand/left/input/select/click"},
+//            {appData->rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
+//            {appData->rightHandButtonPress, "/user/hand/right/input/select/click"},
+//    }))
     {
         // All action sets, which will be initialised in the viewer's session
         vr->actionSets.push_back(baseActionSet);
@@ -185,37 +211,6 @@ static int vsg_init(struct AppData* appData)
     }
 
     appData->vr = vr;
-
-/*
-    // compute the bounds of the scene graph to help position camera
-    vsg::ComputeBounds computeBounds;
-    vsg_scene->accept(computeBounds);
-    vsg::dvec3 centre = (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
-    double radius = vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.6;
-    double nearFarRatio = 0.001;
-
-    // set up the camera
-    auto lookAt = vsg::LookAt::create(centre + vsg::dvec3(-radius * 3.5, 1.5, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0));
-
-    vsg::ref_ptr<vsg::ProjectionMatrix> perspective;
-    vsg::ref_ptr<vsg::EllipsoidModel> ellipsoidModel(vsg_scene->getObject<vsg::EllipsoidModel>("EllipsoidModel"));
-    if (ellipsoidModel)
-    {
-        perspective = vsg::EllipsoidPerspective::create(lookAt, ellipsoidModel, 30.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), nearFarRatio, 0.0);
-    }
-    else
-    {
-        perspective = vsg::Perspective::create(30.0, static_cast<double>(window->extent2D().width) / static_cast<double>(window->extent2D().height), nearFarRatio * radius, radius * 4.5);
-    }
-
-    auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(window->extent2D()));
-*/
-
-//
-//    auto commandGraph = vsg::createCommandGraphForView(window, camera, vsg_scene);
-//    appData->viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
-//
-//    appData->viewer->compile();
 
     return 0;
 }
@@ -268,6 +263,26 @@ static void vsg_frame(struct AppData* appData)
     {
         appData->controllerNodeRight->matrix = appData->rightHandPoseBinding->getTransform();
     }
+    // Quick input test - When triggers pressed (select action binding) make controllers spin
+    // Note coordinate space of controllers - Z is forward
+    if(appData->leftHandButtonPress->getStateValid())
+    {
+        auto lState = appData->leftHandButtonPress->getStateBool();
+        if (lState.isActive && lState.currentState)
+        {
+            appData->leftRot += 0.1;
+        }
+    }
+    if(appData->rightHandButtonPress->getStateValid())
+    {
+        auto rState = appData->rightHandPoseBinding->getStateBool();
+        if (rState.isActive && rState.currentState) {
+            appData->rightRot += 0.1;
+        }
+    }
+    appData->controllerNodeLeft->matrix = appData->controllerNodeLeft->matrix * vsg::rotate(appData->leftRot, { 0.0, 0.0, 1.0 });
+    appData->controllerNodeRight->matrix = appData->controllerNodeRight->matrix * vsg::rotate(appData->rightRot, { 0.0, 0.0, 1.0 });
+
     if (appData->vr->advanceToNextFrame())
     {
         if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)

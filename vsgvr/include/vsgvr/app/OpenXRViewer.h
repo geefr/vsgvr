@@ -141,7 +141,12 @@ namespace vsgvr {
             void getViewConfiguration();
 
             void syncActions();
-            void createActionSpaces();
+            // Attach action sets to the session and create action spaces
+            // This method MUST be called ONCE - After action set bindings
+            // have been suggested, and prior to scene rendering.
+            // OpenXRViewer performs this automatically during the first
+            // call to pollEvents
+            void createActionSpacesAndAttachActionSets();
             void destroyActionSpaces();
 
             vsg::ref_ptr<OpenXRTraits> _xrTraits;
