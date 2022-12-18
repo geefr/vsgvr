@@ -73,7 +73,7 @@ namespace vsgvr
       for( auto& b : bindings )
       {  
         XrPath xrPath;
-        xr_check(xrStringToPath(instance->getInstance(), b.path.c_str(), &xrPath));
+        xr_check(xrStringToPath(instance->getInstance(), b.path.c_str(), &xrPath), "suggestInteractionBindings: Invalid path provided");
         actionBindings.push_back(XrActionSuggestedBinding{b.action->getAction(), xrPath});
       }
 

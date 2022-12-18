@@ -33,8 +33,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-    OpenXRActionPoseBinding::OpenXRActionPoseBinding(OpenXRActionSet* actionSet, std::string name, std::string localisedName )
-      : Inherit(actionSet, XR_ACTION_TYPE_POSE_INPUT, name, localisedName )
+    OpenXRActionPoseBinding::OpenXRActionPoseBinding(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet* actionSet, std::string name, std::string localisedName )
+      : Inherit(instance, actionSet, XR_ACTION_TYPE_POSE_INPUT, name, localisedName )
     {}
 
     OpenXRActionPoseBinding::~OpenXRActionPoseBinding()
