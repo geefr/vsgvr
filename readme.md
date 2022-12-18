@@ -38,7 +38,7 @@ Android Build (Oculus)       | Done
 Android Build (Generic)      | Done, untested
 Code quality / API           | Messy, but in roughly the right structure for now
 OpenXR Rendering             | Working, could do with a cleanup and better vsg integration at some point
-OpenXR Input                 | Not Implemented (But OpenXR API directly accessible)
+OpenXR Input                 | Working
 Controller tracking          | Working
 Controller models in scene   | Working
 HMD tracking                 | Working
