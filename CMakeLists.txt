@@ -5,16 +5,11 @@ project(vsgvr
     DESCRIPTION "VulkanSceneGraph based virtual reality viewer"
     LANGUAGES CXX
 )
-
 set(VSGVR_SOVERSION 0)
+
 
 option( BUILD_SHARED_LIBS "Build shared libraries" OFF )
 option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples" ON )
-
-if( NOT CMAKE_BUILD_TYPE AND NOT MSVC )
-  set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE )
-  set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
-endif()
 
 if( NOT VSGVR_XR_PLATFORM )
   # OPENXR_GENERIC - The standard openxr_loader.so, built from deps/openxr
@@ -30,11 +25,47 @@ set( OpenGL_GL_PREFERENCE GLVND )
 
 # Package/System requirements
 if(ANDROID)
+  # On Android, allow vsg to be located outside the Android sysroot
   find_package(vsg 1.0.0 NO_CMAKE_FIND_ROOT_PATH)
 else()
   find_package(vsg 1.0.0)
 endif()
 
+# vsgMacros.cmake - Follow vsg conventions for the most part
+vsg_setup_dir_vars()
+vsg_setup_build_vars()
+set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
+get_property( generator_is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
+if( generator_is_multi_config )
+  set( CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo" CACHE STRING "Build configuration types")
+endif()
+
+# TODO: Will re-visit these, and fix when vsgvr is more mature
+# (Dev primarily on Windows/Visual Studio, or in Android Studio)
+#
+# vsg_add_target_clang_format(
+#     FILES
+#         ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+#         ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+# )
+# vsg_add_target_cppcheck(
+#     FILES
+#         ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+#         ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+# )
+# vsg_add_target_docs(
+#     FILES
+#         ${PROJECT_SOURCE_DIR}/vsgvr/include
+# )
+# vsg_add_target_clobber()
+
+vsg_add_target_uninstall()
+vsg_add_feature_summary()
+vsg_add_cmake_support_files(
+  CONFIG_TEMPLATE vsgvrConfig.cmake.in
+)
+
+# Other Dependencies
 find_package(Vulkan REQUIRED)
 
 set(OpenXR_LIBRARY openxr_loader)
@@ -60,30 +91,10 @@ elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_OCULUS_MOBILE" )
     "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/3rdParty/khronos/openxr/OpenXR-SDK/include")
 endif()
 
-vsg_setup_dir_vars()
-vsg_setup_build_vars()
-
-vsg_add_target_clang_format(
-    FILES
-        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
-        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
-)
-vsg_add_target_cppcheck(
-    FILES
-        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
-        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
-)
-vsg_add_target_clobber()
-vsg_add_target_docs(
-    FILES
-        ${PROJECT_SOURCE_DIR}/vsgvr/include
-)
-vsg_add_target_uninstall()
-
+# VSGVR
 add_subdirectory( vsgvr )
 
 if( VSGVR_BUILD_EXAMPLES )
   add_subdirectory( examples )
 endif()
 
-vsg_add_feature_summary()
