@@ -28,15 +28,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string>
 #include <vector>
 
-namespace vsgvr {
-  class VSGVR_DECLSPEC OpenXRTraits : public vsg::Inherit<vsg::Object, OpenXRTraits> {
+namespace vsgvr
+{
+  class VSGVR_DECLSPEC OpenXRTraits : public vsg::Inherit<vsg::Object, OpenXRTraits>
+  {
   public:
     OpenXRTraits();
     std::vector<std::string> xrExtensions = {
-      // "XR_EXT_debug_utils"
+        // "XR_EXT_debug_utils"
     };
     std::vector<std::string> xrLayers = {
-      // "XR_APILAYER_LUNARG_core_validation"
+        // "XR_APILAYER_LUNARG_core_validation"
     };
     XrVersion apiVersion = XR_MAKE_VERSION(1, 0, 0);
     std::string applicationName = "VSGVR Application";
@@ -56,8 +58,8 @@ namespace vsgvr {
     VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_SRGB; // Runtimes _should_ support this, as a preferred option
     uint32_t swapchainSampleCount = 4;
 
-    protected:
-      virtual ~OpenXRTraits();
+  protected:
+    virtual ~OpenXRTraits();
   };
 }
 

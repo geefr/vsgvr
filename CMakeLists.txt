@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(VSGVR)
+project(vsgvr
+    VERSION 0.4.0
+    DESCRIPTION "VulkanSceneGraph based virtual reality viewer"
+    LANGUAGES CXX
+)
+
+set(VSGVR_SOVERSION 0)
 
 option( BUILD_SHARED_LIBS "Build shared libraries" OFF )
 option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples" ON )
@@ -54,9 +60,30 @@ elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_OCULUS_MOBILE" )
     "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/3rdParty/khronos/openxr/OpenXR-SDK/include")
 endif()
 
+vsg_setup_dir_vars()
+vsg_setup_build_vars()
+
+vsg_add_target_clang_format(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+)
+vsg_add_target_cppcheck(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include/vsgvr/*.h
+        ${PROJECT_SOURCE_DIR}/vsgvr/srv/vsgvr/*.cpp
+)
+vsg_add_target_clobber()
+vsg_add_target_docs(
+    FILES
+        ${PROJECT_SOURCE_DIR}/vsgvr/include
+)
+vsg_add_target_uninstall()
+
 add_subdirectory( vsgvr )
 
 if( VSGVR_BUILD_EXAMPLES )
   add_subdirectory( examples )
 endif()
 
+vsg_add_feature_summary()

@@ -13,6 +13,7 @@
 #include "../../models/controller/controller.cpp"
 #include "../../models/controller/controller2.cpp"
 #include "../../models/world/world.cpp"
+#include <iostream>
 
 int main(int argc, char **argv) {
   try
