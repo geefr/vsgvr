@@ -602,7 +602,12 @@ namespace vsgvr
           a->setSpaceLocation(location);
         }
 
-        action->syncInputState(_session);
+        auto subPaths = action->getSubPaths();
+        if( subPaths.empty() ) {
+          action->syncInputState(_instance, _session);
+        } else {
+          for( auto& p : subPaths ) action->syncInputState(_instance, _session, p);
+        }
       }
     }
   }

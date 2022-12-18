@@ -36,7 +36,7 @@ namespace vsgvr {
     class VSGVR_DECLSPEC OpenXRActionPoseBinding : public vsg::Inherit<OpenXRAction, OpenXRActionPoseBinding>
     {
         public:
-            OpenXRActionPoseBinding(OpenXRActionSet* actionSet, std::string name, std::string localisedName);
+            OpenXRActionPoseBinding(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet* actionSet, std::string name, std::string localisedName);
             virtual ~OpenXRActionPoseBinding();
 
             XrSpace getActionSpace() const { return _space; }

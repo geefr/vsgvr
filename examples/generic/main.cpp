@@ -181,27 +181,31 @@ int main(int argc, char **argv) {
     
     // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
     // along with binding the OpenXR input subsystem through to usable actions.
-    
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
-    auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
-    auto leftHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "left_hand_select", "Left Hand Select");
 
-    auto rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "right_hand", "Right Hand");
-    auto rightHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "right_hand_select", "Right Hand Select");
+    // Pose bindings - One for each hand
+    auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(xrInstance, baseActionSet, "left_hand", "Left Hand");
+    auto rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(xrInstance, baseActionSet, "right_hand", "Right Hand");
+
+    // An action - In this case applied to both left and right hands
+    // Two separate actions could also be used (Note: Though may not work on the Oculus Quest runtime)
+    auto example_trigger_action = vsgvr::OpenXRAction::create(xrInstance, baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT,
+      "hand_select", "Hand Select", std::vector<std::string>{ "/user/hand/left", "/user/hand/right" });
 
     baseActionSet->actions = {
       leftHandPoseBinding,
-      leftHandButtonPress,
       rightHandPoseBinding,
-      rightHandButtonPress,
+      example_trigger_action,
     };
 
     // Ask OpenXR to bind the actions in the set
+    // List all paths that each action should be bound for
+    // If multiple interaction profiles are supported, perform this step multiple times
     if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
           {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
-          {leftHandButtonPress, "/user/hand/left/input/select/click"},
           {rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
-          {rightHandButtonPress, "/user/hand/right/input/select/click"},
+          {example_trigger_action, "/user/hand/left/input/select/click"},
+          {example_trigger_action, "/user/hand/right/input/select/click"},
        }))
     {
       // All action sets, which will be initialised in the viewer's session
@@ -261,13 +265,21 @@ int main(int argc, char **argv) {
 
       // Quick input test - When triggers pressed (select action binding) make controllers spin
       // Note coordinate space of controllers - Z is forward
-      if (leftHandButtonPress->getStateBool().currentState)
+      if(example_trigger_action->getStateValid("/user/hand/left"))
       {
-        leftRot -= 0.1;
+        auto lState = example_trigger_action->getStateBool("/user/hand/left");
+        if (lState.isActive && lState.currentState)
+        {
+          leftRot -= 0.1;
+        }
       }
-      if (rightHandButtonPress->getStateBool().currentState)
+      if(example_trigger_action->getStateValid("/user/hand/right"))
       {
-        rightRot += 0.1;
+        auto rState = example_trigger_action->getStateBool("/user/hand/right");
+        if (rState.isActive && rState.currentState)
+        {
+          rightRot += 0.1;
+        }
       }
       controllerNodeLeft->matrix = controllerNodeLeft->matrix * vsg::rotate(leftRot, { 0.0, 0.0, 1.0 });
       controllerNodeRight->matrix = controllerNodeRight->matrix * vsg::rotate(rightRot, { 0.0, 0.0, 1.0 });

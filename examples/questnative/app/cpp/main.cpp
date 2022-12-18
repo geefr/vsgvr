@@ -37,9 +37,8 @@ struct AppData
     vsg::ref_ptr<vsg::Viewer> viewer;
     vsg::ref_ptr<vsgvr::OpenXRViewer> vr;
     vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> leftHandPoseBinding;
-    vsg::ref_ptr<vsgvr::OpenXRAction> leftHandButtonPress;
     vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> rightHandPoseBinding;
-    vsg::ref_ptr<vsgvr::OpenXRAction> rightHandButtonPress;
+    vsg::ref_ptr<vsgvr::OpenXRAction> exampleTriggerAction;
     vsg::ref_ptr<vsg::MatrixTransform> controllerNodeLeft;
     vsg::ref_ptr<vsg::MatrixTransform> controllerNodeRight;
     vsg::ref_ptr<vsgAndroid::Android_Window> window;
@@ -167,34 +166,40 @@ static int vsg_init(struct AppData* appData)
     // along with binding the OpenXR input subsystem through to usable actions.
 
     auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
-    appData->leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "left_hand", "Left Hand");
-    appData->leftHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "left_hand_select", "Left Hand Select");
 
-    appData->rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(baseActionSet, "right_hand", "Right Hand");
-    appData->rightHandButtonPress = vsgvr::OpenXRAction::create(baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "right_hand_select", "Right Hand Select");
+    // Pose bindings - One for each hand
+    appData->leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(xrInstance, baseActionSet, "left_hand", "Left Hand");
+    appData->rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(xrInstance, baseActionSet, "right_hand", "Right Hand");
+
+    // An action - In this case applied to both left and right hands
+    // Two separate actions could also be used (Note: Though may not work on the Oculus Quest runtime)
+    appData->exampleTriggerAction = vsgvr::OpenXRAction::create(xrInstance, baseActionSet, XrActionType::XR_ACTION_TYPE_FLOAT_INPUT,
+                                                            "hand_select", "Hand Select", std::vector<std::string>{ "/user/hand/left", "/user/hand/right" });
     baseActionSet->actions = {
             appData->leftHandPoseBinding,
-            appData->leftHandButtonPress,
             appData->rightHandPoseBinding,
-            appData->rightHandButtonPress,
+            appData->exampleTriggerAction,
     };
 
     // Ask OpenXR to bind the actions in the set
     // Note: While the Khronos simple controller profile works, it's generally
     //       best to use the platform-specific bindings if you know what you're running on (i.e. quest)
     //       For full portability suggestInteractionBindings should be called for all configurations you've tested on.
+    // Note: On Quest 2 (or Oculus OpenXR runtime in general) sub-action paths MUST be used - If 2 actions are bound separately to the
+    //       left/right controllers, it appears as if the left controller is bound to the right's action, and the right isn't bound at all
+    // TODO: Should verify what happens if left/right triggers are bound to different actions on each hand, whether that still requires sub-action paths
     if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/oculus/touch_controller", {
             {appData->rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
-            {appData->rightHandButtonPress, "/user/hand/right/input/a/touch"},
             {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
-            {appData->leftHandButtonPress, "/user/hand/left/input/x/touch"},
+            {appData->exampleTriggerAction, "/user/hand/right/input/trigger/value"},
+            {appData->exampleTriggerAction, "/user/hand/left/input/trigger/value"},
         })
     )
 //    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
 //            {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
-//            {appData->leftHandButtonPress, "/user/hand/left/input/select/click"},
 //            {appData->rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
-//            {appData->rightHandButtonPress, "/user/hand/right/input/select/click"},
+//            {appData->exampleTriggerAction, "/user/hand/left/input/select/click"},
+//            {appData->exampleTriggerAction, "/user/hand/right/input/select/click"},
 //    }))
     {
         // All action sets, which will be initialised in the viewer's session
@@ -265,19 +270,19 @@ static void vsg_frame(struct AppData* appData)
     }
     // Quick input test - When triggers pressed (select action binding) make controllers spin
     // Note coordinate space of controllers - Z is forward
-    if(appData->leftHandButtonPress->getStateValid())
+    if(appData->exampleTriggerAction->getStateValid("/user/hand/left"))
     {
-        auto lState = appData->leftHandButtonPress->getStateBool();
-        if (lState.isActive && lState.currentState)
+        auto lState = appData->exampleTriggerAction->getStateFloat("/user/hand/left");
+        if (lState.isActive)
         {
-            appData->leftRot += 0.1;
+            appData->leftRot -= 0.1 * lState.currentState;
         }
     }
-    if(appData->rightHandButtonPress->getStateValid())
+    if(appData->exampleTriggerAction->getStateValid("/user/hand/right"))
     {
-        auto rState = appData->rightHandPoseBinding->getStateBool();
-        if (rState.isActive && rState.currentState) {
-            appData->rightRot += 0.1;
+        auto rState = appData->exampleTriggerAction->getStateFloat("/user/hand/right");
+        if (rState.isActive) {
+            appData->rightRot += 0.1 * rState.currentState;
         }
     }
     appData->controllerNodeLeft->matrix = appData->controllerNodeLeft->matrix * vsg::rotate(appData->leftRot, { 0.0, 0.0, 1.0 });
