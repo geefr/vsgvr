@@ -62,7 +62,7 @@ namespace vsgvr {
             std::string _name;
             std::string _localisedName;
             std::vector<std::string> _subPaths;
-            XrAction _action;
+            XrAction _action = XR_NULL_HANDLE;
 
             struct ActionState {
                 XrActionStateBoolean _stateBool = {};
