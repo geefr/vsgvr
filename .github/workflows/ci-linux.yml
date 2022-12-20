@@ -1,4 +1,4 @@
-name: Compile Check (Desktop)
+name: Compile Check (Linux)
 on:
   push:
   pull_request:
