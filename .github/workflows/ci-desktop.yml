@@ -46,6 +46,7 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
+          cmake --help
           cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_GENERATOR_PLATFORM=x64
           MSBuild.exe INSTALL.vcxproj -p:Configuration=Release
         else
