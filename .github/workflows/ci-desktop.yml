@@ -30,8 +30,8 @@ jobs:
         version: ${{ matrix.vulkan-version }}
         cache: true
 
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1.1
+    - name: Install Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
       if: startsWith(matrix.os, 'windows')
 
     - name: Checkout vsg
@@ -46,8 +46,7 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          cmake --help
-          cmake . -G "Visual Studio 16 2019" -A x64 -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
+          cmake . -G "Ninja" -A x64 -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
           cmake --build . --target install --config Release --parallel 4
         else
           cd vsg
@@ -59,7 +58,7 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
-          cmake . -G "Visual Studio 16 2019" -A x64 -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
+          cmake . -G "Ninja" -A x64 -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
           cmake --build . --target install --config Release --parallel 4
         else
           cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=./install
