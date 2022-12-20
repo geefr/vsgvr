@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 namespace {
-  const char* to_string(XrResult result) {
+  [[maybe_unused]] const char* to_string(XrResult result) {
     switch (result) {
 #define RESULT_CASE(V, _) \
       case V: return #V;
@@ -28,7 +28,7 @@ namespace {
     default: return "Unknown";
     }
   }
-  const char* to_string(XrSessionState result) {
+  [[maybe_unused]] const char* to_string(XrSessionState result) {
     switch (result) {
 #define RESULT_CASE(V, _) \
       case V: return #V;
@@ -36,19 +36,19 @@ namespace {
     default: return "Unknown";
     }
   }
-  void xr_check(XrResult result, std::string msg = "") {
+  [[maybe_unused]] void xr_check(XrResult result, std::string msg = "") {
     if (XR_SUCCEEDED(result)) return;
     vsg::Exception e;
     e.message = msg + " (" + to_string(result) + ")";
     throw e;
   }
-  PFN_xrVoidFunction xr_pfn(XrInstance instance, std::string name) {
+  [[maybe_unused]] PFN_xrVoidFunction xr_pfn(XrInstance instance, std::string name) {
     PFN_xrVoidFunction fn = nullptr;
     xr_check(xrGetInstanceProcAddr(instance, name.c_str(), &fn),
       "Failed to look up function: " + name);
     return fn;
   }
-  PFN_xrVoidFunction xr_pfn_noexcept(XrInstance instance, std::string name) {
+  [[maybe_unused]] PFN_xrVoidFunction xr_pfn_noexcept(XrInstance instance, std::string name) {
     PFN_xrVoidFunction fn = nullptr;
     auto res = xrGetInstanceProcAddr(instance, name.c_str(), &fn);
     if( XR_SUCCEEDED(res) ) return fn;

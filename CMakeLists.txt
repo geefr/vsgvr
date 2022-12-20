@@ -31,7 +31,35 @@ else()
   find_package(vsg 1.0.0)
 endif()
 
-# vsgMacros.cmake - Follow vsg conventions for the most part
+# Other Dependencies
+find_package(Vulkan REQUIRED)
+
+set(OpenXR_LIBRARY openxr_loader)
+if( VSGVR_XR_PLATFORM STREQUAL "OPENXR_GENERIC" )
+  add_subdirectory( deps/openxr )
+elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_SYSTEM" )
+  find_package(OpenXR REQUIRED)
+  set(OpenXR_LIBRARY OpenXR::openxr_loader)
+elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_OCULUS_MOBILE" )
+  if(NOT ANDROID)
+    message(FATAL_ERROR "Oculus Mobile SDK is only supported when building for Android")
+  endif()
+  set( VSGVR_OCULUS_OPENXR_MOBILE_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../ovr_openxr_mobile_sdk")
+  if(NOT EXISTS ${VSGVR_OCULUS_OPENXR_MOBILE_SDK})
+    message(FATAL_ERROR "Failed to find Oculus Mobile SDK, please download from https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/ and set VSGVR_OCULUS_OPENXR_MOBILE_SDK")
+  endif()
+
+  add_library(openxr_loader SHARED IMPORTED)
+  set_property(TARGET openxr_loader PROPERTY IMPORTED_LOCATION
+    "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/OpenXR/Libs/Android/${ANDROID_ABI}/${CMAKE_BUILD_TYPE}/libopenxr_loader.so")
+  target_include_directories(openxr_loader INTERFACE 
+    "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/OpenXR/Include"
+    "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/3rdParty/khronos/openxr/OpenXR-SDK/include")
+endif()
+
+
+# vsgMacros.cmake - Follow vsg conventions for the most part,
+# for all vsgvr libraries and executables
 vsg_setup_dir_vars()
 vsg_setup_build_vars()
 set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo" )
@@ -64,32 +92,6 @@ vsg_add_feature_summary()
 vsg_add_cmake_support_files(
   CONFIG_TEMPLATE vsgvrConfig.cmake.in
 )
-
-# Other Dependencies
-find_package(Vulkan REQUIRED)
-
-set(OpenXR_LIBRARY openxr_loader)
-if( VSGVR_XR_PLATFORM STREQUAL "OPENXR_GENERIC" )
-  add_subdirectory( deps/openxr )
-elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_SYSTEM" )
-  find_package(OpenXR REQUIRED)
-  set(OpenXR_LIBRARY OpenXR::openxr_loader)
-elseif( VSGVR_XR_PLATFORM STREQUAL "OPENXR_OCULUS_MOBILE" )
-  if(NOT ANDROID)
-    message(FATAL_ERROR "Oculus Mobile SDK is only supported when building for Android")
-  endif()
-  set( VSGVR_OCULUS_OPENXR_MOBILE_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../ovr_openxr_mobile_sdk")
-  if(NOT EXISTS ${VSGVR_OCULUS_OPENXR_MOBILE_SDK})
-    message(FATAL_ERROR "Failed to find Oculus Mobile SDK, please download from https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/ and set VSGVR_OCULUS_OPENXR_MOBILE_SDK")
-  endif()
-
-  add_library(openxr_loader SHARED IMPORTED)
-  set_property(TARGET openxr_loader PROPERTY IMPORTED_LOCATION
-    "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/OpenXR/Libs/Android/${ANDROID_ABI}/${CMAKE_BUILD_TYPE}/libopenxr_loader.so")
-  target_include_directories(openxr_loader INTERFACE 
-    "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/OpenXR/Include"
-    "${VSGVR_OCULUS_OPENXR_MOBILE_SDK}/3rdParty/khronos/openxr/OpenXR-SDK/include")
-endif()
 
 # VSGVR
 add_subdirectory( vsgvr )

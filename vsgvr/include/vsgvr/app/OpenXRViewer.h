@@ -135,7 +135,7 @@ namespace vsgvr {
             std::vector<vsg::ref_ptr<OpenXRActionSet>> activeActionSets;
 
         private:
-            vsg::ref_ptr<vsg::Camera> createCameraForScene(vsg::ref_ptr<vsg::Node> scene, const VkExtent2D& extent);
+            vsg::ref_ptr<vsg::Camera> createCamera(const VkExtent2D& extent);
 
             void shutdownAll();
             void getViewConfiguration();
@@ -149,19 +149,16 @@ namespace vsgvr {
             void createActionSpacesAndAttachActionSets();
             void destroyActionSpaces();
 
+            vsg::ref_ptr<OpenXRInstance> _instance;
             vsg::ref_ptr<OpenXRTraits> _xrTraits;
+            vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;
 
             OpenXREventHandler _eventHandler;
-
-            vsg::ref_ptr<OpenXRInstance> _instance;
 
             // Details of chosen _xrTraits->viewConfigurationType
             // Details of individual views - recommended size / sampling
             XrViewConfigurationProperties _viewConfigurationProperties;
             std::vector<XrViewConfigurationView> _viewConfigurationViews;
-
-            // Graphics binding
-            vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;
 
             // Session
             void createSession();
