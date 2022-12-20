@@ -6,10 +6,9 @@ env:
   CMakeVersion: 3.14.x
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
         vsg-tag: [master, VulkanSceneGraph-1.0]
         build-shared: [ON]
         vulkan-version: [1.3.224.1]
@@ -45,23 +44,12 @@ jobs:
     - name: Build and Install VSG
       shell: bash
       run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          cd vsg
-          cmake . -G "Ninja" -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
-          cmake --build . --target install --config Release --parallel 4
-        else
-          cd vsg
-          cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
-          cmake --build . --target install --config Release --parallel 4
-        fi
+        cd vsg
+        cmake . -G "Ninja" -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
+        cmake --build . --target install --config Release --parallel 4
 
     - name: Build and Install VSGVR
       shell: bash
       run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          cmake . -G "Ninja" -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
-          cmake --build . --target install --config Release --parallel 4
-        else
-          cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=./install
-          cmake --build . --target install --config Release --parallel 4
-        fi
+        cmake . -G "Ninja" -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -DCMAKE_INSTALL_PREFIX=../install
+        cmake --build . --target install --config Release --parallel 4
