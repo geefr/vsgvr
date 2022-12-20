@@ -104,6 +104,9 @@ namespace vsgvr {
          case 64:
            framebufferSamples = VK_SAMPLE_COUNT_64_BIT;
            break;
+         default:
+           framebufferSamples = VK_SAMPLE_COUNT_1_BIT;
+           break;
       }
 
       bool multisampling = framebufferSamples != VK_SAMPLE_COUNT_1_BIT;
@@ -201,7 +204,6 @@ namespace vsgvr {
       // set up framebuffer and associated resources
       const auto& imageViews = v.swapchain->getImageViews();
 
-      size_t initial_indexValue = imageViews.size();
       for (size_t i = 0; i < imageViews.size(); ++i)
       {
         vsg::ImageViews attachments;

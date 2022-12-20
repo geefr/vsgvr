@@ -206,7 +206,9 @@ namespace vsgvr
       projectionView.pose = locatedViews[i].pose;
       projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
       auto extent = _session->getSwapchain(i)->getExtent();
-      projectionView.subImage.imageRect = XrRect2Di{ 0, 0, static_cast<int>(extent.width), static_cast<int>(extent.height) };
+      projectionView.subImage.imageRect = XrRect2Di { {0, 0},
+        {static_cast<int>(extent.width), static_cast<int>(extent.height)}
+      };
       projectionView.subImage.imageArrayIndex = 0;
       _layerProjectionViews.push_back(projectionView);
     }
@@ -221,7 +223,7 @@ namespace vsgvr
       auto swapchain = _session->getSwapchain(i);
       uint32_t swapChainImageIndex = 0;
       
-      auto image = swapchain->acquireImage(swapChainImageIndex);
+      swapchain->acquireImage(swapChainImageIndex);
       XrDuration timeoutNs = 20000000;
       auto waitSuccess = swapchain->waitImage(timeoutNs);
 
@@ -282,8 +284,7 @@ namespace vsgvr
   }
 
   vsg::ref_ptr<vsg::Camera>
-    OpenXRViewer::createCameraForScene(vsg::ref_ptr<vsg::Node> scene,
-      const VkExtent2D& extent) {
+    OpenXRViewer::createCamera(const VkExtent2D& extent) {
     // Create an initial camera - OpenXR will provide us with matrices later,
     // so the parameters here don't matter
     auto lookAt = vsg::LookAt::create(vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0), vsg::dvec3(0.0, 1.0, 0.0));
@@ -298,7 +299,6 @@ namespace vsgvr
     // * vsg::CommandGraph::createCommandGraphForView
     // * vsg::RenderGraph::createRenderGraphForView
 
-    auto numViews = _viewConfigurationViews.size();
     std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
 
     // TODO: Arguably the camera is per-view, but the render graph itself is otherwise identical. For now have a single render graph, and modify the camera as needed for each eye/view.
@@ -316,7 +316,7 @@ namespace vsgvr
       auto hmdCommandGraph = CommandGraph::create(_graphicsBinding->getVkDevice(), 
                               _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
 
-      auto camera = createCameraForScene(vsg_scene, hmdExtent);
+      auto camera = createCamera(hmdExtent);
       cameras.push_back(camera);
 
       auto view = View::create(camera);
