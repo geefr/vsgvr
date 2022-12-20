@@ -170,7 +170,9 @@ namespace vsgvr
 
     void OpenXRAction::destroyAction()
     {
-        xr_check(xrDestroyAction(_action));
+        if( _action != XR_NULL_HANDLE ) {
+            xr_check(xrDestroyAction(_action));
+        }
     }
 }
 
