@@ -42,7 +42,7 @@ namespace vsgvr {
             XrSpace getActionSpace() const { return _space; }
 
             bool getTransformValid() const { return _transformValid; }
-            vsg::mat4 getTransform() const { return _transform; }
+            vsg::dmat4 getTransform() const { return _transform; }
 
             void createActionSpace(OpenXRSession* session);
             void destroyActionSpace();
@@ -52,7 +52,7 @@ namespace vsgvr {
             XrSpace _space = 0;
 
             bool _transformValid = false;
-            vsg::mat4 _transform;
+            vsg::dmat4 _transform;
     };
 }
 
