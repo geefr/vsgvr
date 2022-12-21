@@ -44,7 +44,7 @@ namespace vsgvr
         destroyInstance();
     }
 
-    void OpenXRInstance::onEventInstanceLossPending(const XrEventDataInstanceLossPending &event)
+    void OpenXRInstance::onEventInstanceLossPending([[maybe_unused]] const XrEventDataInstanceLossPending &event)
     {
         // https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#XrEventDataInstanceLossPending
         // TODO: This indicates the overall runtime is about to become unavailable. Given that encountering
@@ -160,8 +160,8 @@ namespace vsgvr
         _systemProperties = XrSystemProperties();
         _systemProperties.type = XR_TYPE_SYSTEM_PROPERTIES;
         _systemProperties.next = nullptr;
-        _systemProperties.graphicsProperties = {0};
-        _systemProperties.trackingProperties = {0};
+        _systemProperties.graphicsProperties = {0, 0, 0};
+        _systemProperties.trackingProperties = {XR_FALSE, XR_FALSE};
         xr_check(xrGetSystemProperties(_instance, _system, &_systemProperties), "Failed to get OpenXR system properties");
     }
 
