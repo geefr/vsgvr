@@ -13,7 +13,6 @@
 #include "../../models/controller/controller.cpp"
 #include "../../models/controller/controller2.cpp"
 #include "../../models/world/world.cpp"
-#include <iostream>
 
 int main(int argc, char **argv) {
   try
@@ -199,10 +198,10 @@ int main(int argc, char **argv) {
       example_trigger_action,
     };
 
-    // Ask OpenXR to bind the actions in the set
-    // List all paths that each action should be bound for
-    // If multiple interaction profiles are supported, perform this step multiple times
-    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
+    // Ask OpenXR to suggest interaction bindings.
+    // * If subpaths are used, list all paths that each action should be bound for
+    // * Note that this may only be called once for each interaction profile (but may be across multiple overlapping action sets)
+    if (vsgvr::OpenXRActionSet::suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
           {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
           {rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
           {example_trigger_action, "/user/hand/left/input/select/click"},

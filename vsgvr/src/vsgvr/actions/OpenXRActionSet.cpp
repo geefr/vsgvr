@@ -29,6 +29,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
+    std::set<std::string> OpenXRActionSet::suggestInteractionBindingsCalledFor;
+
     OpenXRActionSet::OpenXRActionSet(OpenXRInstance *instance, std::string name, std::string localisedName, uint32_t priority)
         : _name(name), _localisedName(localisedName), _priority(priority)
     {
@@ -58,9 +60,14 @@ namespace vsgvr
         xr_check(xrDestroyActionSet(_actionSet));
     }
 
-
     bool OpenXRActionSet::suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings)
     {
+      if (suggestInteractionBindingsCalledFor.find(interactionProfile) != suggestInteractionBindingsCalledFor.end())
+      {
+        throw vsg::Exception({"suggestInteractionBindings may only be called once for each interaction profile - Collate your calls together"});
+      }
+      suggestInteractionBindingsCalledFor.insert(interactionProfile);
+
       XrPath xrProfilePath;
       auto res = xrStringToPath(instance->getInstance(), interactionProfile.c_str(), &xrProfilePath);
       if (!XR_SUCCEEDED(res))

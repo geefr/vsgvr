@@ -181,26 +181,21 @@ static int vsg_init(struct AppData* appData)
             appData->exampleTriggerAction,
     };
 
-    // Ask OpenXR to bind the actions in the set
+    // Ask OpenXR to suggest interaction bindings.
+    // * If subpaths are used, list all paths that each action should be bound for
+    // * Note that this may only be called once for each interaction profile (but may be across multiple overlapping action sets)
     // Note: While the Khronos simple controller profile works, it's generally
     //       best to use the platform-specific bindings if you know what you're running on (i.e. quest)
     //       For full portability suggestInteractionBindings should be called for all configurations you've tested on.
     // Note: On Quest 2 (or Oculus OpenXR runtime in general) sub-action paths MUST be used - If 2 actions are bound separately to the
     //       left/right controllers, it appears as if the left controller is bound to the right's action, and the right isn't bound at all
     // TODO: Should verify what happens if left/right triggers are bound to different actions on each hand, whether that still requires sub-action paths
-    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/oculus/touch_controller", {
+    if (vsgvr::OpenXRActionSet::suggestInteractionBindings(xrInstance, "/interaction_profiles/oculus/touch_controller", {
             {appData->rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
             {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
             {appData->exampleTriggerAction, "/user/hand/right/input/trigger/value"},
             {appData->exampleTriggerAction, "/user/hand/left/input/trigger/value"},
-        })
-    )
-//    if (baseActionSet->suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
-//            {appData->leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
-//            {appData->rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
-//            {appData->exampleTriggerAction, "/user/hand/left/input/select/click"},
-//            {appData->exampleTriggerAction, "/user/hand/right/input/select/click"},
-//    }))
+        }))
     {
         // All action sets, which will be initialised in the viewer's session
         vr->actionSets.push_back(baseActionSet);

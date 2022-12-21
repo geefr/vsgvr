@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/OpenXRAction.h>
 #include <vsg/core/Inherit.h>
 
+#include <set>
+
 namespace vsgvr {
     class OpenXRInstance;
     class VSGVR_DECLSPEC OpenXRActionSet : public vsg::Inherit<vsg::Object, OpenXRActionSet>
@@ -48,7 +50,7 @@ namespace vsgvr {
               OpenXRAction* action;
               std::string path;
             };
-            bool suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings);
+            static bool suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings);
 
         private:
             void createActionSet(OpenXRInstance* instance);
@@ -59,6 +61,8 @@ namespace vsgvr {
             uint32_t _priority;
 
             XrActionSet _actionSet;
+
+            static std::set<std::string> suggestInteractionBindingsCalledFor;
     };
 }
 
