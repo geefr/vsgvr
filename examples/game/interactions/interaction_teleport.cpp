@@ -15,17 +15,20 @@ Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::OpenXRInstance> x
   _actionSet = vsgvr::OpenXRActionSet::create(xrInstance, "teleport", "Teleport");
 
   // Pose bindings - One for each hand
-  _action = vsgvr::OpenXRAction::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "teleport", "Teleport");
+  _teleportAction = vsgvr::OpenXRAction::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "teleport", "Teleport");
+  _rotateAction = vsgvr::OpenXRAction::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_FLOAT_INPUT, "rotate", "Rotate");
 
   _actionSet->actions = {
-    _action,
+    _teleportAction,
+    _rotateAction,
   };
 
-  /*_actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
-    {_action, "/user/hand/left/input/select/click"},
-  };*/
+  _actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
+    {_teleportAction, "/user/hand/left/input/select/click"},
+  };
   _actionsToSuggest["/interaction_profiles/oculus/touch_controller"] = {
-    {_action, "/user/hand/left/input/x/click"},
+    {_teleportAction, "/user/hand/left/input/x/click"},
+    {_rotateAction, "/user/hand/left/input/thumbstick/x"}
   };
 }
 
@@ -33,12 +36,29 @@ Interaction_teleport::~Interaction_teleport() {}
 
 void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
 {
-  if (_action->getStateValid())
+  if (_teleportAction->getStateValid())
   {
-    auto state = _action->getStateBool();
+    auto state = _teleportAction->getStateBool();
     if (state.isActive && state.currentState && !_teleportButtonDown)
     {
       _teleportButtonDown = true;
+    }
+  }
+  double rotThresh = 0.25;
+  if (_rotateAction->getStateValid())
+  {
+    auto state = _rotateAction->getStateFloat();
+    if (state.isActive && _rotateActionState == 0)
+    {
+      if( state.currentState < -rotThresh)  _rotateActionState = -1;
+      else if( state.currentState > rotThresh) _rotateActionState = 1;
+
+      if (_rotateActionState != 0)
+      {
+        _playerRotation += (- 15.0 * _rotateActionState);
+        auto rot = vsg::dquat(vsg::radians(_playerRotation), {0.0, 0.0, 1.0});
+        game.setPlayerRotationInWorld(rot);
+      }
     }
   }
     
@@ -77,9 +97,9 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
     }
   }
 
-  if (_action->getStateValid())
+  if (_teleportAction->getStateValid())
   {
-    auto state = _action->getStateBool();
+    auto state = _teleportAction->getStateBool();
     if (state.isActive && state.currentState == false && _teleportButtonDown)
     {
       if (_teleportTargetValid)
@@ -89,6 +109,14 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
       _teleportButtonDown = false;
       _teleportTargetValid = false;
       _teleportTarget->setAllChildren(false);
+    }
+  }
+  if (_rotateAction->getStateValid())
+  {
+    auto state = _rotateAction->getStateFloat();
+    if (state.isActive && _rotateActionState != 0)
+    {
+      if( fabs(state.currentState) < rotThresh) _rotateActionState = 0;
     }
   }
 }

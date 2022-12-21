@@ -21,6 +21,9 @@ public:
 
   void setPlayerOriginInWorld(vsg::dvec3 position);
   vsg::dvec3 getPlayerOriginInWorld() { return _playerOriginInWorld; }
+
+  void setPlayerRotationInWorld(vsg::dquat rotation);
+  vsg::dquat getPlayerRotationInWorld() { return _playerRotationInWorld; }
   
 private:
   void loadScene();
@@ -44,6 +47,8 @@ private:
   vsg::ref_ptr<vsg::Group> _ground;
 
   vsg::dvec3 _playerOriginInWorld = {0.0, 0.0, 0.0};
+  vsg::dquat _playerRotationInWorld = vsg::dquat(0.0, {0.0, 0.0, 0.0});
+
   std::vector<vsg::ref_ptr<vsg::Camera>> _xrCameras;
   vsg::ref_ptr<vsg::Camera> _desktopCamera;
 

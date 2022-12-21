@@ -15,7 +15,8 @@ class Interaction_teleport : public Interaction
     virtual ~Interaction_teleport();
   protected:
 
-    vsg::ref_ptr<vsgvr::OpenXRAction> _action;
+    vsg::ref_ptr<vsgvr::OpenXRAction> _teleportAction;
+    vsg::ref_ptr<vsgvr::OpenXRAction> _rotateAction;
 
     vsg::dvec3 _teleportPosition = {0.0, 0.0, 0.0};
     vsg::ref_ptr<vsg::Switch> _teleportTarget;
@@ -23,5 +24,8 @@ class Interaction_teleport : public Interaction
 
     bool _teleportButtonDown = false;
     bool _teleportTargetValid = false;
+    int _rotateActionState = 0; // -1 is rot left, 1 is rot right
+    double _playerRotation = 0.0;
+
     vsg::ref_ptr<vsg::Group> _ground;
 };

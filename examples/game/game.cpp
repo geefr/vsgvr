@@ -97,10 +97,10 @@ void Game::initActions()
   // * If a particular profile is used, all interactions should be bound to this i.e. If grabbing items only specifies bindings for
   //   an oculus controller, it will not be bound if the simple_controller is chosen by the runtime
   std::map<std::string, std::list<vsgvr::OpenXRActionSet::SuggestedInteractionBinding>> actionsToSuggest;
-  /*actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
+  actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
         {_leftHandPose, "/user/hand/left/input/aim/pose"},
         {_rightHandPose, "/user/hand/right/input/aim/pose"},
-  };*/
+  };
   actionsToSuggest["/interaction_profiles/oculus/touch_controller"] = {
       {_leftHandPose, "/user/hand/left/input/aim/pose"},
       {_rightHandPose, "/user/hand/right/input/aim/pose"},
@@ -238,5 +238,14 @@ void Game::setPlayerOriginInWorld(vsg::dvec3 position)
   //       certainly moving the OpenXR session within the world would be
   //       easier to think about?
   _playerOriginInWorld = position;
-  _scene->matrix = vsg::translate(-position);
+  _scene->matrix = vsg::inverse(vsg::rotate(_playerRotationInWorld)) * vsg::translate(-_playerOriginInWorld);
+}
+
+void Game::setPlayerRotationInWorld(vsg::dquat rotation)
+{
+  // TODO: Not sure if this is better than re-locating the OpenXR session,
+  //       certainly moving the OpenXR session within the world would be
+  //       easier to think about?
+  _playerRotationInWorld = rotation;
+  _scene->matrix = vsg::inverse(vsg::rotate(_playerRotationInWorld)) * vsg::translate(-_playerOriginInWorld);
 }
