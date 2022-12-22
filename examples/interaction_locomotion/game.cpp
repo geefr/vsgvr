@@ -3,7 +3,7 @@
 
 #include "../../models/controller/controller.cpp"
 #include "../../models/controller/controller2.cpp"
-#include "../../models/scenes/world_1/world_1.cpp"
+#include "../../models/world/world.cpp"
 #include "../../models/assets/teleport_marker/teleport_marker.cpp"
 
 #include "interactions/interaction_teleport.h"
@@ -20,10 +20,7 @@ Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer>
   _lastFrameTime = vsg::clock::now();
 }
 
-Game::~Game()
-{
-
-}
+Game::~Game() {}
 
 void Game::loadScene()
 {
@@ -43,7 +40,7 @@ void Game::loadScene()
   _userOrigin = vsgvr::UserOrigin::create();
   _sceneRoot->addChild(_userOrigin);
 
-  _ground = world_1(); // TODO: Not actually correct - buildings etc in the world should not be 'ground'
+  _ground = world(); // TODO: Not actually correct - buildings etc in the world should not be 'ground'
   _userOrigin->addChild(_ground);
 }
 
@@ -134,8 +131,10 @@ void Game::initActions()
   // The action sets which are currently active (will be synced each frame)
   _vr->activeActionSets.push_back(_baseActionSet);
   
-  // _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
-  _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
+  // TODO: Set up input action to switch between modes
+  // TODO: Display active mode somewhere in the world, maybe as text panel when looking at controllers
+  _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
+  // _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
 
   // add close handler to respond the close window button and pressing escape
   _desktopViewer->addEventHandler(vsg::CloseHandler::create(_desktopViewer));
@@ -174,11 +173,7 @@ void Game::frame()
   }
 
   // Match the desktop camera to the HMD view
-  // Ideally OpenXR would provide /user/head as a pose, but at least in the simple_controller profile it won't be available
-  // Instead place the camera on one of the user's eyes, it'll be close enough
   _desktopCamera->viewMatrix = _xrCameras.front()->viewMatrix;
-  // TODO: Just mirroring the projection matrix here isn't quite right but works as a desktop mirror window
-  //       What may be better is placing the camera at the average of the xr cameras (between the eyes)
   _desktopCamera->projectionMatrix = _xrCameras.front()->projectionMatrix;
 
   // The session is running in some form, and a frame must be processed

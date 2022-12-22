@@ -1,20 +1,10 @@
 #include <vsg/all.h>
 
-#include <vsgvr/xr/Instance.h>
-#include <vsgvr/xr/GraphicsBindingVulkan.h>
-#include <vsgvr/xr/ViewMatrix.h>
-#include <vsgvr/app/Viewer.h>
-#include <vsgvr/actions/ActionSet.h>
-#include <vsgvr/actions/ActionPoseBinding.h>
-
 #include <iostream>
-#include <algorithm>
-
-
 
 #include "game.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   try
   {
     // set up defaults and read command line arguments to override them
@@ -63,7 +53,7 @@ int main(int argc, char **argv) {
     // Add any other requirements of OpenXR to the window traits, this mostly includes memory sharing and synchronisation extensions
     for (auto& ext : xrVulkanReqs.instanceExtensions)
     {
-      if (std::find(windowTraits->instanceExtensionNames.begin(), windowTraits->instanceExtensionNames.end(), ext) == windowTraits->instanceExtensionNames.end() ) {
+      if (std::find(windowTraits->instanceExtensionNames.begin(), windowTraits->instanceExtensionNames.end(), ext) == windowTraits->instanceExtensionNames.end()) {
         windowTraits->instanceExtensionNames.push_back(ext.c_str());
       }
     }
@@ -73,7 +63,7 @@ int main(int argc, char **argv) {
         windowTraits->deviceExtensionNames.push_back(ext.c_str());
       }
     }
-    
+
     // VSync must be disabled - In this example we're driving a desktop window and HMD from the same thread,
     // the OpenXRViewer must never be waiting for the desktop window to sync
     windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -82,8 +72,8 @@ int main(int argc, char **argv) {
     auto desktopWindow = vsg::Window::create(windowTraits);
     if (!desktopWindow)
     {
-        std::cout << "Could not create windows." << std::endl;
-        return EXIT_FAILURE;
+      std::cout << "Could not create windows." << std::endl;
+      return EXIT_FAILURE;
     }
     desktopViewer->addWindow(desktopWindow);
 
@@ -116,14 +106,14 @@ int main(int argc, char **argv) {
 
     Game game(xrInstance, vr, desktopViewer);
 
-    while(!game.shouldExit)
+    while (!game.shouldExit)
     {
       game.frame();
     }
 
     return EXIT_SUCCESS;
   }
-  catch( const vsg::Exception& e )
+  catch (const vsg::Exception& e)
   {
     std::cerr << "VSG Exception: " << e.message << std::endl;
     return EXIT_FAILURE;
