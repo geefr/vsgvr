@@ -21,20 +21,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/xr/OpenXRTraits.h>
+#include <vsgvr/xr/Traits.h>
 
 #include <jni.h>
 
 namespace vsgvr {
-  class VSGVR_DECLSPEC OpenXRAndroidTraits : public vsg::Inherit<vsgvr::OpenXRTraits, OpenXRAndroidTraits> {
+  class VSGVR_DECLSPEC AndroidTraits : public vsg::Inherit<vsgvr::Traits, AndroidTraits> {
   public:
-    OpenXRAndroidTraits();
+    AndroidTraits();
 
     JavaVM* vm = nullptr;
     jobject activity = nullptr;
   protected:
-    virtual ~OpenXRAndroidTraits();
+    virtual ~AndroidTraits();
   };
 }
 
-EVSG_type_name(vsgvr::OpenXRAndroidTraits);
+EVSG_type_name(vsgvr::AndroidTraits);
