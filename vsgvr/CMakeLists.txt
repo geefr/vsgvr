@@ -1,45 +1,47 @@
 
 set( HEADERS_ACTIONS
-  include/vsgvr/actions/OpenXRAction.h
-  include/vsgvr/actions/OpenXRActionPoseBinding.h
-  include/vsgvr/actions/OpenXRActionSet.h
+  include/vsgvr/actions/Action.h
+  include/vsgvr/actions/ActionPoseBinding.h
+  include/vsgvr/actions/ActionSet.h
 )
 
 set( HEADERS_APP
-  include/vsgvr/app/OpenXRViewer.h
+  include/vsgvr/app/Viewer.h
+  include/vsgvr/app/UserOrigin.h
 )
 
 set( HEADERS_XR
-  include/vsgvr/xr/OpenXRCommon.h
-  include/vsgvr/xr/OpenXREventHandler.h
-  include/vsgvr/xr/OpenXRGraphicsBindingVulkan.h
-  include/vsgvr/xr/OpenXRInstance.h
-  include/vsgvr/xr/OpenXRProjectionMatrix.h
-  include/vsgvr/xr/OpenXRSession.h
-  include/vsgvr/xr/OpenXRSwapchain.h
-  include/vsgvr/xr/OpenXRTraits.h
-  include/vsgvr/xr/OpenXRViewMatrix.h
+  include/vsgvr/xr/Common.h
+  include/vsgvr/xr/EventHandler.h
+  include/vsgvr/xr/GraphicsBindingVulkan.h
+  include/vsgvr/xr/Instance.h
+  include/vsgvr/xr/ProjectionMatrix.h
+  include/vsgvr/xr/Session.h
+  include/vsgvr/xr/Swapchain.h
+  include/vsgvr/xr/Traits.h
+  include/vsgvr/xr/ViewMatrix.h
 )
 
 set( SOURCES
-  src/vsgvr/actions/OpenXRAction.cpp
-  src/vsgvr/actions/OpenXRActionPoseBinding.cpp
-  src/vsgvr/actions/OpenXRActionSet.cpp
-  src/vsgvr/app/OpenXRViewer.cpp
-  src/vsgvr/xr/OpenXREventHandler.cpp
-  src/vsgvr/xr/OpenXRGraphicsBindingVulkan.cpp
-  src/vsgvr/xr/OpenXRInstance.cpp
-  src/vsgvr/xr/OpenXRSession.cpp
-  src/vsgvr/xr/OpenXRSwapchain.cpp
-  src/vsgvr/xr/OpenXRTraits.cpp
+  src/vsgvr/actions/Action.cpp
+  src/vsgvr/actions/ActionPoseBinding.cpp
+  src/vsgvr/actions/ActionSet.cpp
+  src/vsgvr/app/Viewer.cpp
+  src/vsgvr/app/UserOrigin.cpp
+  src/vsgvr/xr/EventHandler.cpp
+  src/vsgvr/xr/GraphicsBindingVulkan.cpp
+  src/vsgvr/xr/Instance.cpp
+  src/vsgvr/xr/Session.cpp
+  src/vsgvr/xr/Swapchain.cpp
+  src/vsgvr/xr/Traits.cpp
 )
 
 if( ANDROID )
   list(APPEND HEADERS_XR
-    include/vsgvr/xr/OpenXRAndroidTraits.h
+    include/vsgvr/xr/AndroidTraits.h
   )
   list(APPEND SOURCES
-    src/vsgvr/xr/OpenXRAndroidTraits.cpp
+    src/vsgvr/xr/AndroidTraits.cpp
   )
 endif()
 
