@@ -58,8 +58,7 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
       if (_rotateActionState != 0)
       {
         _playerRotation += (- 15.0 * _rotateActionState);
-        auto rot = vsg::dquat(vsg::radians(_playerRotation), {0.0, 0.0, 1.0});
-        game.setPlayerRotationInWorld(rot);
+        game.userOrigin()->orientation = vsg::dquat(vsg::radians(_playerRotation), { 0.0, 0.0, 1.0 });
       }
     }
   }
@@ -69,29 +68,28 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
     // Raycast from controller aim to world, colliding with anything named "ground"
     // https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#semantic-path-standard-pose-identifiers
     // In XR the 'world' space is fixed to our physical room, with the game world sliding around beneath us
-    vsg::dvec3 intersectStart = game.getPlayerTransform() * (_leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, 0.0});
-    vsg::dvec3 intersectEnd = game.getPlayerTransform() * (_leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, -100.0});
+    // so this is simply an intersection to the target point, and later converting it through to the scene
+    // space to update the vsgvr::UserOrigin
+    vsg::dvec3 intersectStart = _leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, 0.0};
+    vsg::dvec3 intersectEnd = _leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, -100.0};
 
     auto intersector = vsg::LineSegmentIntersector::create(intersectStart, intersectEnd);
     // TODO: Intersect whole scene, or sub-scene matched on tags? For now we can't be anywhere but the ground plane
+    // TODO: Intersections appear to be in reverse-distance order. Should double check this but intersections.back()
+    //       seems to always get the ground plane (and not fences, trees, houses, or the underside of the ground plane.
     _ground->accept(*intersector);
     if (!intersector->intersections.empty())
     {
       _teleportTargetValid = true;
       _teleportTarget->setAllChildren(true);
 
-      _teleportPosition = intersector->intersections.front()->worldIntersection;
+      _teleportPosition = intersector->intersections.back()->worldIntersection;
 
       for (auto& child : _teleportTarget->children)
       {
         if (auto m = child.node->cast<vsg::MatrixTransform>())
         {
-          // TODO: Double check this rotate - Due to the wonky axis mapping / Need some helpers for vsgworld_to_vsgvrworld?
-          // TODO: Or, put markers within the vsg world space, with just pose bindings and such being special -> Forcing everyone to have an
-          //       extra 'world' node at the top of their scene graph?
-
-          // Doing the same transform as the 'world' eventually gets in game - TODO: Seriously this super-space stuff should be in vsgvr and hidden
-          m->matrix = vsg::inverse(game.getPlayerTransform()) * vsg::translate(_teleportPosition) * vsg::rotate(vsg::radians(90.0), {1.0, 0.0, 0.0});
+          m->matrix = vsg::translate(_teleportPosition) * vsg::rotate(vsg::radians(90.0), {1.0, 0.0, 0.0});
         }
       }
     }
@@ -109,7 +107,8 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
     {
       if (_teleportTargetValid)
       {
-        game.setPlayerOriginInWorld(_teleportPosition);
+        // Teleport position within the child scene
+        game.userOrigin()->position = game.userOrigin()->userToScene() * _teleportPosition;
       }
       _teleportButtonDown = false;
       _teleportTargetValid = false;

@@ -2,6 +2,7 @@
 
 #include <vsg/all.h>
 #include <vsgvr/app/Viewer.h>
+#include <vsgvr/app/UserOrigin.h>
 #include <vsgvr/actions/Action.h>
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/ActionPoseBinding.h>
@@ -19,14 +20,8 @@ public:
 
   void frame();
 
-  void setPlayerOriginInWorld(vsg::dvec3 position);
-  vsg::dvec3 getPlayerOriginInWorld() { return _playerOriginInWorld; }
+  vsg::ref_ptr<vsgvr::UserOrigin> userOrigin() const { return _userOrigin; }
 
-  void setPlayerRotationInWorld(vsg::dquat rotation);
-  vsg::dquat getPlayerRotationInWorld() { return _playerRotationInWorld; }
-
-  vsg::dmat4 getPlayerTransform();
-  
 private:
   void loadScene();
   void initVR();
@@ -41,16 +36,10 @@ private:
   vsg::ref_ptr<vsg::MatrixTransform> _controllerLeft;
   vsg::ref_ptr<vsg::MatrixTransform> _controllerRight;
   vsg::ref_ptr<vsg::Switch> _teleportMarker;
-
-  // World space - TODO: For now, moving the world around rather than the OpenXR space
-  //                     but should also be able to re-locate the OpenXR session for
-  //                     a more natural xr-origin style setup?
-  vsg::ref_ptr<vsg::MatrixTransform> _scene;
+    
+  // A transform allowing the player to move within the normal vsg scene
+  vsg::ref_ptr<vsgvr::UserOrigin> _userOrigin;
   vsg::ref_ptr<vsg::Group> _ground;
-
-  vsg::dvec3 _playerOriginInWorld = {0.0, 0.0, 0.0};
-  vsg::dquat _playerRotationInWorld = vsg::dquat(0.0, {0.0, 0.0, 0.0});
-  bool _spaceChangePending = false;
 
   std::vector<vsg::ref_ptr<vsg::Camera>> _xrCameras;
   vsg::ref_ptr<vsg::Camera> _desktopCamera;

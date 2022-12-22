@@ -26,8 +26,8 @@ Game::~Game()
 
 void Game::loadScene()
 {
+  // User / OpenXR root space
   _sceneRoot = vsg::Group::create();
-
   _controllerLeft = controller();
   _sceneRoot->addChild(_controllerLeft);
   _controllerRight = controller2();
@@ -37,10 +37,13 @@ void Game::loadScene()
   _teleportMarker->addChild(false, teleport_marker());
   _sceneRoot->addChild(_teleportMarker);
 
-  _scene = vsg::MatrixTransform::create();
+  // User origin - The regular vsg scene / world space,
+  // which the user origin may move around in
+  _userOrigin = vsgvr::UserOrigin::create();
+  _sceneRoot->addChild(_userOrigin);
+
   _ground = world_1(); // TODO: Not actually correct - buildings etc in the world should not be 'ground'
-  _scene->addChild(_ground);
-  _sceneRoot->addChild(_scene);
+  _userOrigin->addChild(_ground);
 }
 
 void Game::initVR()
@@ -50,6 +53,7 @@ void Game::initVR()
   // a Window instance. Other than some possible improvements later, it could use the same code as vsg
   // OpenXR rendering may use one or more command graphs, as decided by the viewer
   // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
+  // Note: assignHeadlight = false -> Scene lighting is required
   auto xrCommandGraphs = _vr->createCommandGraphsForView(_sceneRoot, _xrCameras, false);
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
@@ -59,10 +63,6 @@ void Game::initVR()
   _vr->compile();
 
   // Create a CommandGraph to render the desktop window
-  // TODO: I tried to share one of the HMD's cameras here, but under steamvr that caused a deadlock when rendering
-  //       Instead, create a standard perspective camera and bind it to the hmd's position - This looks better on the desktop window anyway
-
-  // set up the camera
   auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
   auto desktopWindow = _desktopViewer->windows().front();
   auto perspective = vsg::Perspective::create(30.0,
@@ -70,7 +70,7 @@ void Game::initVR()
     , 0.1, 100.0
   );
   _desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));
-  auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, _desktopCamera, _sceneRoot);
+  auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, _desktopCamera, _sceneRoot, VK_SUBPASS_CONTENTS_INLINE, false);
   _desktopViewer->assignRecordAndSubmitTaskAndPresentation({ desktopCommandGraph });
   _desktopViewer->compile();
 }
@@ -141,12 +141,6 @@ void Game::initActions()
 
 void Game::frame()
 {
-  if (_spaceChangePending)
-  {
-    _spaceChangePending = false;
-    _scene-> matrix = vsg::inverse(getPlayerTransform());
-  }
-
   // OpenXR events must be checked first
   auto pol = _vr->pollEvents();
   if (pol == vsgvr::Viewer::PollEventsResult::Exit)
@@ -168,9 +162,6 @@ void Game::frame()
   }
 
   // Scene graph updates
-  // TODO: This should be automatic, or handled by a graph traversal / node tags?
-  // TODO: The transforms / spaces on these need to be validated. Visually they're correct,
-  //       but there's probably bugs in here.
   if (_leftHandPose->getTransformValid())
   {
     _controllerLeft->matrix = _leftHandPose->getTransform();
@@ -185,7 +176,7 @@ void Game::frame()
     if (std::find(_vr->activeActionSets.begin(), _vr->activeActionSets.end(), 
         interaction.second->actionSet()) != _vr->activeActionSets.end())
     {
-      interaction.second->frame(_sceneRoot, *this);
+      interaction.second->frame(_userOrigin, *this);
     }
   }
 
@@ -236,20 +227,4 @@ void Game::frame()
   // End the frame, and present to user
   // Frames must be explicitly released, even if the previous advanceToNextFrame returned false (PollEventsResult::RunningDontRender)
   _vr->releaseFrame();
-}
-
-void Game::setPlayerOriginInWorld(vsg::dvec3 position)
-{
-  _playerOriginInWorld = position;
-  _spaceChangePending = true;
-}
-
-void Game::setPlayerRotationInWorld(vsg::dquat rotation)
-{
-  _playerRotationInWorld = rotation;
-  _spaceChangePending = true;
-}
-
-vsg::dmat4 Game::getPlayerTransform() {
-  return vsg::translate(_playerOriginInWorld) * vsg::rotate(_playerRotationInWorld);
 }
