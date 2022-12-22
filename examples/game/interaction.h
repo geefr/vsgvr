@@ -16,7 +16,7 @@ class Interaction
     vsg::ref_ptr<vsgvr::ActionSet> actionSet() const { return _actionSet; }
     std::map<std::string, std::list<vsgvr::ActionSet::SuggestedInteractionBinding>> actionsToSuggest() const { return _actionsToSuggest; }
 
-    virtual void frame(vsg::ref_ptr<vsg::Group> scene, Game& game) = 0;
+    virtual void frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT) = 0;
     virtual ~Interaction();
   protected:
     Interaction();

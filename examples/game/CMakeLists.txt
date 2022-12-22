@@ -6,10 +6,10 @@ set( SOURCES
   interaction.h
   interaction.cpp
 
-  # interactions/interaction_example.h
-  # interactions/interaction_example.cpp
   interactions/interaction_teleport.h
   interactions/interaction_teleport.cpp
+  interactions/interaction_slide.h
+  interactions/interaction_slide.cpp
 )
 
 add_executable( vsgvr_example_game ${SOURCES} )

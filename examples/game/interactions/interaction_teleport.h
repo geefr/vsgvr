@@ -2,6 +2,9 @@
 
 #include "interaction.h"
 
+/// Basic user-teleport navigation, on left controller
+/// * A button, Trackpad click, or trigger pull on controller -> Teleport to aimed target
+/// * Thumstick on controller -> rotate in place
 class Interaction_teleport : public Interaction
 {
   public:
@@ -11,7 +14,7 @@ class Interaction_teleport : public Interaction
       vsg::ref_ptr<vsg::Switch> teleportTarget,
       vsg::ref_ptr<vsg::Group> ground);
 
-    void frame(vsg::ref_ptr<vsg::Group> scene, Game& game) final override;
+    void frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT) final override;
     virtual ~Interaction_teleport();
   protected:
 

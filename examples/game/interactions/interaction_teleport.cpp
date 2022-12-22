@@ -28,6 +28,10 @@ Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::Instance> xrInsta
   _actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
     {_teleportAction, "/user/hand/left/input/select/click"},
   };
+  _actionsToSuggest["/interaction_profiles/htc/vive_controller"] = {
+    {_teleportAction, "/user/hand/left/input/trackpad/click"},
+    {_rotateAction, "/user/hand/left/input/trackpad/x"}
+  };
   _actionsToSuggest["/interaction_profiles/oculus/touch_controller"] = {
     {_teleportAction, "/user/hand/left/input/x/click"},
     {_rotateAction, "/user/hand/left/input/thumbstick/x"}
@@ -36,7 +40,7 @@ Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::Instance> xrInsta
 
 Interaction_teleport::~Interaction_teleport() {}
 
-void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
+void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT)
 {
   if (_teleportAction->getStateValid())
   {

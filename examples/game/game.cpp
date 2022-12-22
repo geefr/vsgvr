@@ -6,8 +6,8 @@
 #include "../../models/scenes/world_1/world_1.cpp"
 #include "../../models/assets/teleport_marker/teleport_marker.cpp"
 
-// #include "interactions/interaction_example.h"
 #include "interactions/interaction_teleport.h"
+#include "interactions/interaction_slide.h"
 
 Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer)
   : _xrInstance(xrInstance)
@@ -17,6 +17,7 @@ Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer>
   loadScene();
   initVR();
   initActions();
+  _lastFrameTime = vsg::clock::now();
 }
 
 Game::~Game()
@@ -88,8 +89,8 @@ void Game::initActions()
     _rightHandPose,
   };
 
-  // _interactions.emplace("example", new Interaction_example(_xrInstance, _controllerLeft, _controllerRight));
   _interactions.emplace("teleport", new Interaction_teleport(_xrInstance, _leftHandPose, _teleportMarker, _ground));
+  _interactions.emplace("slide", new Interaction_slide(_xrInstance, _leftHandPose, _ground));
 
   // Ask OpenXR to suggest interaction bindings.
   // * If subpaths are used, list all paths that each action should be bound for
@@ -132,8 +133,9 @@ void Game::initActions()
 
   // The action sets which are currently active (will be synced each frame)
   _vr->activeActionSets.push_back(_baseActionSet);
-  // _vr->activeActionSets.push_back(_interactions["example"]->actionSet());
-  _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
+  
+  // _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
+  _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
 
   // add close handler to respond the close window button and pressing escape
   _desktopViewer->addEventHandler(vsg::CloseHandler::create(_desktopViewer));
@@ -169,15 +171,6 @@ void Game::frame()
   if (_rightHandPose->getTransformValid())
   {
     _controllerRight->matrix = _rightHandPose->getTransform();
-  }
-
-  for (auto& interaction : _interactions)
-  {
-    if (std::find(_vr->activeActionSets.begin(), _vr->activeActionSets.end(), 
-        interaction.second->actionSet()) != _vr->activeActionSets.end())
-    {
-      interaction.second->frame(_userOrigin, *this);
-    }
   }
 
   // Match the desktop camera to the HMD view
@@ -219,6 +212,19 @@ void Game::frame()
     }
     else
     {
+      for (auto& interaction : _interactions)
+      {
+        if (std::find(_vr->activeActionSets.begin(), _vr->activeActionSets.end(),
+          interaction.second->actionSet()) != _vr->activeActionSets.end())
+        {
+          auto deltaT = static_cast<double>(
+            std::chrono::duration_cast<std::chrono::microseconds>(_vr->frameStamp()->time - _lastFrameTime).count()
+          ) / 1e6;
+          _lastFrameTime = _vr->frameStamp()->time;
+          interaction.second->frame(_userOrigin, *this, deltaT);
+        }
+      }
+
       // Render to the HMD
       _vr->recordAndSubmit(); // Render XR frame
     }

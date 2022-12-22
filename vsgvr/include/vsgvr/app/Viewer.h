@@ -113,6 +113,11 @@ namespace vsgvr {
             /// This method **must** be called if advanceToNextFrame() was called
             void releaseFrame();
 
+            /// State information on the current frame
+            /// Only valid if advanceToNextFrame returned true
+            XrFrameState frameState() const { return _frameState; }
+            vsg::ref_ptr<vsg::FrameStamp> frameStamp() const { return _frameStamp; }
+
             // Manage the work to do each frame using RecordAndSubmitTasks.
             using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
             RecordAndSubmitTasks recordAndSubmitTasks;

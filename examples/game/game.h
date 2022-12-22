@@ -50,4 +50,6 @@ private:
   vsg::ref_ptr<vsgvr::ActionPoseBinding> _rightHandPose;
 
   std::map<std::string, std::unique_ptr<Interaction>> _interactions;
+
+  vsg::time_point _lastFrameTime;
 };
