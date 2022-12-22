@@ -19,10 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/xr/OpenXRSwapchain.h>
+#include <vsgvr/xr/Swapchain.h>
 
 #include <vsg/core/Exception.h>
-#include "OpenXRMacros.cpp"
+#include "Macros.cpp"
 
 #include <iostream>
 
@@ -43,25 +43,25 @@ namespace vsgvr {
     }
   }
 
-  OpenXRSwapchain::OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
+  Swapchain::Swapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
     validateFormat(session);
     createSwapchain(session, viewConfig, graphicsBinding);
   }
 
-  OpenXRSwapchain::~OpenXRSwapchain()
+  Swapchain::~Swapchain()
   {
     destroySwapchain();
   }
 
-  VkImage OpenXRSwapchain::acquireImage(uint32_t& index)
+  VkImage Swapchain::acquireImage(uint32_t& index)
   {
     xr_check(xrAcquireSwapchainImage(_swapchain, nullptr, &index), "Failed to acquire image");
     return _swapchainImages[index];
   }
 
-  bool OpenXRSwapchain::waitImage(XrDuration timeout)
+  bool Swapchain::waitImage(XrDuration timeout)
   {
     auto info = XrSwapchainImageWaitInfo();
     info.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
@@ -76,7 +76,7 @@ namespace vsgvr {
     return true;
   }
 
-  void OpenXRSwapchain::releaseImage()
+  void Swapchain::releaseImage()
   {
     auto info = XrSwapchainImageReleaseInfo();
     info.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
@@ -85,7 +85,7 @@ namespace vsgvr {
   }
 
 
-  void OpenXRSwapchain::validateFormat(XrSession session)
+  void Swapchain::validateFormat(XrSession session)
   {
     uint32_t count = 0;
     xr_check(xrEnumerateSwapchainFormats(session, 0, &count, nullptr));
@@ -98,7 +98,7 @@ namespace vsgvr {
     }
   }
 
-  void OpenXRSwapchain::createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
+  void Swapchain::createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
   {
     XrSwapchainUsageFlags usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
     XrSwapchainCreateFlags createFlags = 0;
@@ -138,7 +138,7 @@ namespace vsgvr {
       _swapchainImages.push_back(i.image);
     }
 
-    // Create image views, used by OpenXRSession::creatSwapchain to bind to vsg::Framebuffer
+    // Create image views, used by Session::creatSwapchain to bind to vsg::Framebuffer
     for (std::size_t i = 0; i < _swapchainImages.size(); ++i)
     {
       auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVkDevice()));
@@ -155,7 +155,7 @@ namespace vsgvr {
     }
   }
 
-  void OpenXRSwapchain::destroySwapchain()
+  void Swapchain::destroySwapchain()
   {
     xr_check(xrDestroySwapchain(_swapchain));
   }

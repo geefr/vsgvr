@@ -9,7 +9,7 @@
 // #include "interactions/interaction_example.h"
 #include "interactions/interaction_teleport.h"
 
-Game::Game(vsg::ref_ptr<vsgvr::OpenXRInstance> xrInstance, vsg::ref_ptr<vsgvr::OpenXRViewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer)
+Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer)
   : _xrInstance(xrInstance)
   , _vr(vr)
   , _desktopViewer(desktopViewer)
@@ -79,10 +79,10 @@ void Game::initActions()
 {
   // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
   // along with binding the OpenXR input subsystem through to usable actions.
-  _baseActionSet = vsgvr::OpenXRActionSet::create(_xrInstance, "controller_positions", "Controller Positions");
+  _baseActionSet = vsgvr::ActionSet::create(_xrInstance, "controller_positions", "Controller Positions");
   // Pose bindings - One for each hand
-  _leftHandPose = vsgvr::OpenXRActionPoseBinding::create(_xrInstance, _baseActionSet, "left_hand", "Left Hand");
-  _rightHandPose = vsgvr::OpenXRActionPoseBinding::create(_xrInstance, _baseActionSet, "right_hand", "Right Hand");
+  _leftHandPose = vsgvr::ActionPoseBinding::create(_xrInstance, _baseActionSet, "left_hand", "Left Hand");
+  _rightHandPose = vsgvr::ActionPoseBinding::create(_xrInstance, _baseActionSet, "right_hand", "Right Hand");
   _baseActionSet->actions = {
     _leftHandPose,
     _rightHandPose,
@@ -96,7 +96,7 @@ void Game::initActions()
   // * Note that this may only be called once for each interaction profile (but may be across multiple overlapping action sets)
   // * If a particular profile is used, all interactions should be bound to this i.e. If grabbing items only specifies bindings for
   //   an oculus controller, it will not be bound if the simple_controller is chosen by the runtime
-  std::map<std::string, std::list<vsgvr::OpenXRActionSet::SuggestedInteractionBinding>> actionsToSuggest;
+  std::map<std::string, std::list<vsgvr::ActionSet::SuggestedInteractionBinding>> actionsToSuggest;
   actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
         {_leftHandPose, "/user/hand/left/input/aim/pose"},
         {_rightHandPose, "/user/hand/right/input/aim/pose"},
@@ -117,7 +117,7 @@ void Game::initActions()
   }
   for (auto& p : actionsToSuggest)
   {
-    if (! vsgvr::OpenXRActionSet::suggestInteractionBindings(_xrInstance, p.first, p.second))
+    if (! vsgvr::ActionSet::suggestInteractionBindings(_xrInstance, p.first, p.second))
     {
       throw vsg::Exception({ "Failed to configure interaction bindings for controllers" });
     }
@@ -149,18 +149,18 @@ void Game::frame()
 
   // OpenXR events must be checked first
   auto pol = _vr->pollEvents();
-  if (pol == vsgvr::OpenXRViewer::PollEventsResult::Exit)
+  if (pol == vsgvr::Viewer::PollEventsResult::Exit)
   {
     // User exited through VR overlay / XR runtime
     shouldExit = true;
     return;
   }
 
-  if (pol == vsgvr::OpenXRViewer::PollEventsResult::NotRunning)
+  if (pol == vsgvr::Viewer::PollEventsResult::NotRunning)
   {
     return;
   }
-  else if (pol == vsgvr::OpenXRViewer::PollEventsResult::RuntimeIdle)
+  else if (pol == vsgvr::Viewer::PollEventsResult::RuntimeIdle)
   {
     // Reduce power usage, wait for XR to wake
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -220,7 +220,7 @@ void Game::frame()
 
   if (_vr->advanceToNextFrame())
   {
-    if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)
+    if (pol == vsgvr::Viewer::PollEventsResult::RunningDontRender)
     {
       // XR Runtime requested that rendering is not performed (not visible to user)
       // While this happens frames must still be acquired and released however, in

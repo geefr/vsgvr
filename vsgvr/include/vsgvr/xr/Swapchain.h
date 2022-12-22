@@ -23,8 +23,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/core/Inherit.h>
 #include <vsg/state/ImageView.h>
-#include <vsgvr/xr/OpenXRCommon.h>
-#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/xr/Common.h>
+#include <vsgvr/xr/GraphicsBindingVulkan.h>
 
 namespace vsgvr
 {
@@ -38,13 +38,13 @@ namespace vsgvr
     virtual ~SwapchainImage();
   };
 
-  class VSGVR_DECLSPEC OpenXRSwapchain : public vsg::Inherit<vsg::Object, OpenXRSwapchain>
+  class VSGVR_DECLSPEC Swapchain : public vsg::Inherit<vsg::Object, Swapchain>
   {
   public:
-    OpenXRSwapchain() = delete;
-    OpenXRSwapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding);
+    Swapchain() = delete;
+    Swapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
-    ~OpenXRSwapchain();
+    ~Swapchain();
 
     VkImage acquireImage(uint32_t &index);
     bool waitImage(XrDuration timeout);
@@ -58,7 +58,7 @@ namespace vsgvr
 
   private:
     void validateFormat(XrSession session);
-    void createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding);
+    void createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
     void destroySwapchain();
 
@@ -72,3 +72,4 @@ namespace vsgvr
 }
 
 EVSG_type_name(vsgvr::SwapchainImage);
+EVSG_type_name(vsgvr::Swapchain);

@@ -19,16 +19,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/app/OpenXRViewer.h>
-#include <vsgvr/xr/OpenXRViewMatrix.h>
-#include <vsgvr/xr/OpenXRProjectionMatrix.h>
+#include <vsgvr/app/Viewer.h>
+#include <vsgvr/xr/ViewMatrix.h>
+#include <vsgvr/xr/ProjectionMatrix.h>
 
-#include <vsgvr/actions/OpenXRActionPoseBinding.h>
+#include <vsgvr/actions/ActionPoseBinding.h>
 
 #include <vsg/core/Exception.h>
 
 #include <openxr/openxr_reflection.h>
-#include "../xr/OpenXRMacros.cpp"
+#include "../xr/Macros.cpp"
 
 #include <iostream>
 
@@ -41,7 +41,7 @@ using namespace vsg;
 
 namespace vsgvr
 {
-  OpenXRViewer::OpenXRViewer(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<OpenXRTraits> xrTraits, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding)
+  Viewer::Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<Traits> xrTraits, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
     , _xrTraits(xrTraits)
     , _graphicsBinding(graphicsBinding)
@@ -50,17 +50,17 @@ namespace vsgvr
     createSession();
   }
 
-  OpenXRViewer::~OpenXRViewer()
+  Viewer::~Viewer()
   {
     shutdownAll();
   }
 
-  void OpenXRViewer::shutdownAll()
+  void Viewer::shutdownAll()
   {
     if (_session) destroySession();
   }
 
-  auto OpenXRViewer::pollEvents() -> PollEventsResult
+  auto Viewer::pollEvents() -> PollEventsResult
   {
     if (!_instance) return PollEventsResult::NotRunning;
 
@@ -112,7 +112,7 @@ namespace vsgvr
     return PollEventsResult::RunningDontRender;
   }
 
-  bool OpenXRViewer::advanceToNextFrame()
+  bool Viewer::advanceToNextFrame()
   {
     // Viewer::acquireNextFrame
     _frameState = XrFrameState();
@@ -153,20 +153,7 @@ namespace vsgvr
     return static_cast<bool>(_frameState.shouldRender);
   }
 
-/*
-  void OpenXRViewer::update()
-  {
-    for (auto& task : recordAndSubmitTasks)
-    {
-      if (task->databasePager)
-      {
-        task->databasePager->updateSceneGraph(_frameStamp);
-      }
-    }
-  }
-*/
-
-  void OpenXRViewer::recordAndSubmit()
+  void Viewer::recordAndSubmit()
   {
     // Locate the views (at predicted frame time), to extract view/proj matrices, and fov
     std::vector<XrView> locatedViews(_viewConfigurationViews.size(), XrView());
@@ -243,8 +230,8 @@ namespace vsgvr
                 renderGraph->framebuffer = _session->frames(i)[swapChainImageIndex].framebuffer;
                 if (auto vsgView = renderGraph->children[0].cast<View>())
                 {
-                  vsgView->camera->viewMatrix = OpenXRViewMatrix::create(locatedViews[i].pose);
-                  vsgView->camera->projectionMatrix = OpenXRProjectionMatrix::create(locatedViews[i].fov, 0.05, 100.0);
+                  vsgView->camera->viewMatrix = ViewMatrix::create(locatedViews[i].pose);
+                  vsgView->camera->projectionMatrix = ProjectionMatrix::create(locatedViews[i].fov, 0.05, 100.0);
                 }
               }
             }
@@ -268,7 +255,7 @@ namespace vsgvr
     _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&_layerProjection));
   }
 
-  void OpenXRViewer::releaseFrame()
+  void Viewer::releaseFrame()
   {
     auto info = XrFrameEndInfo();
     info.type = XR_TYPE_FRAME_END_INFO;
@@ -284,7 +271,7 @@ namespace vsgvr
   }
 
   vsg::ref_ptr<vsg::Camera>
-    OpenXRViewer::createCamera(const VkExtent2D& extent) {
+    Viewer::createCamera(const VkExtent2D& extent) {
     // Create an initial camera - OpenXR will provide us with matrices later,
     // so the parameters here don't matter
     auto lookAt = vsg::LookAt::create(vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0), vsg::dvec3(0.0, 1.0, 0.0));
@@ -295,7 +282,7 @@ namespace vsgvr
     return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
   }
 
-  vsg::CommandGraphs OpenXRViewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
+  vsg::CommandGraphs Viewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
     // * vsg::CommandGraph::createCommandGraphForView
     // * vsg::RenderGraph::createRenderGraphForView
 
@@ -346,7 +333,7 @@ namespace vsgvr
     return commandGraphs;
   }
 
-  void OpenXRViewer::compile(ref_ptr<ResourceHints> hints)
+  void Viewer::compile(ref_ptr<ResourceHints> hints)
   {
     // TODO: This should be unified with the vsg Viewer::compile
     //       there's no real need for it to be copied here
@@ -495,7 +482,7 @@ namespace vsgvr
   }
 
 
-  void OpenXRViewer::assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
+  void Viewer::assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
   {
     struct DeviceQueueFamily
     {
@@ -558,7 +545,7 @@ namespace vsgvr
   }
 
  
-  void OpenXRViewer::getViewConfiguration() {
+  void Viewer::getViewConfiguration() {
     _viewConfigurationProperties = XrViewConfigurationProperties();
     _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
     _viewConfigurationProperties.next = nullptr;
@@ -574,7 +561,7 @@ namespace vsgvr
     xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
   }
 
-  void OpenXRViewer::syncActions()
+  void Viewer::syncActions()
   {
     if( activeActionSets.empty() ) return;
 
@@ -593,7 +580,7 @@ namespace vsgvr
     {
       for (auto& action : actionSet->actions)
       {
-        if (auto a = action.cast<OpenXRActionPoseBinding>())
+        if (auto a = action.cast<ActionPoseBinding>())
         {
           auto location = XrSpaceLocation();
           location.type = XR_TYPE_SPACE_LOCATION;
@@ -612,7 +599,7 @@ namespace vsgvr
     }
   }
 
-  void OpenXRViewer::createActionSpacesAndAttachActionSets()
+  void Viewer::createActionSpacesAndAttachActionSets()
   {
     if( !_attachedActionSets.empty() ) throw vsg::Exception({"Action spaces have already been attached"});
     // Attach action sets to the session
@@ -631,7 +618,7 @@ namespace vsgvr
       {
         for( auto& action : actionSet->actions )
         {
-          if( auto a = action.cast<OpenXRActionPoseBinding>() )
+          if( auto a = action.cast<ActionPoseBinding>() )
           {
             a->createActionSpace(_session);
           }
@@ -640,13 +627,13 @@ namespace vsgvr
     }
   }
 
-  void OpenXRViewer::destroyActionSpaces()
+  void Viewer::destroyActionSpaces()
   {
     for( auto& actionSet : actionSets )
     {
       for( auto& action : actionSet->actions )
       {
-        if( auto a = action.cast<OpenXRActionPoseBinding>() )
+        if( auto a = action.cast<ActionPoseBinding>() )
         {
           if( a->getActionSpace() ) a->destroyActionSpace();
         }
@@ -654,16 +641,16 @@ namespace vsgvr
     }
   }
 
-  void OpenXRViewer::createSession() {
+  void Viewer::createSession() {
     if (_session) {
-      throw Exception({ "openXRViewer: Session already initialised" });
+      throw Exception({ "Viewer: Session already initialised" });
     }
-    _session = OpenXRSession::create(_instance, _graphicsBinding, _xrTraits->swapchainFormat, _viewConfigurationViews);
+    _session = Session::create(_instance, _graphicsBinding, _xrTraits->swapchainFormat, _viewConfigurationViews);
   }
 
-  void OpenXRViewer::destroySession() {
+  void Viewer::destroySession() {
     if (!_session) {
-      throw Exception({ "openXRViewer: Session not initialised" });
+      throw Exception({ "Viewer: Session not initialised" });
     }
     destroyActionSpaces();
     _session = 0;

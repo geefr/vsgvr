@@ -1,11 +1,11 @@
 #include <vsg/all.h>
 
-#include <vsgvr/xr/OpenXRInstance.h>
-#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
-#include <vsgvr/xr/OpenXRViewMatrix.h>
-#include <vsgvr/app/OpenXRViewer.h>
-#include <vsgvr/actions/OpenXRActionSet.h>
-#include <vsgvr/actions/OpenXRActionPoseBinding.h>
+#include <vsgvr/xr/Instance.h>
+#include <vsgvr/xr/GraphicsBindingVulkan.h>
+#include <vsgvr/xr/ViewMatrix.h>
+#include <vsgvr/app/Viewer.h>
+#include <vsgvr/actions/ActionSet.h>
+#include <vsgvr/actions/ActionPoseBinding.h>
 
 #include <iostream>
 #include <algorithm>
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
     //       This should be improved in the future, at least to query what form factors are available.
     // TODO: Some parameters on xrTraits are non-functional at the moment
-    auto xrTraits = vsgvr::OpenXRTraits::create();
+    auto xrTraits = vsgvr::Traits::create();
     xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
 
     // Retrieve vulkan requirements
     // OpenXR will require certain vulkan versions, along with a specific physical device, and instance/device extensions
-    auto xrInstance = vsgvr::OpenXRInstance::create(xrTraits);
-    auto xrVulkanReqs = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanRequirements(xrInstance);
+    auto xrInstance = vsgvr::Instance::create(xrTraits);
+    auto xrVulkanReqs = vsgvr::GraphicsBindingVulkan::getVulkanRequirements(xrInstance);
 
     if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
     {
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     // Ensure the correct physical device is selected
     // Technically the desktop window and HMD could use different devices, but for simplicity OpenXR is configured to use the same device as the desktop
     auto vkInstance = desktopWindow->getOrCreateInstance();
-    VkPhysicalDevice xrRequiredDevice = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanDeviceRequirements(xrInstance, vkInstance, xrVulkanReqs);
+    VkPhysicalDevice xrRequiredDevice = vsgvr::GraphicsBindingVulkan::getVulkanDeviceRequirements(xrInstance, vkInstance, xrVulkanReqs);
     vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice;
     for (auto& dev : vkInstance->getPhysicalDevices())
     {
@@ -147,10 +147,10 @@ int main(int argc, char **argv) {
     // Bind OpenXR to the Device
     desktopWindow->getOrCreateSurface();
     auto vkDevice = desktopWindow->getOrCreateDevice();
-    auto graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
+    auto graphicsBinding = vsgvr::GraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
 
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
-    auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);
+    auto vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
 
     // Create CommandGraphs to render the scene to the HMD
     std::vector<vsg::ref_ptr<vsg::Camera>> xrCameras;
@@ -181,15 +181,15 @@ int main(int argc, char **argv) {
     
     // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
     // along with binding the OpenXR input subsystem through to usable actions.
-    auto baseActionSet = vsgvr::OpenXRActionSet::create(xrInstance, "gameplay", "Gameplay");
+    auto baseActionSet = vsgvr::ActionSet::create(xrInstance, "gameplay", "Gameplay");
 
     // Pose bindings - One for each hand
-    auto leftHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(xrInstance, baseActionSet, "left_hand", "Left Hand");
-    auto rightHandPoseBinding = vsgvr::OpenXRActionPoseBinding::create(xrInstance, baseActionSet, "right_hand", "Right Hand");
+    auto leftHandPoseBinding = vsgvr::ActionPoseBinding::create(xrInstance, baseActionSet, "left_hand", "Left Hand");
+    auto rightHandPoseBinding = vsgvr::ActionPoseBinding::create(xrInstance, baseActionSet, "right_hand", "Right Hand");
 
     // An action - In this case applied to both left and right hands
     // Two separate actions could also be used (Note: Though may not work on the Oculus Quest runtime)
-    auto example_trigger_action = vsgvr::OpenXRAction::create(xrInstance, baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT,
+    auto example_trigger_action = vsgvr::Action::create(xrInstance, baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT,
       "hand_select", "Hand Select", std::vector<std::string>{ "/user/hand/left", "/user/hand/right" });
 
     baseActionSet->actions = {
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
     // Ask OpenXR to suggest interaction bindings.
     // * If subpaths are used, list all paths that each action should be bound for
     // * Note that this may only be called once for each interaction profile (but may be across multiple overlapping action sets)
-    if (vsgvr::OpenXRActionSet::suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
+    if (vsgvr::ActionSet::suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
           {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
           {rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
           {example_trigger_action, "/user/hand/left/input/select/click"},
@@ -233,17 +233,17 @@ int main(int argc, char **argv) {
     {
       // OpenXR events must be checked first
       auto pol = vr->pollEvents();
-      if( pol == vsgvr::OpenXRViewer::PollEventsResult::Exit )
+      if( pol == vsgvr::Viewer::PollEventsResult::Exit )
       {
         // User exited through VR overlay / XR runtime
         break;
       }
 
-      if( pol == vsgvr::OpenXRViewer::PollEventsResult::NotRunning)
+      if( pol == vsgvr::Viewer::PollEventsResult::NotRunning)
       {
         continue;
       }
-      else if (pol == vsgvr::OpenXRViewer::PollEventsResult::RuntimeIdle)
+      else if (pol == vsgvr::Viewer::PollEventsResult::RuntimeIdle)
       {
         // Reduce power usage, wait for XR to wake
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -314,7 +314,7 @@ int main(int argc, char **argv) {
 
       if (vr->advanceToNextFrame())
       {
-        if (pol == vsgvr::OpenXRViewer::PollEventsResult::RunningDontRender)
+        if (pol == vsgvr::Viewer::PollEventsResult::RunningDontRender)
         {
           // XR Runtime requested that rendering is not performed (not visible to user)
           // While this happens frames must still be acquired and released however, in

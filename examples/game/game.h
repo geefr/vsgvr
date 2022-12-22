@@ -1,10 +1,10 @@
 #pragma once
 
 #include <vsg/all.h>
-#include <vsgvr/app/OpenXRViewer.h>
-#include <vsgvr/actions/OpenXRAction.h>
-#include <vsgvr/actions/OpenXRActionSet.h>
-#include <vsgvr/actions/OpenXRActionPoseBinding.h>
+#include <vsgvr/app/Viewer.h>
+#include <vsgvr/actions/Action.h>
+#include <vsgvr/actions/ActionSet.h>
+#include <vsgvr/actions/ActionPoseBinding.h>
 
 #include "interaction.h"
 
@@ -12,7 +12,7 @@
 
 class Game {
 public:
-  Game(vsg::ref_ptr<vsgvr::OpenXRInstance> xrInstance, vsg::ref_ptr<vsgvr::OpenXRViewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer);
+  Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer);
   ~Game();
 
   bool shouldExit = false;
@@ -32,8 +32,8 @@ private:
   void initVR();
   void initActions();
 
-  vsg::ref_ptr<vsgvr::OpenXRInstance> _xrInstance;
-  vsg::ref_ptr<vsgvr::OpenXRViewer> _vr;
+  vsg::ref_ptr<vsgvr::Instance> _xrInstance;
+  vsg::ref_ptr<vsgvr::Viewer> _vr;
   vsg::ref_ptr<vsg::Viewer> _desktopViewer;
 
   // The user / OpenXR root space - Contains elements such as controllers
@@ -56,9 +56,9 @@ private:
   vsg::ref_ptr<vsg::Camera> _desktopCamera;
 
   // Actions and behaviours
-  vsg::ref_ptr<vsgvr::OpenXRActionSet> _baseActionSet;
-  vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> _leftHandPose;
-  vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> _rightHandPose;
+  vsg::ref_ptr<vsgvr::ActionSet> _baseActionSet;
+  vsg::ref_ptr<vsgvr::ActionPoseBinding> _leftHandPose;
+  vsg::ref_ptr<vsgvr::ActionPoseBinding> _rightHandPose;
 
   std::map<std::string, std::unique_ptr<Interaction>> _interactions;
 };

@@ -19,11 +19,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
+#include <vsgvr/xr/GraphicsBindingVulkan.h>
 
 #include <vsg/core/Exception.h>
 
-#include "OpenXRMacros.cpp"
+#include "Macros.cpp"
 
 #include <string>
 #include <sstream>
@@ -33,7 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using namespace vsg;
 
 namespace vsgvr {
-  OpenXRGraphicsBindingVulkan::OpenXRGraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex)
+  GraphicsBindingVulkan::GraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex)
     : _vkInstance(vkInstance)
     , _vkPhysicalDevice(vkPhysicalDevice)
     , _vkDevice(vkDevice)
@@ -48,9 +48,9 @@ namespace vsgvr {
     _binding.queueIndex = queueIndex;
   }
 
-  OpenXRGraphicsBindingVulkan::~OpenXRGraphicsBindingVulkan() {}
+  GraphicsBindingVulkan::~GraphicsBindingVulkan() {}
 
-  VulkanRequirements OpenXRGraphicsBindingVulkan::getVulkanRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance)
+  VulkanRequirements GraphicsBindingVulkan::getVulkanRequirements(vsg::ref_ptr<Instance> xrInstance)
   {
     VulkanRequirements reqs;
     {
@@ -111,7 +111,7 @@ namespace vsgvr {
     return reqs;
   }
 
-  VkPhysicalDevice OpenXRGraphicsBindingVulkan::getVulkanDeviceRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs)
+  VkPhysicalDevice GraphicsBindingVulkan::getVulkanDeviceRequirements(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs)
   {
     if (vkInstance->apiVersion < versionReqs.minVersion) {
       throw Exception({ "OpenXR runtime doesn't support requested Vulkan version" });

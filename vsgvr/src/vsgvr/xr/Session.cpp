@@ -19,19 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/xr/OpenXRSession.h>
+#include <vsgvr/xr/Session.h>
 
 #include <vsg/core/Exception.h>
 #include <vsg/commands/PipelineBarrier.h>
 #include <vsg/vk/SubmitCommands.h>
 
-#include "OpenXRMacros.cpp"
+#include "Macros.cpp"
 
 using namespace vsg;
 
 namespace vsgvr {
 
-  OpenXRSession::OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding,
+  Session::Session(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding,
                                VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
     : _graphicsBinding(graphicsBinding)
   {
@@ -39,13 +39,13 @@ namespace vsgvr {
     createSwapchains(swapchainFormat, viewConfigs);
   }
 
-  OpenXRSession::~OpenXRSession()
+  Session::~Session()
   {
     destroySwapchains();
     destroySession();
   }
 
-  void OpenXRSession::createSession(vsg::ref_ptr<OpenXRInstance> instance)
+  void Session::createSession(vsg::ref_ptr<Instance> instance)
   {
     auto info = XrSessionCreateInfo();
     info.type = XR_TYPE_SESSION_CREATE_INFO;
@@ -69,7 +69,7 @@ namespace vsgvr {
     xr_check(xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space), "Failed to create Session reference space");
   }
 
-  void OpenXRSession::createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
+  void Session::createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
   {
     if( !_viewData.empty() ) throw Exception({ "Swapchain already initialised" });
     if (!_session) throw Exception({ "Unable to create swapchain without session" });
@@ -77,7 +77,7 @@ namespace vsgvr {
     for( auto& viewConfig : viewConfigs )
     {
       PerViewData v;
-      v.swapchain = OpenXRSwapchain::create(_session, swapchainFormat, viewConfig, _graphicsBinding);
+      v.swapchain = Swapchain::create(_session, swapchainFormat, viewConfig, _graphicsBinding);
 
       auto extent = v.swapchain->getExtent();
       VkSampleCountFlagBits framebufferSamples;
@@ -260,12 +260,12 @@ namespace vsgvr {
     }
   }
 
-  void OpenXRSession::destroySwapchains()
+  void Session::destroySwapchains()
   {
     _viewData.clear();
   }
 
-  void OpenXRSession::destroySession()
+  void Session::destroySession()
   {
     xr_check(xrDestroySpace(_space));
     _space = 0;
@@ -273,7 +273,7 @@ namespace vsgvr {
     _session = 0;
   }
 
-  void OpenXRSession::beginSession(XrViewConfigurationType viewConfigurationType)
+  void Session::beginSession(XrViewConfigurationType viewConfigurationType)
   {
     if (_sessionRunning) return;
     auto info = XrSessionBeginInfo();
@@ -284,14 +284,14 @@ namespace vsgvr {
     _sessionRunning = true;
   }
 
-  void OpenXRSession::endSession()
+  void Session::endSession()
   {
     if (!_sessionRunning) return;
     xr_check(xrEndSession(_session), "Failed to end session");
     _sessionRunning = false;
   }
 
-  void OpenXRSession::onEventStateChanged(const XrEventDataSessionStateChanged& event)
+  void Session::onEventStateChanged(const XrEventDataSessionStateChanged& event)
   {
     _sessionState = event.state;
   }

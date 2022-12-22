@@ -19,11 +19,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/actions/OpenXRActionPoseBinding.h>
-#include <vsgvr/xr/OpenXRSession.h>
+#include <vsgvr/actions/ActionPoseBinding.h>
+#include <vsgvr/xr/Session.h>
 
 #include <vsg/core/Exception.h>
-#include "../xr/OpenXRMacros.cpp"
+#include "../xr/Macros.cpp"
 
 #include <vsg/maths/mat4.h>
 #include <vsg/maths/quat.h>
@@ -33,16 +33,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-    OpenXRActionPoseBinding::OpenXRActionPoseBinding(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet* actionSet, std::string name, std::string localisedName )
+    ActionPoseBinding::ActionPoseBinding(vsg::ref_ptr<Instance> instance, ActionSet* actionSet, std::string name, std::string localisedName )
       : Inherit(instance, actionSet, XR_ACTION_TYPE_POSE_INPUT, name, localisedName )
     {}
 
-    OpenXRActionPoseBinding::~OpenXRActionPoseBinding()
+    ActionPoseBinding::~ActionPoseBinding()
     {
         destroyActionSpace();
     }
 
-    void OpenXRActionPoseBinding::createActionSpace(OpenXRSession* session)
+    void ActionPoseBinding::createActionSpace(Session* session)
     {
         if( _space ) throw vsg::Exception({"Space already created: " + _name});
 
@@ -59,7 +59,7 @@ namespace vsgvr
         }
     }
 
-    void OpenXRActionPoseBinding::destroyActionSpace()
+    void ActionPoseBinding::destroyActionSpace()
     {
         if (_space) {
             xr_check(xrDestroySpace(_space));
@@ -67,14 +67,14 @@ namespace vsgvr
         }
     }
 
-    void OpenXRActionPoseBinding::setSpaceLocation(XrSpaceLocation location)
+    void ActionPoseBinding::setSpaceLocation(XrSpaceLocation location)
     {
       if ((location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) && 
           (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT))
       {
         _transformValid = true;
 
-        // In the same way as OpenXRViewMatrix, poses need some conversion for the VSG space
+        // In the same way as ViewMatrix, poses need some conversion for the VSG space
         // OpenXR space: x-right, y-up, z-back
         // VSG/Vulkan space: x-right, y-forward, z-up
         // * Invert y -> To flip the handedness (x-right, y-back, z-up)
@@ -82,7 +82,7 @@ namespace vsgvr
         // After this, models are built for vsg space, and default concepts in the api map across
         //
         // TODO: Need to double check this, but here the action spaces needed to be un-rotated,
-        //       to compensate for the rotation in OpenXRViewMatrix. Not entirely sure why..
+        //       to compensate for the rotation in ViewMatrix. Not entirely sure why..
         auto worldRotateMat = vsg::rotate(vsg::PI / 2.0, 1.0, 0.0, 0.0);
 
         auto q = vsg::dquat(

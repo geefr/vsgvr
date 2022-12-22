@@ -24,17 +24,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/core/Inherit.h>
 #include <vsg/core/ref_ptr.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
-#include <vsgvr/xr/OpenXRTraits.h>
-#include <vsgvr/actions/OpenXRActionSet.h>
+#include <vsgvr/xr/Common.h>
+#include <vsgvr/xr/Traits.h>
+#include <vsgvr/actions/ActionSet.h>
 
 namespace vsgvr {
-    class VSGVR_DECLSPEC OpenXRInstance : public vsg::Inherit<vsg::Object, OpenXRInstance>
+    class VSGVR_DECLSPEC Instance : public vsg::Inherit<vsg::Object, Instance>
     {
         public:
-            OpenXRInstance() = delete;
-            OpenXRInstance(vsg::ref_ptr<OpenXRTraits> xrTraits);
-            ~OpenXRInstance();
+            Instance() = delete;
+            Instance(vsg::ref_ptr<Traits> xrTraits);
+            ~Instance();
 
             XrInstance getInstance() const { return _instance; }
             XrInstanceProperties getInstanceProperties() const { return _instanceProperties; }
@@ -55,7 +55,7 @@ namespace vsgvr {
             // TODO: Support/validation of xr layers - Debug/validation, view type extensions
             void validateTraits();
 
-            vsg::ref_ptr<OpenXRTraits> _xrTraits;
+            vsg::ref_ptr<Traits> _xrTraits;
 
             XrInstance _instance = 0;
             XrInstanceProperties _instanceProperties;
@@ -65,4 +65,4 @@ namespace vsgvr {
     };
 }
 
-EVSG_type_name(vsgvr::OpenXRInstance);
+EVSG_type_name(vsgvr::Instance);

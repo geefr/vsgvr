@@ -23,18 +23,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/core/Inherit.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/Common.h>
 
 namespace vsgvr {
-    class OpenXRInstance;
-    class OpenXRActionSet;
-    class OpenXRSession;
+    class Instance;
+    class ActionSet;
+    class Session;
     
-    class VSGVR_DECLSPEC OpenXRAction : public vsg::Inherit<vsg::Object, OpenXRAction>
+    class VSGVR_DECLSPEC Action : public vsg::Inherit<vsg::Object, Action>
     {
         public:
-            OpenXRAction(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet* actionSet, XrActionType actionType, std::string name, std::string localisedName, std::vector<std::string> subPaths = {} );
-            virtual ~OpenXRAction();
+            Action(vsg::ref_ptr<Instance> instance, ActionSet* actionSet, XrActionType actionType, std::string name, std::string localisedName, std::vector<std::string> subPaths = {} );
+            virtual ~Action();
 
             XrAction getAction() const { return _action; }
             XrActionType getActionType() const { return _actionType; }
@@ -42,7 +42,7 @@ namespace vsgvr {
             std::string getLocalisedName() const { return _localisedName; }
             const std::vector<std::string>& getSubPaths() const { return _subPaths; }
              
-            void syncInputState(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRSession> session, std::string subPath = {});
+            void syncInputState(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<Session> session, std::string subPath = {});
 
             // TODO: Writing lots of wrappers on openxr api isn't great,
             // but this is worse. Rework to subclasses for each type,
@@ -54,7 +54,7 @@ namespace vsgvr {
             bool getStateValid( std::string subPath = {} ) const;
 
         private:
-            void createAction(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet* actionSet);
+            void createAction(vsg::ref_ptr<Instance> instance, ActionSet* actionSet);
             void destroyAction();
 
         protected:
@@ -75,4 +75,4 @@ namespace vsgvr {
     };
 }
 
-EVSG_type_name(vsgvr::OpenXRAction);
+EVSG_type_name(vsgvr::Action);

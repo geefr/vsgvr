@@ -27,17 +27,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/maths/vec4.h>
 #include <vsg/maths/quat.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/Common.h>
 
 namespace vsgvr {
-  class VSGVR_DECLSPEC OpenXRViewMatrix : public vsg::Inherit<vsg::ViewMatrix, OpenXRViewMatrix>
+  class VSGVR_DECLSPEC ViewMatrix : public vsg::Inherit<vsg::ViewMatrix, ViewMatrix>
   {
   public:
-    OpenXRViewMatrix(const vsg::dmat4& m) :
+    ViewMatrix(const vsg::dmat4& m) :
       matrix(m)
     {}
 
-    OpenXRViewMatrix(const XrPosef& pose)
+    ViewMatrix(const XrPosef& pose)
     {
       // OpenXR space: x-right, y-up, z-back
       // VSG/Vulkan space: x-right, y-forward, z-up
@@ -82,4 +82,4 @@ namespace vsgvr {
   };
 }
 
-EVSG_type_name(vsgvr::OpenXRViewMatrix);
+EVSG_type_name(vsgvr::ViewMatrix);

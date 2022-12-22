@@ -19,19 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/xr/OpenXRTraits.h>
+#include <vsgvr/xr/Traits.h>
 
 namespace vsgvr
 {
-  OpenXRTraits::OpenXRTraits() {}
+  Traits::Traits() {}
 
-  OpenXRTraits::~OpenXRTraits() {}
+  Traits::~Traits() {}
 
-  void OpenXRTraits::setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch)
+  void Traits::setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch)
   {
     applicationVersion = XR_MAKE_VERSION(maj, min, patch);
   }
-  void OpenXRTraits::setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch)
+  void Traits::setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch)
   {
     engineVersion = XR_MAKE_VERSION(maj, min, patch);
   }

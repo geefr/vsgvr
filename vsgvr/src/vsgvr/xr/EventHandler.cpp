@@ -19,24 +19,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/xr/OpenXREventHandler.h>
+#include <vsgvr/xr/EventHandler.h>
 
-#include <vsgvr/app/OpenXRViewer.h>
-#include <vsgvr/xr/OpenXRSession.h>
+#include <vsgvr/app/Viewer.h>
+#include <vsgvr/xr/Session.h>
 
 #include <vsg/core/Exception.h>
 
-#include "OpenXRMacros.cpp"
+#include "Macros.cpp"
 
 using namespace vsg;
 
 namespace vsgvr {
 
-  OpenXREventHandler::OpenXREventHandler() {}
+  EventHandler::EventHandler() {}
 
-  OpenXREventHandler::~OpenXREventHandler() {}
+  EventHandler::~EventHandler() {}
 
-  void OpenXREventHandler::pollEvents(OpenXRInstance* instance, OpenXRSession* session)
+  void EventHandler::pollEvents(Instance* instance, Session* session)
   {
     auto toProcess = 20;
     while (toProcess-- > 0)

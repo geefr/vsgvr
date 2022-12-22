@@ -19,19 +19,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/actions/OpenXRActionSet.h>
-#include <vsgvr/xr/OpenXRInstance.h>
+#include <vsgvr/actions/ActionSet.h>
+#include <vsgvr/xr/Instance.h>
 
 #include <vsg/core/Exception.h>
-#include "../xr/OpenXRMacros.cpp"
+#include "../xr/Macros.cpp"
 
 #include <iostream>
 
 namespace vsgvr
 {
-    std::set<std::string> OpenXRActionSet::suggestInteractionBindingsCalledFor;
+    std::set<std::string> ActionSet::suggestInteractionBindingsCalledFor;
 
-    OpenXRActionSet::OpenXRActionSet(OpenXRInstance *instance, std::string name, std::string localisedName, uint32_t priority)
+    ActionSet::ActionSet(Instance *instance, std::string name, std::string localisedName, uint32_t priority)
         : _name(name), _localisedName(localisedName), _priority(priority)
     {
         if (_localisedName.empty())
@@ -39,12 +39,12 @@ namespace vsgvr
         createActionSet(instance);
     }
 
-    OpenXRActionSet::~OpenXRActionSet()
+    ActionSet::~ActionSet()
     {
         destroyActionSet();
     }
 
-    void OpenXRActionSet::createActionSet(OpenXRInstance *instance)
+    void ActionSet::createActionSet(Instance *instance)
     {
         auto info = XrActionSetCreateInfo();
         info.type = XR_TYPE_ACTION_SET_CREATE_INFO;
@@ -55,12 +55,12 @@ namespace vsgvr
         xr_check(xrCreateActionSet(instance->getInstance(), &info, &_actionSet), "Failed to create action set: " + _name);
     }
 
-    void OpenXRActionSet::destroyActionSet()
+    void ActionSet::destroyActionSet()
     {
         xr_check(xrDestroyActionSet(_actionSet));
     }
 
-    bool OpenXRActionSet::suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings)
+    bool ActionSet::suggestInteractionBindings(Instance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings)
     {
       if (suggestInteractionBindingsCalledFor.find(interactionProfile) != suggestInteractionBindingsCalledFor.end())
       {
@@ -72,7 +72,7 @@ namespace vsgvr
       auto res = xrStringToPath(instance->getInstance(), interactionProfile.c_str(), &xrProfilePath);
       if (!XR_SUCCEEDED(res))
       {
-        std::cerr << "OpenXRActionSet::suggestInteractionBindings: xrStringToPath(" << interactionProfile << "): " << to_string(res) << std::endl;
+        std::cerr << "ActionSet::suggestInteractionBindings: xrStringToPath(" << interactionProfile << "): " << to_string(res) << std::endl;
         return false;
       }
 
@@ -97,7 +97,7 @@ namespace vsgvr
       }
       else
       {
-        std::cerr << "OpenXRActionPoseBinding::suggestInteractionBinding: Failed to suggest interaction bindings (" << interactionProfile << "): " << to_string(result) << std::endl;
+        std::cerr << "ActionPoseBinding::suggestInteractionBinding: Failed to suggest interaction bindings (" << interactionProfile << "): " << to_string(result) << std::endl;
         return false;
       }
     }

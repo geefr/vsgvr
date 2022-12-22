@@ -21,19 +21,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/xr/OpenXRCommon.h>
-#include <vsgvr/actions/OpenXRAction.h>
+#include <vsgvr/xr/Common.h>
+#include <vsgvr/actions/Action.h>
 #include <vsg/core/Inherit.h>
 
 #include <set>
 
 namespace vsgvr {
-    class OpenXRInstance;
-    class VSGVR_DECLSPEC OpenXRActionSet : public vsg::Inherit<vsg::Object, OpenXRActionSet>
+    class Instance;
+    class VSGVR_DECLSPEC ActionSet : public vsg::Inherit<vsg::Object, ActionSet>
     {
         public:
-            OpenXRActionSet(OpenXRInstance* instance, std::string name, std::string localisedName, uint32_t priority = 0);
-            ~OpenXRActionSet();
+            ActionSet(Instance* instance, std::string name, std::string localisedName, uint32_t priority = 0);
+            ~ActionSet();
 
             XrActionSet getActionSet() const { return _actionSet; }
             std::string getName() const { return _name; }
@@ -43,17 +43,17 @@ namespace vsgvr {
             // Storage for actions in the set.
             // Any actions within the set will be synchronised by the viewer
             // each frame.
-            std::vector<vsg::ref_ptr<OpenXRAction>> actions;
+            std::vector<vsg::ref_ptr<Action>> actions;
 
             struct SuggestedInteractionBinding
             {
-              OpenXRAction* action;
+              Action* action;
               std::string path;
             };
-            static bool suggestInteractionBindings(OpenXRInstance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings);
+            static bool suggestInteractionBindings(Instance* instance, std::string interactionProfile, std::list<SuggestedInteractionBinding> bindings);
 
         private:
-            void createActionSet(OpenXRInstance* instance);
+            void createActionSet(Instance* instance);
             void destroyActionSet();
 
             std::string _name;
@@ -66,4 +66,4 @@ namespace vsgvr {
     };
 }
 
-EVSG_type_name(vsgvr::OpenXRActionSet);
+EVSG_type_name(vsgvr::ActionSet);

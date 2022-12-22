@@ -23,19 +23,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/core/Inherit.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/Common.h>
 
 namespace vsgvr {
-    class OpenXRInstance;
-    class OpenXRSession;
-    class VSGVR_DECLSPEC OpenXREventHandler : public vsg::Inherit<vsg::Object, OpenXREventHandler>
+    class Instance;
+    class Session;
+    class VSGVR_DECLSPEC EventHandler : public vsg::Inherit<vsg::Object, EventHandler>
     {
         public:
-            OpenXREventHandler();
-            ~OpenXREventHandler();
+            EventHandler();
+            ~EventHandler();
 
-            void pollEvents(OpenXRInstance* instance, OpenXRSession* session);
+            void pollEvents(Instance* instance, Session* session);
     };
 }
 
-EVSG_type_name(vsgvr::OpenXREventHandler);
+EVSG_type_name(vsgvr::EventHandler);

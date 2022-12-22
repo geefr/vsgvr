@@ -27,19 +27,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/maths/vec4.h>
 #include <vsg/maths/quat.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/Common.h>
 #include <cmath>
 
 namespace vsgvr
 {
-    class VSGVR_DECLSPEC OpenXRProjectionMatrix : public vsg::Inherit<vsg::ProjectionMatrix, OpenXRProjectionMatrix>
+    class VSGVR_DECLSPEC ProjectionMatrix : public vsg::Inherit<vsg::ProjectionMatrix, ProjectionMatrix>
     {
     public:
-        OpenXRProjectionMatrix(vsg::dmat4 matrix)
+        ProjectionMatrix(vsg::dmat4 matrix)
         : mat(matrix)
         {}
 
-        OpenXRProjectionMatrix(const XrFovf& pose, double near, double far)
+        ProjectionMatrix(const XrFovf& pose, double near, double far)
         {
             // https://gitlab.freedesktop.org/monado/demos/xrgears/-/blob/master/src/main.cpp _create_projection_from_fov
             // See also https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/main/src/common/xr_linear.h
@@ -69,4 +69,4 @@ namespace vsgvr
     };
 }
 
-EVSG_type_name(vsgvr::OpenXRProjectionMatrix);
+EVSG_type_name(vsgvr::ProjectionMatrix);

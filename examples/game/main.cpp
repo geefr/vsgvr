@@ -1,11 +1,11 @@
 #include <vsg/all.h>
 
-#include <vsgvr/xr/OpenXRInstance.h>
-#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
-#include <vsgvr/xr/OpenXRViewMatrix.h>
-#include <vsgvr/app/OpenXRViewer.h>
-#include <vsgvr/actions/OpenXRActionSet.h>
-#include <vsgvr/actions/OpenXRActionPoseBinding.h>
+#include <vsgvr/xr/Instance.h>
+#include <vsgvr/xr/GraphicsBindingVulkan.h>
+#include <vsgvr/xr/ViewMatrix.h>
+#include <vsgvr/app/Viewer.h>
+#include <vsgvr/actions/ActionSet.h>
+#include <vsgvr/actions/ActionPoseBinding.h>
 
 #include <iostream>
 #include <algorithm>
@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
     //       This should be improved in the future, at least to query what form factors are available.
     // TODO: Some parameters on xrTraits are non-functional at the moment
-    auto xrTraits = vsgvr::OpenXRTraits::create();
+    auto xrTraits = vsgvr::Traits::create();
     xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
@@ -41,8 +41,8 @@ int main(int argc, char **argv) {
 
     // Retrieve vulkan requirements
     // OpenXR will require certain vulkan versions, along with a specific physical device, and instance/device extensions
-    auto xrInstance = vsgvr::OpenXRInstance::create(xrTraits);
-    auto xrVulkanReqs = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanRequirements(xrInstance);
+    auto xrInstance = vsgvr::Instance::create(xrTraits);
+    auto xrVulkanReqs = vsgvr::GraphicsBindingVulkan::getVulkanRequirements(xrInstance);
 
     if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
     {
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     // Ensure the correct physical device is selected
     // Technically the desktop window and HMD could use different devices, but for simplicity OpenXR is configured to use the same device as the desktop
     auto vkInstance = desktopWindow->getOrCreateInstance();
-    VkPhysicalDevice xrRequiredDevice = vsgvr::OpenXRGraphicsBindingVulkan::getVulkanDeviceRequirements(xrInstance, vkInstance, xrVulkanReqs);
+    VkPhysicalDevice xrRequiredDevice = vsgvr::GraphicsBindingVulkan::getVulkanDeviceRequirements(xrInstance, vkInstance, xrVulkanReqs);
     vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice;
     for (auto& dev : vkInstance->getPhysicalDevices())
     {
@@ -109,10 +109,10 @@ int main(int argc, char **argv) {
     // Bind OpenXR to the Device
     desktopWindow->getOrCreateSurface();
     auto vkDevice = desktopWindow->getOrCreateDevice();
-    auto graphicsBinding = vsgvr::OpenXRGraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
+    auto graphicsBinding = vsgvr::GraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
 
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
-    auto vr = vsgvr::OpenXRViewer::create(xrInstance, xrTraits, graphicsBinding);
+    auto vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
 
     Game game(xrInstance, vr, desktopViewer);
 

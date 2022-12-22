@@ -19,32 +19,32 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/xr/OpenXRInstance.h>
+#include <vsgvr/xr/Instance.h>
 
 #include <vsg/core/Exception.h>
-#include "OpenXRMacros.cpp"
+#include "Macros.cpp"
 
 #ifdef ANDROID
-# include <vsgvr/xr/OpenXRAndroidTraits.h>
+# include <vsgvr/xr/AndroidTraits.h>
 #endif
 
 using namespace vsg;
 
 namespace vsgvr
 {
-    OpenXRInstance::OpenXRInstance(vsg::ref_ptr<OpenXRTraits> xrTraits)
+    Instance::Instance(vsg::ref_ptr<Traits> xrTraits)
         : _xrTraits(xrTraits)
     {
         createInstance();
         createSystem();
     }
 
-    OpenXRInstance::~OpenXRInstance()
+    Instance::~Instance()
     {
         destroyInstance();
     }
 
-    void OpenXRInstance::onEventInstanceLossPending([[maybe_unused]] const XrEventDataInstanceLossPending &event)
+    void Instance::onEventInstanceLossPending([[maybe_unused]] const XrEventDataInstanceLossPending &event)
     {
         // https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#XrEventDataInstanceLossPending
         // TODO: This indicates the overall runtime is about to become unavailable. Given that encountering
@@ -53,11 +53,11 @@ namespace vsgvr
         throw Exception({"OpenXR: Instance loss pending"});
     }
 
-    void OpenXRInstance::createInstance()
+    void Instance::createInstance()
     {
         if (_instance)
         {
-            throw Exception({"OpenXRViewer: Instance already initialised"});
+            throw Exception({"Viewer: Instance already initialised"});
         }
         std::vector<const char *> extensions = {
             "XR_KHR_vulkan_enable"
@@ -70,7 +70,7 @@ namespace vsgvr
         auto fn = (PFN_xrInitializeLoaderKHR)xr_pfn_noexcept(XR_NULL_HANDLE, "xrInitializeLoaderKHR");
         if( fn )
         {
-            auto androidTraits = _xrTraits.cast<vsgvr::OpenXRAndroidTraits>();
+            auto androidTraits = _xrTraits.cast<vsgvr::AndroidTraits>();
             if( androidTraits && androidTraits->vm && androidTraits->activity )
             {
                 XrLoaderInitInfoAndroidKHR loaderInitInfo;
@@ -82,7 +82,7 @@ namespace vsgvr
             }
             else
             {
-                throw Exception({"On Android an OpenXRAndroidTraits structure must be provided, with valid JNI/Activity pointers."});
+                throw Exception({"On Android an AndroidTraits structure must be provided, with valid JNI/Activity pointers."});
             }
         }
 
@@ -112,7 +112,7 @@ namespace vsgvr
         info.applicationInfo.engineVersion = _xrTraits->engineVersion;
 
 #ifdef ANDROID
-        auto androidTraits = _xrTraits.cast<vsgvr::OpenXRAndroidTraits>();
+        auto androidTraits = _xrTraits.cast<vsgvr::AndroidTraits>();
         if( androidTraits && androidTraits->vm && androidTraits->activity )
         {
             XrInstanceCreateInfoAndroidKHR androidCreateInfo;
@@ -124,7 +124,7 @@ namespace vsgvr
         }
         else
         {
-            throw Exception({"On Android an OpenXRAndroidTraits structure must be provided, with valid JNI/Activity pointers."});
+            throw Exception({"On Android an AndroidTraits structure must be provided, with valid JNI/Activity pointers."});
         }
 #endif
 
@@ -136,11 +136,11 @@ namespace vsgvr
         xr_check(xrGetInstanceProperties(_instance, &_instanceProperties), "Failed to get XR Instance properties");
     }
 
-    void OpenXRInstance::destroyInstance()
+    void Instance::destroyInstance()
     {
         if (!_instance)
         {
-            throw Exception({"OpenXRViewer: Instance not initialised"});
+            throw Exception({"Viewer: Instance not initialised"});
         }
         _system = 0;
         _systemProperties = XrSystemProperties();
@@ -148,7 +148,7 @@ namespace vsgvr
         _instance = 0;
     }
 
-    void OpenXRInstance::createSystem()
+    void Instance::createSystem()
     {
         XrSystemGetInfo info;
         info.type = XR_TYPE_SYSTEM_GET_INFO;
@@ -165,7 +165,7 @@ namespace vsgvr
         xr_check(xrGetSystemProperties(_instance, _system, &_systemProperties), "Failed to get OpenXR system properties");
     }
 
-    void OpenXRInstance::validateTraits()
+    void Instance::validateTraits()
     {
         // View configuration type
         {

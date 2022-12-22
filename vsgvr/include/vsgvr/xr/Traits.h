@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/Common.h>
 
 #include <vsg/core/Inherit.h>
 
@@ -30,10 +30,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  class VSGVR_DECLSPEC OpenXRTraits : public vsg::Inherit<vsg::Object, OpenXRTraits>
+  class VSGVR_DECLSPEC Traits : public vsg::Inherit<vsg::Object, Traits>
   {
   public:
-    OpenXRTraits();
+    Traits();
     std::vector<std::string> xrExtensions = {
         // "XR_EXT_debug_utils"
     };
@@ -59,8 +59,8 @@ namespace vsgvr
     uint32_t swapchainSampleCount = 4;
 
   protected:
-    virtual ~OpenXRTraits();
+    virtual ~Traits();
   };
 }
 
-EVSG_type_name(vsgvr::OpenXRTraits);
+EVSG_type_name(vsgvr::Traits);

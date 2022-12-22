@@ -21,8 +21,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsgvr/xr/OpenXRCommon.h>
-#include <vsgvr/xr/OpenXRInstance.h>
+#include <vsgvr/xr/Common.h>
+#include <vsgvr/xr/Instance.h>
 
 #include <vsg/core/Inherit.h>
 #include <vsg/vk/Instance.h>
@@ -49,15 +49,15 @@ namespace vsgvr {
       VkPhysicalDevice* physicalDevice;
     };
 
-    class VSGVR_DECLSPEC OpenXRGraphicsBindingVulkan : public vsg::Inherit<vsg::Object, OpenXRGraphicsBindingVulkan>
+    class VSGVR_DECLSPEC GraphicsBindingVulkan : public vsg::Inherit<vsg::Object, GraphicsBindingVulkan>
     {
         public:
-            static VulkanRequirements getVulkanRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance);
-            static VkPhysicalDevice getVulkanDeviceRequirements(vsg::ref_ptr<OpenXRInstance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs);
+            static VulkanRequirements getVulkanRequirements(vsg::ref_ptr<Instance> xrInstance);
+            static VkPhysicalDevice getVulkanDeviceRequirements(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs);
 
-            OpenXRGraphicsBindingVulkan() = delete;
-            OpenXRGraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex);
-            ~OpenXRGraphicsBindingVulkan();
+            GraphicsBindingVulkan() = delete;
+            GraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex);
+            ~GraphicsBindingVulkan();
 
             const XrGraphicsBindingVulkanKHR& getBinding() const { return _binding; }
 
@@ -74,4 +74,4 @@ namespace vsgvr {
     };
 }
 
-EVSG_type_name(vsgvr::OpenXRGraphicsBindingVulkan);
+EVSG_type_name(vsgvr::GraphicsBindingVulkan);

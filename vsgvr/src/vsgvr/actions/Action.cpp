@@ -19,12 +19,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/actions/OpenXRAction.h>
-#include <vsgvr/actions/OpenXRActionSet.h>
-#include <vsgvr/xr/OpenXRSession.h>
+#include <vsgvr/actions/Action.h>
+#include <vsgvr/actions/ActionSet.h>
+#include <vsgvr/xr/Session.h>
 
 #include <vsg/core/Exception.h>
-#include "../xr/OpenXRMacros.cpp"
+#include "../xr/Macros.cpp"
 
 #include <vsg/io/Logger.h>
 
@@ -33,7 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr
 {
 
-    OpenXRAction::OpenXRAction(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet *actionSet, XrActionType actionType, std::string name, std::string localisedName, std::vector<std::string> subPaths)
+    Action::Action(vsg::ref_ptr<Instance> instance, ActionSet *actionSet, XrActionType actionType, std::string name, std::string localisedName, std::vector<std::string> subPaths)
         : _actionType(actionType)
         , _name(name)
         , _localisedName(localisedName)
@@ -44,12 +44,12 @@ namespace vsgvr
         createAction(instance, actionSet);
     }
 
-    OpenXRAction::~OpenXRAction()
+    Action::~Action()
     {
         destroyAction();
     }
 
-    void OpenXRAction::createAction(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet *actionSet)
+    void Action::createAction(vsg::ref_ptr<Instance> instance, ActionSet *actionSet)
     {
         auto info = XrActionCreateInfo();
         info.type = XR_TYPE_ACTION_CREATE_INFO;
@@ -78,7 +78,7 @@ namespace vsgvr
         }
     }
 
-    void OpenXRAction::syncInputState(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRSession> session, std::string subPath)
+    void Action::syncInputState(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<Session> session, std::string subPath)
     {
         XrActionStateGetInfo info;
         info.type = XR_TYPE_ACTION_STATE_GET_INFO;
@@ -147,28 +147,28 @@ namespace vsgvr
         }
     }
 
-    XrActionStateBoolean OpenXRAction::getStateBool( std::string subPath ) const {
+    XrActionStateBoolean Action::getStateBool( std::string subPath ) const {
         auto it = _state.find(subPath);
         if( it == _state.end() ) return {};
         return it->second._stateBool;
     }
-    XrActionStateFloat OpenXRAction::getStateFloat( std::string subPath ) const {
+    XrActionStateFloat Action::getStateFloat( std::string subPath ) const {
         auto it = _state.find(subPath);
         if( it == _state.end() ) return {};
         return it->second._stateFloat;
     }
-    XrActionStateVector2f OpenXRAction::getStateVec2f( std::string subPath ) const {
+    XrActionStateVector2f Action::getStateVec2f( std::string subPath ) const {
         auto it = _state.find(subPath);
         if( it == _state.end() ) return {};
         return it->second._stateVec2f;
     }
-    bool OpenXRAction::getStateValid( std::string subPath ) const {
+    bool Action::getStateValid( std::string subPath ) const {
         auto it = _state.find(subPath);
         if( it == _state.end() ) return {};
         return it->second._stateValid;
     }
 
-    void OpenXRAction::destroyAction()
+    void Action::destroyAction()
     {
         xr_check(xrDestroyAction(_action));
     }

@@ -22,20 +22,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <vsg/core/Inherit.h>
-#include <vsgvr/xr/OpenXRCommon.h>
+#include <vsgvr/xr/Common.h>
 
-#include <vsgvr/xr/OpenXRInstance.h>
-#include <vsgvr/xr/OpenXRGraphicsBindingVulkan.h>
-#include <vsgvr/xr/OpenXRSwapchain.h>
+#include <vsgvr/xr/Instance.h>
+#include <vsgvr/xr/GraphicsBindingVulkan.h>
+#include <vsgvr/xr/Swapchain.h>
 
 #include <vsg/vk/Framebuffer.h>
 
 namespace vsgvr {
-    class VSGVR_DECLSPEC OpenXRSession : public vsg::Inherit<vsg::Object, OpenXRSession>
+    class VSGVR_DECLSPEC Session : public vsg::Inherit<vsg::Object, Session>
     {
         public:
-            OpenXRSession() = delete;
-            OpenXRSession(vsg::ref_ptr<OpenXRInstance> instance, vsg::ref_ptr<OpenXRGraphicsBindingVulkan> graphicsBinding,
+            Session() = delete;
+            Session(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding,
                           VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
 
             XrSession getSession() const { return _session; }
@@ -47,7 +47,7 @@ namespace vsgvr {
             void beginSession(XrViewConfigurationType viewConfigurationType);
             void endSession();
 
-            vsg::ref_ptr<OpenXRSwapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
+            vsg::ref_ptr<Swapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
 
             XrSpace getSpace() const { return _space; }
 
@@ -61,14 +61,14 @@ namespace vsgvr {
             Frame& frame(size_t view, size_t i) { return _viewData[view].frames[i]; }
             Frames& frames(size_t view) { return _viewData[view].frames; }
         protected:
-            virtual ~OpenXRSession();
+            virtual ~Session();
         private:
-            void createSession(vsg::ref_ptr<OpenXRInstance> instance);
+            void createSession(vsg::ref_ptr<Instance> instance);
             void createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs);
             void destroySwapchains();
             void destroySession();
 
-            vsg::ref_ptr<OpenXRGraphicsBindingVulkan> _graphicsBinding;
+            vsg::ref_ptr<GraphicsBindingVulkan> _graphicsBinding;
             
             XrSession _session = 0;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
@@ -77,7 +77,7 @@ namespace vsgvr {
 
             struct PerViewData
             {
-              vsg::ref_ptr<OpenXRSwapchain> swapchain;
+              vsg::ref_ptr<Swapchain> swapchain;
               vsg::ref_ptr<vsg::Image> depthImage;
               vsg::ref_ptr<vsg::ImageView> depthImageView;
               // only used when multisampling is required
@@ -94,4 +94,4 @@ namespace vsgvr {
 }
 
 
-EVSG_type_name(vsgvr::OpenXRSession);
+EVSG_type_name(vsgvr::Session);

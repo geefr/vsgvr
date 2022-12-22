@@ -23,28 +23,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/core/Inherit.h>
 
-#include <vsgvr/xr/OpenXRCommon.h>
-#include <vsgvr/actions/OpenXRAction.h>
+#include <vsgvr/xr/Common.h>
+#include <vsgvr/actions/Action.h>
 
 namespace vsgvr {
-    class OpenXRSession;
+    class Session;
 
     /**
      * An action of type XR_INPUT_ACTION_TYPE_POSE, and an associated action space
      * The space will only be valid while a session is running
      */
-    class VSGVR_DECLSPEC OpenXRActionPoseBinding : public vsg::Inherit<OpenXRAction, OpenXRActionPoseBinding>
+    class VSGVR_DECLSPEC ActionPoseBinding : public vsg::Inherit<Action, ActionPoseBinding>
     {
         public:
-            OpenXRActionPoseBinding(vsg::ref_ptr<OpenXRInstance> instance, OpenXRActionSet* actionSet, std::string name, std::string localisedName);
-            virtual ~OpenXRActionPoseBinding();
+            ActionPoseBinding(vsg::ref_ptr<Instance> instance, ActionSet* actionSet, std::string name, std::string localisedName);
+            virtual ~ActionPoseBinding();
 
             XrSpace getActionSpace() const { return _space; }
 
             bool getTransformValid() const { return _transformValid; }
             vsg::dmat4 getTransform() const { return _transform; }
 
-            void createActionSpace(OpenXRSession* session);
+            void createActionSpace(Session* session);
             void destroyActionSpace();
 
             void setSpaceLocation(XrSpaceLocation location);
@@ -56,4 +56,4 @@ namespace vsgvr {
     };
 }
 
-EVSG_type_name(vsgvr::OpenXRActionPoseBinding);
+EVSG_type_name(vsgvr::ActionPoseBinding);

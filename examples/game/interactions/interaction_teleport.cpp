@@ -6,19 +6,19 @@
 
 #include <iostream>
 
-Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::OpenXRInstance> xrInstance,
-  vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> leftHandPose,
+Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::Instance> xrInstance,
+  vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose,
   vsg::ref_ptr<vsg::Switch> teleportTarget,
   vsg::ref_ptr<vsg::Group> ground)
   : _leftHandPose(leftHandPose)
   , _teleportTarget(teleportTarget)
   , _ground(ground)
 {
-  _actionSet = vsgvr::OpenXRActionSet::create(xrInstance, "teleport", "Teleport");
+  _actionSet = vsgvr::ActionSet::create(xrInstance, "teleport", "Teleport");
 
   // Pose bindings - One for each hand
-  _teleportAction = vsgvr::OpenXRAction::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "teleport", "Teleport");
-  _rotateAction = vsgvr::OpenXRAction::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_FLOAT_INPUT, "rotate", "Rotate");
+  _teleportAction = vsgvr::Action::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "teleport", "Teleport");
+  _rotateAction = vsgvr::Action::create(xrInstance, _actionSet, XrActionType::XR_ACTION_TYPE_FLOAT_INPUT, "rotate", "Rotate");
 
   _actionSet->actions = {
     _teleportAction,
