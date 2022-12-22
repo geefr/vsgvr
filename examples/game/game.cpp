@@ -141,6 +141,12 @@ void Game::initActions()
 
 void Game::frame()
 {
+  if (_spaceChangePending)
+  {
+    _spaceChangePending = false;
+    _scene-> matrix = vsg::inverse(getPlayerTransform());
+  }
+
   // OpenXR events must be checked first
   auto pol = _vr->pollEvents();
   if (pol == vsgvr::OpenXRViewer::PollEventsResult::Exit)
@@ -234,18 +240,16 @@ void Game::frame()
 
 void Game::setPlayerOriginInWorld(vsg::dvec3 position)
 {
-  // TODO: Not sure if this is better than re-locating the OpenXR session,
-  //       certainly moving the OpenXR session within the world would be
-  //       easier to think about?
   _playerOriginInWorld = position;
-  _scene->matrix = vsg::inverse(vsg::rotate(_playerRotationInWorld)) * vsg::translate(-_playerOriginInWorld);
+  _spaceChangePending = true;
 }
 
 void Game::setPlayerRotationInWorld(vsg::dquat rotation)
 {
-  // TODO: Not sure if this is better than re-locating the OpenXR session,
-  //       certainly moving the OpenXR session within the world would be
-  //       easier to think about?
   _playerRotationInWorld = rotation;
-  _scene->matrix = vsg::inverse(vsg::rotate(_playerRotationInWorld)) * vsg::translate(-_playerOriginInWorld);
+  _spaceChangePending = true;
+}
+
+vsg::dmat4 Game::getPlayerTransform() {
+  return vsg::translate(_playerOriginInWorld) * vsg::rotate(_playerRotationInWorld);
 }

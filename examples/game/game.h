@@ -24,6 +24,8 @@ public:
 
   void setPlayerRotationInWorld(vsg::dquat rotation);
   vsg::dquat getPlayerRotationInWorld() { return _playerRotationInWorld; }
+
+  vsg::dmat4 getPlayerTransform();
   
 private:
   void loadScene();
@@ -48,6 +50,7 @@ private:
 
   vsg::dvec3 _playerOriginInWorld = {0.0, 0.0, 0.0};
   vsg::dquat _playerRotationInWorld = vsg::dquat(0.0, {0.0, 0.0, 0.0});
+  bool _spaceChangePending = false;
 
   std::vector<vsg::ref_ptr<vsg::Camera>> _xrCameras;
   vsg::ref_ptr<vsg::Camera> _desktopCamera;

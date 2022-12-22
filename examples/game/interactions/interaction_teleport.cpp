@@ -4,6 +4,8 @@
 
 #include <vsg/all.h>
 
+#include <iostream>
+
 Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::OpenXRInstance> xrInstance,
   vsg::ref_ptr<vsgvr::OpenXRActionPoseBinding> leftHandPose,
   vsg::ref_ptr<vsg::Switch> teleportTarget,
@@ -66,8 +68,9 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
   {
     // Raycast from controller aim to world, colliding with anything named "ground"
     // https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#semantic-path-standard-pose-identifiers
-    vsg::dvec3 intersectStart = game.getPlayerOriginInWorld() + (_leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, 0.0});
-    vsg::dvec3 intersectEnd = _leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, -100.0};
+    // In XR the 'world' space is fixed to our physical room, with the game world sliding around beneath us
+    vsg::dvec3 intersectStart = game.getPlayerTransform() * (_leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, 0.0});
+    vsg::dvec3 intersectEnd = game.getPlayerTransform() * (_leftHandPose->getTransform() * vsg::dvec3{0.0, 0.0, -100.0});
 
     auto intersector = vsg::LineSegmentIntersector::create(intersectStart, intersectEnd);
     // TODO: Intersect whole scene, or sub-scene matched on tags? For now we can't be anywhere but the ground plane
@@ -86,7 +89,9 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game)
           // TODO: Double check this rotate - Due to the wonky axis mapping / Need some helpers for vsgworld_to_vsgvrworld?
           // TODO: Or, put markers within the vsg world space, with just pose bindings and such being special -> Forcing everyone to have an
           //       extra 'world' node at the top of their scene graph?
-          m->matrix = vsg::translate(_teleportPosition - game.getPlayerOriginInWorld()) * vsg::rotate(vsg::radians(90.0), {1.0, 0.0, 0.0});
+
+          // Doing the same transform as the 'world' eventually gets in game - TODO: Seriously this super-space stuff should be in vsgvr and hidden
+          m->matrix = vsg::inverse(game.getPlayerTransform()) * vsg::translate(_teleportPosition) * vsg::rotate(vsg::radians(90.0), {1.0, 0.0, 0.0});
         }
       }
     }
