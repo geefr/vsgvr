@@ -1,4 +1,4 @@
-name: CI Android
+name: Compile Check (Android)
 
 on:
   push:
@@ -12,12 +12,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        path: vsgvr
       - name: Checkout vsg
         uses: actions/checkout@v3
         with:
           repository: vsg-dev/VulkanSceneGraph
           ref: ${{matrix.vsg-tag}}
-          path: ../vsg
+          path: vsg
           submodules: true
       - name: Setup JDK
         uses: actions/setup-java@v1
@@ -26,5 +27,5 @@ jobs:
       - name: Build APK
         shell: bash
         run: |
-          cd examples/questnative
+          cd vsgvr/examples/questnative
           bash ./gradlew assembleDebug --stacktrace
