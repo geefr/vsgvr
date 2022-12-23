@@ -17,21 +17,17 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: true
-
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v1.13
       with:
         cmake-version: ${{ env.CMakeVersion }}
-
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.1.1
       with:
         version: ${{ matrix.vulkan-version }}
         cache: true
-
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
-
     - name: Checkout vsg
       uses: actions/checkout@v3
       with:
@@ -39,14 +35,13 @@ jobs:
         ref: ${{matrix.vsg-tag}}
         path: vsg
         submodules: true
-
     - name: Build and Install VSG
       shell: bash
       run: |
         cd vsg
-          cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -A x64 -DCMAKE_INSTALL_PREFIX=../../install
-          MSBuild.exe INSTALL.vcxproj -p:Configuration=Release
-
+        cmake --help
+        cmake . -DBUILD_SHARED_LIBS=${{matrix.build-shared}} -A x64 -DCMAKE_INSTALL_PREFIX=../../install
+        MSBuild.exe INSTALL.vcxproj -p:Configuration=Release
     - name: Build and Install VSGVR
       shell: bash
       run: |
