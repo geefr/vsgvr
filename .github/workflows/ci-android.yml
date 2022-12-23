@@ -12,7 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        path: vsgvr
+        with:
+          path: vsgvr
       - name: Checkout vsg
         uses: actions/checkout@v3
         with:
