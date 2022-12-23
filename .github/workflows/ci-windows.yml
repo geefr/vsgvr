@@ -31,7 +31,6 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
-      if: startsWith(matrix.os, 'windows')
 
     - name: Checkout vsg
       uses: actions/checkout@v3
