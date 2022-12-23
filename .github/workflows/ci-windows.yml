@@ -3,7 +3,7 @@ on:
   push:
   pull_request:
 env:
-  CMakeVersion: 3.14.x
+  CMakeVersion: 3.21.x
 jobs:
   build:
     runs-on: windows-latest
