@@ -1,0 +1,30 @@
+name: CI Android
+
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        vsg-tag: [master, VulkanSceneGraph-1.0]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Checkout vsg
+        uses: actions/checkout@v3
+        with:
+          repository: vsg-dev/VulkanSceneGraph
+          ref: ${{matrix.vsg-tag}}
+          path: ../vsg
+          submodules: true
+      - name: Setup JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Build APK
+        shell: bash
+        run: |
+          cd examples/questnative
+          bash ./gradlew assembleDebug --stacktrace
