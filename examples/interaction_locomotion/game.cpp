@@ -133,8 +133,8 @@ void Game::initActions()
   
   // TODO: Set up input action to switch between modes
   // TODO: Display active mode somewhere in the world, maybe as text panel when looking at controllers
-  // _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
-  _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
+  _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
+  // _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
 
   // add close handler to respond the close window button and pressing escape
   _desktopViewer->addEventHandler(vsg::CloseHandler::create(_desktopViewer));
