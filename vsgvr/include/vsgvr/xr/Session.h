@@ -49,6 +49,7 @@ namespace vsgvr {
 
             vsg::ref_ptr<Swapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
 
+            /// The session's reference space
             XrSpace getSpace() const { return _space; }
 
             struct Frame
@@ -70,10 +71,10 @@ namespace vsgvr {
 
             vsg::ref_ptr<GraphicsBindingVulkan> _graphicsBinding;
             
-            XrSession _session = 0;
+            XrSession _session = XR_NULL_HANDLE;
             XrSessionState _sessionState = XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;
-            XrSpace _space = 0;
+            XrSpace _space = XR_NULL_HANDLE;
 
             struct PerViewData
             {

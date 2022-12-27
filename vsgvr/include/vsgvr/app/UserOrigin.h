@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <vsg/nodes/Transform.h>
+#include <vsg/maths/transform.h>
 
 namespace vsgvr {
 
@@ -40,19 +41,19 @@ namespace vsgvr {
   {
   public:
     UserOrigin();
+    explicit UserOrigin(vsg::dmat4 in_matrix);
     explicit UserOrigin(vsg::dvec3 in_position, vsg::dquat in_orientation, vsg::dvec3 in_scale = {1.0, 1.0, 1.0});
 
-    vsg::dmat4 userToScene() const;
-    vsg::dmat4 sceneToUser() const;
+    vsg::dmat4 userToScene() const { return matrix; }
+    vsg::dmat4 sceneToUser() const { return vsg::inverse(matrix); }
 
     vsg::dmat4 transform(const vsg::dmat4& mv) const override { return mv * sceneToUser(); }
 
-    /// Origin position within the vsg scene space
-    vsg::dvec3 position;
-    /// Origin orientation within the vsg scene space
-    vsg::dquat orientation;
-    /// Origin scale within the vsg scene space
-    vsg::dvec3 scale = {1.0, 1.0, 1.0};
+    /// Position / orientation of user's origin {0,0,0} within the vsg scene space
+    /// Note: The user themself is not usually at the origin - They may move relative to it, within the real world
+    void setOriginInScene( vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale);
+
+    vsg::dmat4 matrix;
   };
 }
 

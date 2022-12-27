@@ -4,6 +4,7 @@
 #include <vsgvr/actions/Action.h>
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/ActionPoseBinding.h>
+#include <vsgvr/actions/SpaceBinding.h>
 
 #include <list>
 #include <map>

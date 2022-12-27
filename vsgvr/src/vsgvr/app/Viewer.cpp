@@ -24,6 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/ProjectionMatrix.h>
 
 #include <vsgvr/actions/ActionPoseBinding.h>
+#include <vsgvr/actions/SpaceBinding.h>
 
 #include <vsg/core/Exception.h>
 
@@ -70,6 +71,7 @@ namespace vsgvr
 
     if( _firstUpdate )
     {
+      createSpaceBindings();
       createActionSpacesAndAttachActionSets();
       _firstUpdate = false;
     }
@@ -89,6 +91,7 @@ namespace vsgvr
       return PollEventsResult::RunningDontRender;
     case XR_SESSION_STATE_VISIBLE:
     case XR_SESSION_STATE_FOCUSED:
+      syncSpaceBindings();
       syncActions();
       return PollEventsResult::RunningDoRender;
     case XR_SESSION_STATE_STOPPING:
@@ -561,6 +564,20 @@ namespace vsgvr
     xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
   }
 
+  void Viewer::syncSpaceBindings()
+  {
+    if( spaceBindings.empty() ) return;
+
+    for (auto& space : spaceBindings)
+    {
+      auto location = XrSpaceLocation();
+      location.type = XR_TYPE_SPACE_LOCATION;
+      location.next = nullptr;
+      xr_check(xrLocateSpace(space->getSpace(), _session->getSpace(), _frameState.predictedDisplayTime, &location));
+      space->setSpaceLocation(location);
+    }
+  }
+
   void Viewer::syncActions()
   {
     if( activeActionSets.empty() ) return;
@@ -599,6 +616,14 @@ namespace vsgvr
     }
   }
 
+  void Viewer::createSpaceBindings()
+  {
+    for (auto& space : spaceBindings)
+    {
+      space->createSpace(_session);
+    }
+  }
+
   void Viewer::createActionSpacesAndAttachActionSets()
   {
     if( !_attachedActionSets.empty() ) throw vsg::Exception({"Action spaces have already been attached"});
@@ -624,6 +649,14 @@ namespace vsgvr
           }
         }
       }
+    }
+  }
+
+  void Viewer::destroySpaceBindings()
+  {
+    for (auto& space : spaceBindings)
+    {
+      space->destroySpace();
     }
   }
 

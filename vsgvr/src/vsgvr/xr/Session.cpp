@@ -32,7 +32,7 @@ using namespace vsg;
 namespace vsgvr {
 
   Session::Session(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding,
-                               VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
+    VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
     : _graphicsBinding(graphicsBinding)
   {
     createSession(instance);
@@ -71,10 +71,10 @@ namespace vsgvr {
 
   void Session::createSwapchains(VkFormat swapchainFormat, std::vector<XrViewConfigurationView> viewConfigs)
   {
-    if( !_viewData.empty() ) throw Exception({ "Swapchain already initialised" });
+    if (!_viewData.empty()) throw Exception({ "Swapchain already initialised" });
     if (!_session) throw Exception({ "Unable to create swapchain without session" });
 
-    for( auto& viewConfig : viewConfigs )
+    for (auto& viewConfig : viewConfigs)
     {
       PerViewData v;
       v.swapchain = Swapchain::create(_session, swapchainFormat, viewConfig, _graphicsBinding);
@@ -83,30 +83,30 @@ namespace vsgvr {
       VkSampleCountFlagBits framebufferSamples;
       switch (viewConfig.recommendedSwapchainSampleCount)
       {
-         case 1:
-           framebufferSamples = VK_SAMPLE_COUNT_1_BIT;
-           break;
-         case 2:
-           framebufferSamples = VK_SAMPLE_COUNT_2_BIT;
-           break;
-         case 4:
-           framebufferSamples = VK_SAMPLE_COUNT_4_BIT;
-           break;
-         case 8:
-           framebufferSamples = VK_SAMPLE_COUNT_8_BIT;
-           break;
-         case 16:
-           framebufferSamples = VK_SAMPLE_COUNT_16_BIT;
-           break;
-         case 32:
-           framebufferSamples = VK_SAMPLE_COUNT_32_BIT;
-           break;
-         case 64:
-           framebufferSamples = VK_SAMPLE_COUNT_64_BIT;
-           break;
-         default:
-           framebufferSamples = VK_SAMPLE_COUNT_1_BIT;
-           break;
+      case 1:
+        framebufferSamples = VK_SAMPLE_COUNT_1_BIT;
+        break;
+      case 2:
+        framebufferSamples = VK_SAMPLE_COUNT_2_BIT;
+        break;
+      case 4:
+        framebufferSamples = VK_SAMPLE_COUNT_4_BIT;
+        break;
+      case 8:
+        framebufferSamples = VK_SAMPLE_COUNT_8_BIT;
+        break;
+      case 16:
+        framebufferSamples = VK_SAMPLE_COUNT_16_BIT;
+        break;
+      case 32:
+        framebufferSamples = VK_SAMPLE_COUNT_32_BIT;
+        break;
+      case 64:
+        framebufferSamples = VK_SAMPLE_COUNT_64_BIT;
+        break;
+      default:
+        framebufferSamples = VK_SAMPLE_COUNT_1_BIT;
+        break;
       }
 
       bool multisampling = framebufferSamples != VK_SAMPLE_COUNT_1_BIT;
@@ -268,9 +268,9 @@ namespace vsgvr {
   void Session::destroySession()
   {
     xr_check(xrDestroySpace(_space));
-    _space = 0;
+    _space = XR_NULL_HANDLE;
     xr_check(xrDestroySession(_session));
-    _session = 0;
+    _session = XR_NULL_HANDLE;
   }
 
   void Session::beginSession(XrViewConfigurationType viewConfigurationType)

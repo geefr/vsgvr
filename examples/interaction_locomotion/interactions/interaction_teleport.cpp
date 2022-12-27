@@ -7,10 +7,12 @@
 #include <iostream>
 
 Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::Instance> xrInstance,
+  vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
   vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose,
   vsg::ref_ptr<vsg::Switch> teleportTarget,
   vsg::ref_ptr<vsg::Group> ground)
-  : _leftHandPose(leftHandPose)
+  : _headPose(headPose)
+  , _leftHandPose(leftHandPose)
   , _teleportTarget(teleportTarget)
   , _ground(ground)
 {
@@ -42,6 +44,9 @@ Interaction_teleport::~Interaction_teleport() {}
 
 void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT)
 {
+  auto applyRotation = false;
+  auto applyTeleport = false;
+
   if (_teleportAction->getStateValid())
   {
     auto state = _teleportAction->getStateBool();
@@ -50,6 +55,7 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
       _teleportButtonDown = true;
     }
   }
+
   double rotThresh = 0.25;
   if (_rotateAction->getStateValid())
   {
@@ -62,11 +68,11 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
       if (_rotateActionState != 0)
       {
         _playerRotation += (- 15.0 * _rotateActionState);
-        game.userOrigin()->orientation = vsg::dquat(vsg::radians(_playerRotation), { 0.0, 0.0, 1.0 });
+        applyRotation = true;
       }
     }
   }
-    
+
   if (_teleportButtonDown && _leftHandPose->getTransformValid())
   {
     // Raycast from controller aim to world, colliding with anything named "ground"
@@ -79,8 +85,8 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
 
     auto intersector = vsg::LineSegmentIntersector::create(intersectStart, intersectEnd);
     // TODO: Intersect whole scene, or sub-scene matched on tags? For now we can't be anywhere but the ground plane
-    // TODO: Intersections appear to be in reverse-distance order. Should double check this but intersections.back()
-    //       seems to always get the ground plane (and not fences, trees, houses, or the underside of the ground plane.
+    // TODO: Should sort intersections as well - For now intersections.back() seems to always get the ground plane,
+    //       and not other geometry within the world.
     _ground->accept(*intersector);
     if (!intersector->intersections.empty())
     {
@@ -93,6 +99,7 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
       {
         if (auto m = child.node->cast<vsg::MatrixTransform>())
         {
+          // TODO: The rotate here shouldn't be needed - we're overriding the root transform in the model however
           m->matrix = vsg::translate(_teleportPosition) * vsg::rotate(vsg::radians(90.0), {1.0, 0.0, 0.0});
         }
       }
@@ -112,7 +119,8 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
       if (_teleportTargetValid)
       {
         // Teleport position within the child scene
-        game.userOrigin()->position = game.userOrigin()->userToScene() * _teleportPosition;
+        // Here the origin is being moved, by the difference between the teleport target, and where the user currently is (left hand)
+        applyTeleport = true;
       }
       _teleportButtonDown = false;
       _teleportTargetValid = false;
@@ -126,5 +134,33 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
     {
       if( fabs(state.currentState) < rotThresh) _rotateActionState = 0;
     }
+  }
+
+  if( applyRotation || applyTeleport )
+  {
+    // The player's position in vr space, at 'ground' level
+    auto playerPosOrigin = _headPose->getTransform() * vsg::dvec3{ 0.0, 0.0, 0.0 };
+    playerPosOrigin.z = _teleportPosition.z;
+
+    vsg::dvec3 newPlayerPosScene;
+    if (!applyTeleport)
+    {
+      // The player hasn't moved
+      newPlayerPosScene = game.userOrigin()->userToScene() * playerPosOrigin;
+    }
+    else
+    {
+      // The player has moved - Center on the teleport target
+      newPlayerPosScene = game.userOrigin()->userToScene() * _teleportPosition;
+    }
+
+    // Set the transform from vr origin to position/rotation within scene
+    // The initial translate is important as the user is rarely positioned 
+    // at the origin of their vr space.
+    game.userOrigin()->matrix =
+      vsg::translate(newPlayerPosScene) *
+      vsg::rotate(vsg::radians(_playerRotation), { 0.0, 0.0, 1.0 }) *
+      vsg::scale(1.0, 1.0, 1.0) *
+      vsg::translate(-playerPosOrigin);
   }
 }

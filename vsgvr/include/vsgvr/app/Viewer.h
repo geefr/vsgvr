@@ -31,6 +31,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/GraphicsBindingVulkan.h>
 #include <vsgvr/xr/Session.h>
 
+#include <vsgvr/actions/ActionSet.h>
+#include <vsgvr/actions/SpaceBinding.h>
+
 #include <vsg/app/CommandGraph.h>
 #include <vsg/app/RecordAndSubmitTask.h>
 #include <vsg/app/CompileManager.h>
@@ -130,6 +133,11 @@ namespace vsgvr {
             void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
             void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
 
+            // OpenXR spaces, which will be synced along with actions
+            // Typically used for obtaining the position of the headset, via
+            // a binding to the origin of XR_REFERENCE_SPACE_TYPE_VIEW
+            std::vector<vsg::ref_ptr<SpaceBinding>> spaceBindings;
+
             // OpenXR action sets, which will be managed by the viewer / session
             std::vector<vsg::ref_ptr<ActionSet>> actionSets;
             // Active actions sets, which will be synchronised each update
@@ -142,13 +150,16 @@ namespace vsgvr {
             void shutdownAll();
             void getViewConfiguration();
 
+            void syncSpaceBindings();
             void syncActions();
             // Attach action sets to the session and create action spaces
             // This method MUST be called ONCE - After action set bindings
             // have been suggested, and prior to scene rendering.
             // Viewer performs this automatically during the first
             // call to pollEvents
+            void createSpaceBindings();
             void createActionSpacesAndAttachActionSets();
+            void destroySpaceBindings();
             void destroyActionSpaces();
 
             vsg::ref_ptr<Instance> _instance;

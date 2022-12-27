@@ -75,18 +75,25 @@ void Game::initVR()
 
 void Game::initActions()
 {
-  // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
+  // Tracking the location of the user's headset is achieved by tracking the VIEW reference space
+  // vsgvr provides a SpaceBinding class for this - Similar to the ActionPoseBindings the head's pose
+  // will be tracked during rendering, and available when performing interactions
+  _headPose = vsgvr::SpaceBinding::create(_xrInstance, XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
+  _vr->spaceBindings.push_back(_headPose);
+
+  // Input devices are tracked via ActionPoseBindings - Tracking elements from the OpenXR device tree in the session space,
   // along with binding the OpenXR input subsystem through to usable actions.
   _baseActionSet = vsgvr::ActionSet::create(_xrInstance, "controller_positions", "Controller Positions");
-  // Pose bindings - One for each hand
+  // Pose bindings
   _leftHandPose = vsgvr::ActionPoseBinding::create(_xrInstance, _baseActionSet, "left_hand", "Left Hand");
   _rightHandPose = vsgvr::ActionPoseBinding::create(_xrInstance, _baseActionSet, "right_hand", "Right Hand");
+
   _baseActionSet->actions = {
     _leftHandPose,
     _rightHandPose,
   };
 
-  _interactions.emplace("teleport", new Interaction_teleport(_xrInstance, _leftHandPose, _teleportMarker, _ground));
+  _interactions.emplace("teleport", new Interaction_teleport(_xrInstance, _headPose, _leftHandPose, _teleportMarker, _ground));
   _interactions.emplace("slide", new Interaction_slide(_xrInstance, _leftHandPose, _ground));
 
   // Ask OpenXR to suggest interaction bindings.

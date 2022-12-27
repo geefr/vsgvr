@@ -51,7 +51,7 @@ void Interaction_slide::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double
     if (state.isActive && fabs(state.currentState) > deadZone)
     {
       _rotation += state.currentState * rotateSensitivity * deltaT * -1.0;
-      game.userOrigin()->orientation = vsg::dquat(_rotation, { 0.0, 0.0, 1.0 });
+      // game.userOrigin()->orientation = vsg::dquat(_rotation, { 0.0, 0.0, 1.0 });
     }
   }
 
@@ -73,7 +73,7 @@ void Interaction_slide::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double
       if (vsg::length(d) > deadZone)
       {
         d *= strafeSensitivity * deltaT;
-        game.userOrigin()->position += d;
+        // game.userOrigin()->position += d;
       }
     }
   }

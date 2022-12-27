@@ -6,6 +6,7 @@
 #include <vsgvr/actions/Action.h>
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/ActionPoseBinding.h>
+#include <vsgvr/actions/SpaceBinding.h>
 
 #include "interaction.h"
 
@@ -48,6 +49,7 @@ private:
   vsg::ref_ptr<vsgvr::ActionSet> _baseActionSet;
   vsg::ref_ptr<vsgvr::ActionPoseBinding> _leftHandPose;
   vsg::ref_ptr<vsgvr::ActionPoseBinding> _rightHandPose;
+  vsg::ref_ptr<vsgvr::SpaceBinding> _headPose;
 
   std::map<std::string, std::unique_ptr<Interaction>> _interactions;
 

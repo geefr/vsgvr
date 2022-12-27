@@ -26,20 +26,17 @@ namespace vsgvr
 {
     UserOrigin::UserOrigin() {}
 
-    UserOrigin::UserOrigin(vsg::dvec3 in_position, vsg::dquat in_orientation, vsg::dvec3 in_scale)
-      : position(in_position)
-      , orientation(in_orientation)
-      , scale(in_scale)
+    UserOrigin::UserOrigin(vsg::dmat4 in_matrix)
+      : matrix(in_matrix)
     {}
 
-    vsg::dmat4 UserOrigin::userToScene() const
+    UserOrigin::UserOrigin(vsg::dvec3 in_position, vsg::dquat in_orientation, vsg::dvec3 in_scale)
     {
-      return vsg::translate(position) * vsg::rotate(orientation) * vsg::scale(scale);
+      setOriginInScene(in_position, in_orientation, in_scale);
     }
 
-    vsg::dmat4 UserOrigin::sceneToUser() const
+    void UserOrigin::setOriginInScene(vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale)
     {
-      return vsg::inverse(userToScene());
+      matrix = vsg::translate(position) * vsg::rotate(orientation) * vsg::scale(scale);
     }
 }
-
