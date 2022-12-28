@@ -139,6 +139,7 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
   if( applyRotation || applyTeleport )
   {
     // The player's position in vr space, at 'ground' level
+    // In this case we know the level if the ground from the teleport target
     auto playerPosOrigin = _headPose->getTransform() * vsg::dvec3{ 0.0, 0.0, 0.0 };
     playerPosOrigin.z = _teleportPosition.z;
 
@@ -157,10 +158,11 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
     // Set the transform from vr origin to position/rotation within scene
     // The initial translate is important as the user is rarely positioned 
     // at the origin of their vr space.
-    game.userOrigin()->matrix =
-      vsg::translate(newPlayerPosScene) *
-      vsg::rotate(vsg::radians(_playerRotation), { 0.0, 0.0, 1.0 }) *
-      vsg::scale(1.0, 1.0, 1.0) *
-      vsg::translate(-playerPosOrigin);
+    game.userOrigin()->setUserInScene(
+      playerPosOrigin, 
+      newPlayerPosScene,
+      vsg::dquat(vsg::radians(_playerRotation), { 0.0, 0.0, 1.0 }),
+      {1.0, 1.0, 1.0}
+    );
   }
 }

@@ -94,7 +94,7 @@ void Game::initActions()
   };
 
   _interactions.emplace("teleport", new Interaction_teleport(_xrInstance, _headPose, _leftHandPose, _teleportMarker, _ground));
-  _interactions.emplace("slide", new Interaction_slide(_xrInstance, _leftHandPose, _ground));
+  _interactions.emplace("slide", new Interaction_slide(_xrInstance, _headPose, _leftHandPose, _ground));
 
   // Ask OpenXR to suggest interaction bindings.
   // * If subpaths are used, list all paths that each action should be bound for

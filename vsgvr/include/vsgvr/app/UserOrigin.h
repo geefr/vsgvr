@@ -49,9 +49,38 @@ namespace vsgvr {
 
     vsg::dmat4 transform(const vsg::dmat4& mv) const override { return mv * sceneToUser(); }
 
-    /// Position / orientation of user's origin {0,0,0} within the vsg scene space
-    /// Note: The user themself is not usually at the origin - They may move relative to it, within the real world
+    /// Set the matrix to position the origin within the vsg scene space.
+    /// 
+    /// Note: The user is not usually at the origin, @see setUserInScene.
+    /// 
+    /// @param position The position to set the origin to, within the scene's space
+    /// @param orientation The orientation of the origin, within the scene's space
+    /// @param scale The scale of the origin, within the scene's space
     void setOriginInScene( vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale);
+
+    /// Set the matrix to position th euser within the vsg scene space.
+    ///
+    /// This is similar to setOriginInScene, however accounts for the position of the player
+    /// within the vr space - The origin will be offset by playerFloorPosition.
+    /// 
+    /// playerFloorPosition is typically calculated based on the user's head
+    /// ```c++
+    /// // Enable tracking of the headset - View space in OpenXR
+    /// headPose = vsgvr::SpaceBinding::create(_xrInstance, XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
+    /// viewer->spaceBindings.push_back(_headPose);
+    /// 
+    /// // The position on the ground, beneath the player
+    /// // This assumes the user is standing on a flat plane, and that z == 0 in vr space
+    /// // aligns with z == 0 in scene space (An intersection in scene space may be preferred)
+    /// auto playerGroundPosition = _headPose->getTransform() * vsg::dvec3{ 0.0, 0.0, 0.0 };
+    /// playerPosUser.z = 0.0;
+    /// ```
+    /// 
+    /// @param playerGroundPosition A position on the floor, directly beneath the player, in the vr space
+    /// @param position The position to set the origin to, within the scene's space
+    /// @param orientation The orientation of the origin, within the scene's space
+    /// @param scale The scale of the origin, within the scene's space
+    void setUserInScene( vsg::dvec3 playerGroundPosition, vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale);
 
     vsg::dmat4 matrix;
   };

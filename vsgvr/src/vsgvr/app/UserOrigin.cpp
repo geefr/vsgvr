@@ -37,6 +37,18 @@ namespace vsgvr
 
     void UserOrigin::setOriginInScene(vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale)
     {
-      matrix = vsg::translate(position) * vsg::rotate(orientation) * vsg::scale(scale);
+      matrix = 
+        vsg::translate(position) * 
+        vsg::rotate(orientation) * 
+        vsg::scale(scale);
+    }
+
+    void UserOrigin::setUserInScene(vsg::dvec3 playerGroundPosition, vsg::dvec3 newPosition, vsg::dquat orientation, vsg::dvec3 scale)
+    {
+      matrix =
+        vsg::translate(newPosition) *
+        vsg::rotate(orientation) *
+        vsg::scale(scale) *
+        vsg::translate(-playerGroundPosition);
     }
 }

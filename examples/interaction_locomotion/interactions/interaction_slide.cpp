@@ -7,10 +7,12 @@
 #include <iostream>
 
 Interaction_slide::Interaction_slide(
-  vsg::ref_ptr<vsgvr::Instance> xrInstance, 
+  vsg::ref_ptr<vsgvr::Instance> xrInstance,
+  vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
   vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose, 
   vsg::ref_ptr<vsg::Group> ground)
-    : _leftHandPose(leftHandPose)
+    : _headPose(headPose)
+    , _leftHandPose(leftHandPose)
     , _ground(ground)
 {
   _actionSet = vsgvr::ActionSet::create(xrInstance, "slide", "Slide");
@@ -45,18 +47,36 @@ Interaction_slide::~Interaction_slide() {}
 
 void Interaction_slide::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT)
 {
+  bool updateOrigin = false;
+
+  // The player's position in vr space, at 'ground' level
+  // In most cases this will simply be playerPosOrigin.z = 0,
+  // though an intersection to the scene would be more appropriate in many cases
+  auto playerPosUser = _headPose->getTransform() * vsg::dvec3{ 0.0, 0.0, 0.0 };
+  playerPosUser.z = 0.0;
+  
+  // Player's position in the scene - Strafing is performed in scene space
+  auto newPositionScene = game.userOrigin()->userToScene() * playerPosUser;
+
   if (_rotateAction->getStateValid())
   {
     auto state = _rotateAction->getStateFloat();
     if (state.isActive && fabs(state.currentState) > deadZone)
     {
       _rotation += state.currentState * rotateSensitivity * deltaT * -1.0;
-      // game.userOrigin()->orientation = vsg::dquat(_rotation, { 0.0, 0.0, 1.0 });
+      updateOrigin = true;
     }
   }
 
   if (_leftHandPose->getTransformValid() && _strafeXAction->getStateValid() && _strafeYAction->getStateValid())
   {
+    // Direction vectors in scene space, based on left controller
+    // (User may point controller to modify strafe direction)
+    // Alternatively the head's pose could be used to determine forward,
+    // but that would prevent strafing sideways while looking sideways
+    //
+    // Here all strafing is performed in the xy plane, ignoring height differences
+    // of the ground.
     auto lt = game.userOrigin()->userToScene() * _leftHandPose->getTransform();
     auto lForward = (lt * vsg::dvec3{0.0, 0.0, -1.0}) - (lt * vsg::dvec3{0.0, 0.0, 0.0});
     lForward.z = 0;
@@ -73,8 +93,20 @@ void Interaction_slide::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double
       if (vsg::length(d) > deadZone)
       {
         d *= strafeSensitivity * deltaT;
-        // game.userOrigin()->position += d;
+        newPositionScene += d;
+        updateOrigin = true;
       }
     }
+  }
+
+  if( updateOrigin )
+  {
+    // Update the vsg scene's transform to strafe player as needed
+    game.userOrigin()->setUserInScene(
+      playerPosUser,
+      newPositionScene,
+      vsg::dquat(_rotation, { 0.0, 0.0, 1.0 }),
+      { 1.0, 1.0, 1.0 }
+    );
   }
 }

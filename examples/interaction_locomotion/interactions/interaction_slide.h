@@ -9,7 +9,8 @@ class Interaction_slide : public Interaction
 {
   public:
     Interaction_slide() = delete;
-    Interaction_slide(vsg::ref_ptr<vsgvr::Instance> xrInstance, 
+    Interaction_slide(vsg::ref_ptr<vsgvr::Instance> xrInstance,
+      vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
       vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose, 
       vsg::ref_ptr<vsg::Group> ground);
 
@@ -24,6 +25,7 @@ class Interaction_slide : public Interaction
     vsg::ref_ptr<vsgvr::Action> _strafeXAction;
     vsg::ref_ptr<vsgvr::Action> _strafeYAction;
     vsg::ref_ptr<vsgvr::Action> _rotateAction;
+    vsg::ref_ptr<vsgvr::SpaceBinding> _headPose;
     vsg::ref_ptr<vsgvr::ActionPoseBinding> _leftHandPose;
 
     vsg::ref_ptr<vsg::Group> _ground;
