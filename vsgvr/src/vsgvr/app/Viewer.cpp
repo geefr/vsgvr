@@ -234,7 +234,7 @@ namespace vsgvr
                 if (auto vsgView = renderGraph->children[0].cast<View>())
                 {
                   vsgView->camera->viewMatrix = ViewMatrix::create(locatedViews[i].pose);
-                  vsgView->camera->projectionMatrix = ProjectionMatrix::create(locatedViews[i].fov, 0.05, 100.0);
+                  vsgView->camera->projectionMatrix = ProjectionMatrix::create(locatedViews[i].fov, nearPlane, farPlane);
                 }
               }
             }
@@ -281,7 +281,7 @@ namespace vsgvr
     auto perspective = vsg::Perspective::create(
       30.0,
       static_cast<double>(extent.width) / static_cast<double>(extent.height),
-      0.01, 100.0);
+      nearPlane, farPlane);
     return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
   }
 

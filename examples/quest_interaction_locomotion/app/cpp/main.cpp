@@ -101,7 +101,8 @@ static int vsg_init(struct AppData* appData)
     // cast the window to an android window so we can pass it events
     appData->window = window.cast<vsgAndroid::Android_Window>();
 
-    // attach the window to the viewer
+    // Attach the window to the viewer
+    // Android: The window is present, but will not be rendered by the Game class
     appData->viewer->addWindow(window);
 
     // Ensure the correct physical device is selected
@@ -131,7 +132,7 @@ static int vsg_init(struct AppData* appData)
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
     appData->vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
 
-    appData->game.reset(new Game(xrInstance, appData->vr, appData->viewer));
+    appData->game.reset(new Game(xrInstance, appData->vr, appData->viewer, false));
 
     return 0;
 }

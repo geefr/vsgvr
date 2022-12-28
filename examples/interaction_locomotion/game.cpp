@@ -9,10 +9,11 @@
 #include "interactions/interaction_teleport.h"
 #include "interactions/interaction_slide.h"
 
-Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer)
+Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow)
   : _xrInstance(xrInstance)
   , _vr(vr)
   , _desktopViewer(desktopViewer)
+  , _desktopWindowEnabled(displayDesktopWindow)
 {
   loadScene();
   initVR();
@@ -62,17 +63,20 @@ void Game::initVR()
   // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
   _vr->compile();
 
-  // Create a CommandGraph to render the desktop window
-  auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
-  auto desktopWindow = _desktopViewer->windows().front();
-  auto perspective = vsg::Perspective::create(30.0,
-    static_cast<double>(desktopWindow->extent2D().width) / static_cast<double>(desktopWindow->extent2D().height)
-    , 0.1, 100.0
-  );
-  _desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));
-  auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, _desktopCamera, _sceneRoot, VK_SUBPASS_CONTENTS_INLINE, false);
-  _desktopViewer->assignRecordAndSubmitTaskAndPresentation({ desktopCommandGraph });
-  _desktopViewer->compile();
+  if(_desktopWindowEnabled)
+  {
+    // Create a CommandGraph to render the desktop window
+    auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
+    auto desktopWindow = _desktopViewer->windows().front();
+    auto perspective = vsg::Perspective::create(30.0,
+      static_cast<double>(desktopWindow->extent2D().width) / static_cast<double>(desktopWindow->extent2D().height)
+      , 0.1, 100.0
+    );
+    _desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));
+    auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, _desktopCamera, _sceneRoot, VK_SUBPASS_CONTENTS_INLINE, false);
+    _desktopViewer->assignRecordAndSubmitTaskAndPresentation({ desktopCommandGraph });
+    _desktopViewer->compile();
+  }
 }
 
 void Game::initActions()
@@ -181,29 +185,32 @@ void Game::frame()
     _controllerRight->matrix = _rightHandPose->getTransform();
   }
 
-  // Match the desktop camera to the HMD view
-  _desktopCamera->viewMatrix = _xrCameras.front()->viewMatrix;
-  _desktopCamera->projectionMatrix = _xrCameras.front()->projectionMatrix;
-
   // The session is running in some form, and a frame must be processed
   // The OpenXR frame loop takes priority - Acquire a frame to render into
   auto shouldQuit = false;
 
-  // Desktop render
-  // * The scene graph is updated by the desktop render
-  // * if PollEventsResult::RunningDontRender the desktop render could be skipped
-  if (_desktopViewer->advanceToNextFrame())
+  if(_desktopWindowEnabled)
   {
-    _desktopViewer->handleEvents();
-    _desktopViewer->update();
-    _desktopViewer->recordAndSubmit();
-    _desktopViewer->present();
-  }
-  else
-  {
-    // Desktop window was closed
-    shouldQuit = true;
-    return;
+    // Match the desktop camera to the HMD view
+    _desktopCamera->viewMatrix = _xrCameras.front()->viewMatrix;
+    _desktopCamera->projectionMatrix = _xrCameras.front()->projectionMatrix;
+
+    // Desktop render
+    // * The scene graph is updated by the desktop render
+    // * if PollEventsResult::RunningDontRender the desktop render could be skipped
+    if (_desktopViewer->advanceToNextFrame())
+    {
+      _desktopViewer->handleEvents();
+      _desktopViewer->update();
+      _desktopViewer->recordAndSubmit();
+      _desktopViewer->present();
+    }
+    else
+    {
+      // Desktop window was closed
+      shouldQuit = true;
+      return;
+    }
   }
 
   if (_vr->advanceToNextFrame())

@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
     auto vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
 
-    Game game(xrInstance, vr, desktopViewer);
+    Game game(xrInstance, vr, desktopViewer, true);
 
     while (!game.shouldExit)
     {

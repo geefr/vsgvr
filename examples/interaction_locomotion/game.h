@@ -14,7 +14,7 @@
 
 class Game {
 public:
-  Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer);
+  Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow);
   ~Game();
 
   bool shouldExit = false;
@@ -31,6 +31,7 @@ private:
   vsg::ref_ptr<vsgvr::Instance> _xrInstance;
   vsg::ref_ptr<vsgvr::Viewer> _vr;
   vsg::ref_ptr<vsg::Viewer> _desktopViewer;
+  bool _desktopWindowEnabled = false;
 
   // The user / OpenXR root space - Contains elements such as controllers
   vsg::ref_ptr<vsg::Group> _sceneRoot;

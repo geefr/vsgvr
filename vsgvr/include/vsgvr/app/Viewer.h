@@ -144,6 +144,9 @@ namespace vsgvr {
             // One or more may be active at a time, depending on user interaction mode
             std::vector<vsg::ref_ptr<ActionSet>> activeActionSets;
 
+            double nearPlane = 0.05;
+            double farPlane = 100.0;
+
         private:
             vsg::ref_ptr<vsg::Camera> createCamera(const VkExtent2D& extent);
 
