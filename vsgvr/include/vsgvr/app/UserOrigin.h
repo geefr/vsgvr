@@ -21,38 +21,76 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <vsg/nodes/Transform.h>
+#include <vsg/nodes/MatrixTransform.h>
+#include <vsg/maths/transform.h>
 
 namespace vsgvr {
 
-  /// A node which allows the vsgvr origin to be set within the scene
-  /// via position, rotation, and scale.
+  /// A transform node which allows the vsgvr::Viewer origin to be set within the
+  /// scene via position, rotation, and scale.
   /// 
-  /// This node functions in the same way as vsg::MatrixTransform, but is intended
-  /// to transform the whole scene to position the user as needed, within the scene,
-  /// as world space is defined by the OpenXR / vsgvr session (The user's play area).
+  /// This node functions in the same way as vsg::MatrixTransform, but will
+  /// transform a child vsg scene to position the user as needed.
+  /// Note that under vsgvr world space is defined by the OpenXR / vsgvr session,
+  /// based on the user's physical play area.
   /// 
-  /// Also provided are the following functions, to provide transforms between
-  /// the XR world space and vsg world space.
-  /// * userToScene
-  /// * sceneToUser
-  class VSGVR_DECLSPEC UserOrigin : public vsg::Inherit<vsg::Transform, UserOrigin>
+  /// Actions previously performed in 'world' space may remain if they are performed
+  /// within the child scene node(s) of this transform - Desktop base interactions
+  /// should ignore this node, and instead operate directly on the child scene.
+  /// 
+  /// Likewise vr-specific elements such as SpaceBinding, ActionPoseBinding, and
+  /// any nodes which represent controllers / trackers should be added to the root
+  /// of the scene graph, and not as a child of UserOrigin - These elements are
+  /// tracked within the user's physical play area, rather than within the 
+  /// vsg scene.
+  class VSGVR_DECLSPEC UserOrigin : public vsg::Inherit<vsg::MatrixTransform, UserOrigin>
   {
   public:
     UserOrigin();
-    explicit UserOrigin(vsg::dvec3 in_position, vsg::dquat in_orientation, vsg::dvec3 in_scale = {1.0, 1.0, 1.0});
 
-    vsg::dmat4 userToScene() const;
-    vsg::dmat4 sceneToUser() const;
+    explicit UserOrigin(vsg::dmat4 matrix);
 
-    vsg::dmat4 transform(const vsg::dmat4& mv) const override { return mv * sceneToUser(); }
+    /// @see setOriginInScene.
+    explicit UserOrigin(vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale);
 
-    /// Origin position within the vsg scene space
-    vsg::dvec3 position;
-    /// Origin orientation within the vsg scene space
-    vsg::dquat orientation;
-    /// Origin scale within the vsg scene space
-    vsg::dvec3 scale = {1.0, 1.0, 1.0};
+    /// @see setUserInScene. 
+    explicit UserOrigin(vsg::dvec3 playerGroundPosition, vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale);
+
+    vsg::dmat4 userToScene() const { return vsg::inverse(matrix); }
+    vsg::dmat4 sceneToUser() const { return matrix; }
+
+    /// Set the matrix to position the origin within the vsg scene space.
+    /// 
+    /// Note: The user is not usually at the origin, @see setUserInScene.
+    /// 
+    /// @param position The position to set the origin to, within the scene's space
+    /// @param orientation The orientation of the origin, within the scene's space
+    /// @param scale The scale of the origin, within the scene's space
+    void setOriginInScene( vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale );
+
+    /// Set the matrix to position th euser within the vsg scene space.
+    ///
+    /// This is similar to setOriginInScene, however accounts for the position of the player
+    /// within the vr space - The origin will be offset by playerFloorPosition.
+    /// 
+    /// playerFloorPosition is typically calculated based on the user's head
+    /// ```c++
+    /// // Enable tracking of the headset - View space in OpenXR
+    /// headPose = vsgvr::SpaceBinding::create(_xrInstance, XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
+    /// viewer->spaceBindings.push_back(_headPose);
+    /// 
+    /// // The position on the ground, beneath the player
+    /// // This assumes the user is standing on a flat plane, and that z == 0 in vr space
+    /// // aligns with z == 0 in scene space (An intersection in scene space may be preferred)
+    /// auto playerGroundPosition = _headPose->getTransform() * vsg::dvec3{ 0.0, 0.0, 0.0 };
+    /// playerPosUser.z = 0.0;
+    /// ```
+    /// 
+    /// @param playerGroundPosition A position on the floor, directly beneath the player, in the vr space
+    /// @param position The position to set the origin to, within the scene's space
+    /// @param orientation The orientation of the origin, within the scene's space
+    /// @param scale The scale of the origin, within the scene's space
+    void setUserInScene( vsg::dvec3 playerGroundPosition, vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale );
   };
 }
 

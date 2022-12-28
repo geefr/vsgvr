@@ -26,20 +26,36 @@ namespace vsgvr
 {
     UserOrigin::UserOrigin() {}
 
-    UserOrigin::UserOrigin(vsg::dvec3 in_position, vsg::dquat in_orientation, vsg::dvec3 in_scale)
-      : position(in_position)
-      , orientation(in_orientation)
-      , scale(in_scale)
+    UserOrigin::UserOrigin(vsg::dmat4 matrix)
+      : Inherit(matrix)
     {}
 
-    vsg::dmat4 UserOrigin::userToScene() const
+    UserOrigin::UserOrigin(vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale)
     {
-      return vsg::translate(position) * vsg::rotate(orientation) * vsg::scale(scale);
+      setOriginInScene(position, orientation, scale);
     }
 
-    vsg::dmat4 UserOrigin::sceneToUser() const
+    UserOrigin::UserOrigin(vsg::dvec3 playerGroundPosition, vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale)
     {
-      return vsg::inverse(userToScene());
+      setUserInScene(playerGroundPosition, position, orientation, scale);
+    }
+
+    void UserOrigin::setOriginInScene(vsg::dvec3 position, vsg::dquat orientation, vsg::dvec3 scale)
+    {
+      matrix = vsg::inverse(
+        vsg::translate(position) * 
+        vsg::rotate(orientation) * 
+        vsg::scale(scale)
+      );
+    }
+
+    void UserOrigin::setUserInScene(vsg::dvec3 playerGroundPosition, vsg::dvec3 newPosition, vsg::dquat orientation, vsg::dvec3 scale)
+    {
+      matrix = vsg::inverse(
+        vsg::translate(newPosition) *
+        vsg::rotate(orientation) *
+        vsg::scale(scale) *
+        vsg::translate(-playerGroundPosition)
+      );
     }
 }
-

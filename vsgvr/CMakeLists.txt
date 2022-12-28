@@ -2,6 +2,7 @@
 set( HEADERS_ACTIONS
   include/vsgvr/actions/Action.h
   include/vsgvr/actions/ActionPoseBinding.h
+  include/vsgvr/actions/SpaceBinding.h
   include/vsgvr/actions/ActionSet.h
 )
 
@@ -25,6 +26,7 @@ set( HEADERS_XR
 set( SOURCES
   src/vsgvr/actions/Action.cpp
   src/vsgvr/actions/ActionPoseBinding.cpp
+  src/vsgvr/actions/SpaceBinding.cpp
   src/vsgvr/actions/ActionSet.cpp
   src/vsgvr/app/Viewer.cpp
   src/vsgvr/app/UserOrigin.cpp
