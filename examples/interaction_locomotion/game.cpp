@@ -32,7 +32,9 @@ void Game::loadScene()
   _sceneRoot->addChild(_controllerRight);
 
   _teleportMarker = vsg::Switch::create();
-  _teleportMarker->addChild(false, teleport_marker());
+  auto teleportMatrix = vsg::MatrixTransform::create();
+  _teleportMarker->addChild(false, teleportMatrix);
+  teleportMatrix->addChild(teleport_marker());
   _sceneRoot->addChild(_teleportMarker);
 
   // User origin - The regular vsg scene / world space,

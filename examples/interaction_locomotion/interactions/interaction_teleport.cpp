@@ -99,8 +99,7 @@ void Interaction_teleport::frame(vsg::ref_ptr<vsg::Group> scene, Game& game, dou
       {
         if (auto m = child.node->cast<vsg::MatrixTransform>())
         {
-          // TODO: The rotate here shouldn't be needed - we're overriding the root transform in the model however
-          m->matrix = vsg::translate(_teleportPosition) * vsg::rotate(vsg::radians(90.0), {1.0, 0.0, 0.0});
+          m->matrix = vsg::translate(_teleportPosition);
         }
       }
     }
