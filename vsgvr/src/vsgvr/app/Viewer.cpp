@@ -203,8 +203,7 @@ namespace vsgvr
   void Viewer::renderCompositionLayerProjection(vsg::ref_ptr<vsgvr::CompositionLayerProjection> layer, RecordAndSubmitTasks& recordAndSubmitTasks, const std::vector<XrView>& locatedViews, bool viewsValid)
   {
     // Set up projection views, within a composition layer
-    std::vector<XrCompositionLayerProjectionView> layerProjectionViews;
-    layerProjectionViews.clear();
+    layer->_layerProjectionViews.clear();
     for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
     {
       auto projectionView = XrCompositionLayerProjectionView();
@@ -218,7 +217,7 @@ namespace vsgvr
         {static_cast<int>(extent.width), static_cast<int>(extent.height)}
       };
       projectionView.subImage.imageArrayIndex = 0;
-      layerProjectionViews.push_back(projectionView);
+      layer->_layerProjectionViews.push_back(projectionView);
     }
 
     // Render the scene
@@ -267,8 +266,8 @@ namespace vsgvr
     // Add the composition layer for the frame end info
     layer->_compositionLayer = layer->getCompositionLayer();
     layer->_compositionLayer.space = _session->getSpace();
-    layer->_compositionLayer.viewCount = static_cast<uint32_t>(layerProjectionViews.size());
-    layer->_compositionLayer.views = layerProjectionViews.data();
+    layer->_compositionLayer.viewCount = static_cast<uint32_t>(layer->_layerProjectionViews.size());
+    layer->_compositionLayer.views = layer->_layerProjectionViews.data();
     _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer->_compositionLayer));
   }
 
@@ -312,7 +311,8 @@ namespace vsgvr
     }
 
     // Add the composition layer for the frame end info
-    layer->_compositionLayer = layer->getCompositionLayer();    
+    layer->_compositionLayer = layer->getCompositionLayer();
+    layer->_compositionLayer.space = _session->getSpace();
     layer->_compositionLayer.subImage.swapchain = swapchain->getSwapchain();
     auto extent = swapchain->getExtent();
     layer->_compositionLayer.subImage.imageRect = XrRect2Di{ {0, 0},

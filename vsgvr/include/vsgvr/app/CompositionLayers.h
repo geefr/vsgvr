@@ -55,6 +55,7 @@ namespace vsgvr {
 
       /// @internal
       XrCompositionLayerProjection _compositionLayer;
+      std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
   };
 
   /// XrCompositionLayerQuad - Rendered elements on a 2D quad, positioned in world space.
