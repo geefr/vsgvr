@@ -34,6 +34,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
+#include <vsgvr/app/CompositionLayers.h>
+
 #include <vsg/app/CommandGraph.h>
 #include <vsg/app/RecordAndSubmitTask.h>
 #include <vsg/app/CompileManager.h>
@@ -121,16 +123,32 @@ namespace vsgvr {
             XrFrameState frameState() const { return _frameState; }
             vsg::ref_ptr<vsg::FrameStamp> frameStamp() const { return _frameStamp; }
 
-            // Manage the work to do each frame using RecordAndSubmitTasks.
+            // Manage the work to do each frame using RecordAndSubmitTasks
+            // the vsgvr::Viewer renders to a series of OpenXR composition layers,
+            // each of which contains one or more RecordAndSubmitTasks (for each view/eye)
+            // Composition layers are rendered in order, following the OpenXR specification.
+            
+            // TODO: Some kind of vector of <composition layer definition, list<RecordAndSubmitTasks>
+            // - A base class for CompositionLayer - For any composition layer type, with direct access to struct if needed (to allow extensions)
+            // - Child classes for XrCompositionLayerProjection and XrCompositionLayerQuad
+            // - Optionally child classes for XrCompositionLayerCubeKHR and friends, though as those are extensions would need to be special / marked as such
+            //   - If classes are in vsgvr which require extensions, should be in an extension namespace? or have a common BaseClass::extensionsRequired function?
+            // - Here, a list of structs, pairing a composition layer together with RecordAndSubmitTasks
+            // - In rendering, run each of the tasks in turn to render to the views, and provide those views to OpenXR through the xrEndFrame / composition layers
             using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
-            RecordAndSubmitTasks recordAndSubmitTasks;
+            struct CompositionLayerTask
+            {
+              vsg::ref_ptr<vsgvr::CompositionLayer> layer;
+              RecordAndSubmitTasks recordAndSubmitTasks;
+            };
+            std::vector<CompositionLayerTask> compositionRecordAndSubmitTasks;
 
             // TODO: These methods are required at the moment, and have some small differences from their vsg
             //       counterparts. Ideally these would not be duplicated, but this will likely require chnanges
             //       within vsg to correct. In the long run Viewer should only be concerned with the XR parts
             //       or may even be moved to be a 'Window' class.
             vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
-            void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
+            void assignRecordAndSubmitTask(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
             void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
 
             // OpenXR spaces, which will be synced along with actions
@@ -165,6 +183,9 @@ namespace vsgvr {
             void destroySpaceBindings();
             void destroyActionSpaces();
 
+            void renderCompositionLayerProjection(vsg::ref_ptr<vsgvr::CompositionLayerProjection> layer, RecordAndSubmitTasks& recordAndSubmitTasks, const std::vector<XrView>& locatedViews, bool viewsValid);
+            void renderCompositionLayerQuad(vsg::ref_ptr<vsgvr::CompositionLayerQuad> layer, RecordAndSubmitTasks& recordAndSubmitTasks);
+
             vsg::ref_ptr<Instance> _instance;
             vsg::ref_ptr<Traits> _xrTraits;
             vsg::ref_ptr<GraphicsBindingVulkan> _graphicsBinding;
@@ -187,10 +208,7 @@ namespace vsgvr {
             // Per-frame
             XrFrameState _frameState;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
-
             std::vector<XrCompositionLayerBaseHeader*> _layers;
-            XrCompositionLayerProjection _layerProjection;
-            std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
 }
 

@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
     auto xrCommandGraphs = vr->createCommandGraphsForView(vsg_scene, xrCameras, false);
     // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
     // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-    vr->assignRecordAndSubmitTask(xrCommandGraphs);
+    vr->assignRecordAndSubmitTask(vsgvr::CompositionLayerProjection::create(), xrCommandGraphs);
     // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
     // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
     vr->compile();

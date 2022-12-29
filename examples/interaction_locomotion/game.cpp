@@ -58,7 +58,7 @@ void Game::initVR()
   auto xrCommandGraphs = _vr->createCommandGraphsForView(_sceneRoot, _xrCameras, false);
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-  _vr->assignRecordAndSubmitTask(xrCommandGraphs);
+  _vr->assignRecordAndSubmitTask(vsgvr::CompositionLayerProjection::create(), xrCommandGraphs);
   // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
   // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
   _vr->compile();

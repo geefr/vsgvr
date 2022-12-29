@@ -38,8 +38,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/app/View.h>
 #include <vsg/ui/UIEvent.h>
 
-using namespace vsg;
-
 namespace vsgvr
 {
   Viewer::Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<Traits> xrTraits, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
@@ -136,16 +134,20 @@ namespace vsgvr
     if (!_frameStamp)
     {
       // first frame, initialize to frame count and indices to 0
-      _frameStamp = FrameStamp::create(t, 0);
+      _frameStamp = vsg::FrameStamp::create(t, 0);
     }
     else
     {
       // after first frame so increment frame count and indices
-      _frameStamp = FrameStamp::create(t, _frameStamp->frameCount + 1);
+      _frameStamp = vsg::FrameStamp::create(t, _frameStamp->frameCount + 1);
     }
-    for (auto& task : recordAndSubmitTasks)
+
+    for( auto& layer : compositionRecordAndSubmitTasks )
     {
-      task->advance();
+      for (auto& task : layer.recordAndSubmitTasks)
+      {
+        task->advance();
+      }
     }
 
     // create an event for the new frame.
@@ -179,15 +181,31 @@ namespace vsgvr
       viewState.next = nullptr;
       uint32_t numViews = 0;
       xr_check(xrLocateViews(_session->getSession(), &viewLocateInfo, &viewState, static_cast<uint32_t>(locatedViews.size()), &numViews, locatedViews.data()), "Failed to locate views");
-      if (numViews != locatedViews.size()) throw Exception({ "Failed to locate views (Incorrect numViews)" });
+      if (numViews != locatedViews.size()) throw vsg::Exception({ "Failed to locate views (Incorrect numViews)" });
 
       viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
     }
 
+    for( auto& compositionLayer : compositionRecordAndSubmitTasks )
+    {
+      if (auto layer = compositionLayer.layer.cast<CompositionLayerProjection>())
+      {
+        renderCompositionLayerProjection(layer, compositionLayer.recordAndSubmitTasks, locatedViews, viewsValid);
+      }
+      else if (auto layer = compositionLayer.layer.cast<CompositionLayerQuad>())
+      {
+        // TODO: What about swapchain requirements for the quad, on top of those created for the view configuration? Perhaps there's more rework to be done :(
+        renderCompositionLayerQuad(layer, compositionLayer.recordAndSubmitTasks);
+      }
+    }
+  }
+
+  void Viewer::renderCompositionLayerProjection(vsg::ref_ptr<vsgvr::CompositionLayerProjection> layer, RecordAndSubmitTasks& recordAndSubmitTasks, const std::vector<XrView>& locatedViews, bool viewsValid)
+  {
     // Set up projection views, within a composition layer
-    // TODO: For now, using a single composition layer - Elements such as a skybox could be directly passed to OpenXR if desired
-    _layerProjectionViews.clear();
-    for( auto i = 0u; i < _viewConfigurationViews.size(); ++i )
+    std::vector<XrCompositionLayerProjectionView> layerProjectionViews;
+    layerProjectionViews.clear();
+    for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
     {
       auto projectionView = XrCompositionLayerProjectionView();
       projectionView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
@@ -196,28 +214,24 @@ namespace vsgvr
       projectionView.pose = locatedViews[i].pose;
       projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
       auto extent = _session->getSwapchain(i)->getExtent();
-      projectionView.subImage.imageRect = XrRect2Di { {0, 0},
+      projectionView.subImage.imageRect = XrRect2Di{ {0, 0},
         {static_cast<int>(extent.width), static_cast<int>(extent.height)}
       };
       projectionView.subImage.imageArrayIndex = 0;
-      _layerProjectionViews.push_back(projectionView);
+      layerProjectionViews.push_back(projectionView);
     }
-
-    _layerProjection = XrCompositionLayerProjection();
-    _layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-    _layerProjection.next = nullptr;
 
     // Render the scene
     for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
     {
       auto swapchain = _session->getSwapchain(i);
       uint32_t swapChainImageIndex = 0;
-      
+
       swapchain->acquireImage(swapChainImageIndex);
       XrDuration timeoutNs = 20000000;
       auto waitSuccess = swapchain->waitImage(timeoutNs);
 
-      if( waitSuccess && viewsValid )
+      if (waitSuccess && viewsValid)
       {
         // reset connected ExecuteCommands
         for (auto& recordAndSubmitTask : recordAndSubmitTasks)
@@ -225,20 +239,19 @@ namespace vsgvr
           for (auto& commandGraph : recordAndSubmitTask->commandGraphs)
           {
             commandGraph->reset();
-            if (!commandGraph->children.empty() )
+            if (!commandGraph->children.empty())
             {
               // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
-              if (auto renderGraph = commandGraph->children[0].cast<RenderGraph>())
+              if (auto renderGraph = commandGraph->children[0].cast<vsg::RenderGraph>())
               {
                 renderGraph->framebuffer = _session->frames(i)[swapChainImageIndex].framebuffer;
-                if (auto vsgView = renderGraph->children[0].cast<View>())
+                if (auto vsgView = renderGraph->children[0].cast<vsg::View>())
                 {
                   vsgView->camera->viewMatrix = ViewMatrix::create(locatedViews[i].pose);
                   vsgView->camera->projectionMatrix = ProjectionMatrix::create(locatedViews[i].fov, nearPlane, farPlane);
                 }
               }
             }
-        
           }
         }
 
@@ -251,11 +264,62 @@ namespace vsgvr
       }
     }
 
-    _layerProjection.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-    _layerProjection.space = _session->getSpace();
-    _layerProjection.viewCount = static_cast<uint32_t>(_layerProjectionViews.size());
-    _layerProjection.views = _layerProjectionViews.data();
-    _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&_layerProjection));
+    // Add the composition layer for the frame end info
+    layer->_compositionLayer = layer->getCompositionLayer();
+    layer->_compositionLayer.space = _session->getSpace();
+    layer->_compositionLayer.viewCount = static_cast<uint32_t>(layerProjectionViews.size());
+    layer->_compositionLayer.views = layerProjectionViews.data();
+    _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer->_compositionLayer));
+  }
+
+  void Viewer::renderCompositionLayerQuad(vsg::ref_ptr<vsgvr::CompositionLayerQuad> layer, RecordAndSubmitTasks& recordAndSubmitTasks)
+  {
+    // Render the scene
+    // TODO: Which swapchain(s) should quad layers use - Surely their own (new) ones?
+    auto swapchainI = 0;
+    auto swapchain = _session->getSwapchain(swapchainI);
+    uint32_t swapChainImageIndex = 0;
+
+    swapchain->acquireImage(swapChainImageIndex);
+    XrDuration timeoutNs = 20000000;
+    auto waitSuccess = swapchain->waitImage(timeoutNs);
+
+    if (waitSuccess)
+    {
+      // reset connected ExecuteCommands
+      for (auto& recordAndSubmitTask : recordAndSubmitTasks)
+      {
+        for (auto& commandGraph : recordAndSubmitTask->commandGraphs)
+        {
+          commandGraph->reset();
+          if (!commandGraph->children.empty())
+          {
+            // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
+            if (auto renderGraph = commandGraph->children[0].cast<vsg::RenderGraph>())
+            {
+              renderGraph->framebuffer = _session->frames(swapchainI)[swapChainImageIndex].framebuffer;
+            }
+          }
+        }
+      }
+
+      for (auto& recordAndSubmitTask : recordAndSubmitTasks)
+      {
+        recordAndSubmitTask->submit(_frameStamp);
+      }
+
+      swapchain->releaseImage();
+    }
+
+    // Add the composition layer for the frame end info
+    layer->_compositionLayer = layer->getCompositionLayer();    
+    layer->_compositionLayer.subImage.swapchain = swapchain->getSwapchain();
+    auto extent = swapchain->getExtent();
+    layer->_compositionLayer.subImage.imageRect = XrRect2Di{ {0, 0},
+      {static_cast<int>(extent.width), static_cast<int>(extent.height)}
+    };
+    layer->_compositionLayer.subImage.imageArrayIndex = 0;
+    _layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer->_compositionLayer));
   }
 
   void Viewer::releaseFrame()
@@ -264,6 +328,7 @@ namespace vsgvr
     info.type = XR_TYPE_FRAME_END_INFO;
     info.next = nullptr;
     info.displayTime = _frameState.predictedDisplayTime;
+    // TODO: Non-opaque blend modes needed for AR content - Should probably just be exposed on traits
     info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
     info.layerCount = static_cast<uint32_t>(_layers.size());
     info.layers = _layers.data();
@@ -303,20 +368,20 @@ namespace vsgvr
       };
 
       // vsg::createCommandGraphForView
-      auto hmdCommandGraph = CommandGraph::create(_graphicsBinding->getVkDevice(), 
+      auto hmdCommandGraph = vsg::CommandGraph::create(_graphicsBinding->getVkDevice(),
                               _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
 
       auto camera = createCamera(hmdExtent);
       cameras.push_back(camera);
 
-      auto view = View::create(camera);
+      auto view = vsg::View::create(camera);
       // TODO: Need to check how this interacts with the multi-view rendering. Does this mean that each eye views the scene with
       //       a different light source? As that may look odd..
-      if (assignHeadlight) view->addChild(createHeadlight());
+      if (assignHeadlight) view->addChild(vsg::createHeadlight());
       if (vsg_scene) view->addChild(vsg_scene);
 
       // Set up the render graph
-      auto renderGraph = RenderGraph::create();
+      auto renderGraph = vsg::RenderGraph::create();
       renderGraph->addChild(view);
 
       if (_session)
@@ -336,160 +401,160 @@ namespace vsgvr
     return commandGraphs;
   }
 
-  void Viewer::compile(ref_ptr<ResourceHints> hints)
+  void Viewer::compile(vsg::ref_ptr<vsg::ResourceHints> hints)
   {
-    // TODO: This should be unified with the vsg Viewer::compile
-    //       there's no real need for it to be copied here
-    if (recordAndSubmitTasks.empty())
+    if( compositionRecordAndSubmitTasks.empty())
     {
       return;
     }
 
-    // TODO: CompileManager requires a child class of Viewer
-    // if (!compileManager) compileManager = CompileManager::create(*this, hints);
-
-    bool containsPagedLOD = false;
-    ref_ptr<DatabasePager> databasePager;
-
-    struct DeviceResources
+    for( auto& compositionLayer : compositionRecordAndSubmitTasks )
     {
-      CollectResourceRequirements collectResources;
-      vsg::ref_ptr<vsg::CompileTraversal> compile;
-    };
+      // TODO: CompileManager requires a child class of Viewer
+      // if (!compileManager) compileManager = CompileManager::create(*this, hints);
 
-    // find which devices are available and the resources required for then,
-    using DeviceResourceMap = std::map<ref_ptr<vsg::Device>, DeviceResources>;
-    DeviceResourceMap deviceResourceMap;
-    for (auto& task : recordAndSubmitTasks)
-    {
-        auto& collectResources = deviceResourceMap[task->device].collectResources;
-        for (auto& commandGraph : task->commandGraphs)
-        {
+      bool containsPagedLOD = false;
+      vsg::ref_ptr<vsg::DatabasePager> databasePager;
 
-            commandGraph->accept(collectResources);
-        }
-
-        if (task->databasePager && !databasePager) databasePager = task->databasePager;
-    }
-
-
-    // allocate DescriptorPool for each Device 
-    ResourceRequirements::Views views;
-    for (auto& [device, deviceResource] : deviceResourceMap)
-    {
-      auto& collectResources = deviceResource.collectResources;
-      auto& resourceRequirements = collectResources.requirements;
-
-      if (hints) hints->accept(collectResources);
-
-      views.insert(resourceRequirements.views.begin(), resourceRequirements.views.end());
-
-      if (resourceRequirements.containsPagedLOD) containsPagedLOD = true;
-
-      auto physicalDevice = device->getPhysicalDevice();
-
-      auto queueFamily = physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT); // TODO : could we just use transfer bit?
-
-      deviceResource.compile = CompileTraversal::create(device, resourceRequirements);
-
-      // CT TODO need to reorganize this whole section
-      for (auto& context : deviceResource.compile->contexts)
+      struct DeviceResources
       {
-        context->commandPool = vsg::CommandPool::create(device, queueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        context->graphicsQueue = device->getQueue(queueFamily);
-        context->reserve(resourceRequirements);
-      }
-    }
+        vsg::CollectResourceRequirements collectResources;
+        vsg::ref_ptr<vsg::CompileTraversal> compile;
+      };
 
-    // assign the viewID's to each View
-    for (auto& [const_view, binDetails] : views)
-    {
-      auto view = const_cast<View*>(const_view);
-      for (auto& binNumber : binDetails.indices)
+      // find which devices are available and the resources required for then,
+      using DeviceResourceMap = std::map<vsg::ref_ptr<vsg::Device>, DeviceResources>;
+      DeviceResourceMap deviceResourceMap;
+      for (auto& task : compositionLayer.recordAndSubmitTasks)
       {
-        bool binNumberMatched = false;
-        for (auto& bin : view->bins)
-        {
-          if (bin->binNumber == binNumber)
+          auto& collectResources = deviceResourceMap[task->device].collectResources;
+          for (auto& commandGraph : task->commandGraphs)
           {
-            binNumberMatched = true;
+              commandGraph->accept(collectResources);
+          }
+
+          if (task->databasePager && !databasePager) databasePager = task->databasePager;
+      }
+
+
+      // allocate DescriptorPool for each Device 
+      vsg::ResourceRequirements::Views views;
+      for (auto& [device, deviceResource] : deviceResourceMap)
+      {
+        auto& collectResources = deviceResource.collectResources;
+        auto& resourceRequirements = collectResources.requirements;
+
+        if (hints) hints->accept(collectResources);
+
+        views.insert(resourceRequirements.views.begin(), resourceRequirements.views.end());
+
+        if (resourceRequirements.containsPagedLOD) containsPagedLOD = true;
+
+        auto physicalDevice = device->getPhysicalDevice();
+
+        auto queueFamily = physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT); // TODO : could we just use transfer bit?
+
+        deviceResource.compile = vsg::CompileTraversal::create(device, resourceRequirements);
+
+        // CT TODO need to reorganize this whole section
+        for (auto& context : deviceResource.compile->contexts)
+        {
+          context->commandPool = vsg::CommandPool::create(device, queueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+          context->graphicsQueue = device->getQueue(queueFamily);
+          context->reserve(resourceRequirements);
+        }
+      }
+
+      // assign the viewID's to each View
+      for (auto& [const_view, binDetails] : views)
+      {
+        auto view = const_cast<vsg::View*>(const_view);
+        for (auto& binNumber : binDetails.indices)
+        {
+          bool binNumberMatched = false;
+          for (auto& bin : view->bins)
+          {
+            if (bin->binNumber == binNumber)
+            {
+              binNumberMatched = true;
+            }
+          }
+          if (!binNumberMatched)
+          {
+            vsg::Bin::SortOrder sortOrder = (binNumber < 0) ? vsg::Bin::ASCENDING : ((binNumber == 0) ? vsg::Bin::NO_SORT : vsg::Bin::DESCENDING);
+            view->bins.push_back(vsg::Bin::create(binNumber, sortOrder));
           }
         }
-        if (!binNumberMatched)
-        {
-          Bin::SortOrder sortOrder = (binNumber < 0) ? Bin::ASCENDING : ((binNumber == 0) ? Bin::NO_SORT : Bin::DESCENDING);
-          view->bins.push_back(Bin::create(binNumber, sortOrder));
-        }
       }
-    }
 
-    if (containsPagedLOD && !databasePager) databasePager = DatabasePager::create();
+      if (containsPagedLOD && !databasePager) databasePager = vsg::DatabasePager::create();
 
-    // create the Vulkan objects
-    for (auto& task : recordAndSubmitTasks)
-    {
-        auto& deviceResource = deviceResourceMap[task->device];
-        auto& resourceRequirements = deviceResource.collectResources.requirements;
+      // create the Vulkan objects
+      for (auto& task : compositionLayer.recordAndSubmitTasks)
+      {
+          auto& deviceResource = deviceResourceMap[task->device];
+          auto& resourceRequirements = deviceResource.collectResources.requirements;
 
-        bool task_containsPagedLOD = false;
+          bool task_containsPagedLOD = false;
 
-        for (auto& commandGraph : task->commandGraphs)
-        {
-            commandGraph->maxSlot = resourceRequirements.maxSlot;
-            commandGraph->accept(*deviceResource.compile);
+          for (auto& commandGraph : task->commandGraphs)
+          {
+              commandGraph->maxSlot = resourceRequirements.maxSlot;
+              commandGraph->accept(*deviceResource.compile);
 
-            if (resourceRequirements.containsPagedLOD) task_containsPagedLOD = true;
-        }
+              if (resourceRequirements.containsPagedLOD) task_containsPagedLOD = true;
+          }
 
-        if (task_containsPagedLOD)
-        {
-            if (!task->databasePager) task->databasePager = databasePager;
-        }
+          if (task_containsPagedLOD)
+          {
+              if (!task->databasePager) task->databasePager = databasePager;
+          }
 
+          if (task->databasePager)
+          {
+              // TODO: CompileManager requires a child class of Viewer
+              // task->databasePager->compileManager = compileManager;
+          }
+
+          if (task->earlyTransferTask)
+          {
+              task->earlyTransferTask->assign(resourceRequirements.earlyDynamicData);
+          }
+          if (task->lateTransferTask)
+          {
+              task->lateTransferTask->assign(resourceRequirements.lateDynamicData);
+          }
+      }
+
+      // record any transfer commands
+      for (auto& dp : deviceResourceMap)
+      {
+        dp.second.compile->record();
+      }
+
+      // wait for the transfers to complete
+      for (auto& dp : deviceResourceMap)
+      {
+        dp.second.compile->waitForCompletion();
+      }
+
+      // start any DatabasePagers
+      for (auto& task : compositionLayer.recordAndSubmitTasks)
+      {
         if (task->databasePager)
         {
-            // TODO: CompileManager requires a child class of Viewer
-            // task->databasePager->compileManager = compileManager;
+          task->databasePager->start();
         }
-
-        if (task->earlyTransferTask)
-        {
-            task->earlyTransferTask->assign(resourceRequirements.earlyDynamicData);
-        }
-        if (task->lateTransferTask)
-        {
-            task->lateTransferTask->assign(resourceRequirements.lateDynamicData);
-        }
-    }
-
-    // record any transfer commands
-    for (auto& dp : deviceResourceMap)
-    {
-      dp.second.compile->record();
-    }
-
-    // wait for the transfers to complete
-    for (auto& dp : deviceResourceMap)
-    {
-      dp.second.compile->waitForCompletion();
-    }
-
-    // start any DatabasePagers
-    for (auto& task : recordAndSubmitTasks)
-    {
-      if (task->databasePager)
-      {
-        task->databasePager->start();
       }
     }
   }
 
 
-  void Viewer::assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
+  void Viewer::assignRecordAndSubmitTask(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs)
   {
     struct DeviceQueueFamily
     {
-      Device* device = nullptr;
+      vsg::Device* device = nullptr;
       int queueFamily = -1;
       int presentFamily = -1;
 
@@ -504,18 +569,19 @@ namespace vsgvr
     };
 
     // place the input CommandGraphs into separate groups associated with each device and queue family combination
-    std::map<DeviceQueueFamily, CommandGraphs> deviceCommandGraphsMap;
+    std::map<DeviceQueueFamily, vsg::CommandGraphs> deviceCommandGraphsMap;
     for (auto& commandGraph : in_commandGraphs)
     {
       deviceCommandGraphsMap[DeviceQueueFamily{ commandGraph->device.get(), commandGraph->queueFamily, commandGraph->presentFamily }].emplace_back(commandGraph);
     }
 
     // create the required RecordAndSubmitTask and any Presentation objects that are required for each set of CommandGraphs
+    RecordAndSubmitTasks recordAndSubmitTasks;
     for (auto& [deviceQueueFamily, commandGraphs] : deviceCommandGraphsMap)
     {
       // make sure the secondary CommandGraphs appear first in the commandGraphs list so they are filled in first
-      CommandGraphs primary_commandGraphs;
-      CommandGraphs secondary_commandGraphs;
+      vsg::CommandGraphs primary_commandGraphs;
+      vsg::CommandGraphs secondary_commandGraphs;
       for (auto& commandGraph : commandGraphs)
       {
         if (commandGraph->level() == VK_COMMAND_BUFFER_LEVEL_PRIMARY)
@@ -529,8 +595,7 @@ namespace vsgvr
         commandGraphs.insert(commandGraphs.end(), primary_commandGraphs.begin(), primary_commandGraphs.end());
       }
 
-      uint32_t numBuffers = 1; // TODO: Needs to relate to OpenXR swapchain surely
-
+      uint32_t numBuffers = 1;
       auto device = deviceQueueFamily.device;
       uint32_t transferQueueFamily = device->getPhysicalDevice()->getQueueFamily(VK_QUEUE_TRANSFER_BIT);
 
@@ -543,11 +608,12 @@ namespace vsgvr
 
       recordAndSubmitTask->earlyTransferTask->transferQueue = device->getQueue(transferQueueFamily);
       recordAndSubmitTask->lateTransferTask->transferQueue = device->getQueue(transferQueueFamily);
-
     }
+
+    // An OpenXR composition layer, along with the vsg tasks needed for rendering the contents
+    compositionRecordAndSubmitTasks.push_back({compositionLayer, recordAndSubmitTasks});
   }
 
- 
   void Viewer::getViewConfiguration() {
     _viewConfigurationProperties = XrViewConfigurationProperties();
     _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
@@ -588,7 +654,7 @@ namespace vsgvr
     info.next = nullptr;
     std::vector<XrActiveActionSet> d;
     for( auto& actionSet : activeActionSets ) d.push_back({actionSet->getActionSet(), XR_NULL_PATH});
-    info.countActiveActionSets = d.size();
+    info.countActiveActionSets = static_cast<uint32_t>(d.size());
     info.activeActionSets = d.data();
     xr_check(xrSyncActions(_session->getSession(), &info));
 
@@ -635,7 +701,7 @@ namespace vsgvr
       auto info = XrSessionActionSetsAttachInfo();
       info.type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO;
       info.next = nullptr;
-      info.countActionSets = _attachedActionSets.size();
+      info.countActionSets = static_cast<uint32_t>(_attachedActionSets.size());
       info.actionSets = _attachedActionSets.data();
       xr_check(xrAttachSessionActionSets(_session->getSession(), &info), "Failed to attach action sets to session");
 
@@ -676,14 +742,14 @@ namespace vsgvr
 
   void Viewer::createSession() {
     if (_session) {
-      throw Exception({ "Viewer: Session already initialised" });
+      throw vsg::Exception({ "Viewer: Session already initialised" });
     }
     _session = Session::create(_instance, _graphicsBinding, _xrTraits->swapchainFormat, _viewConfigurationViews);
   }
 
   void Viewer::destroySession() {
     if (!_session) {
-      throw Exception({ "Viewer: Session not initialised" });
+      throw vsg::Exception({ "Viewer: Session not initialised" });
     }
     destroyActionSpaces();
     _session = 0;

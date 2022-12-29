@@ -28,8 +28,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # include <vsgvr/xr/AndroidTraits.h>
 #endif
 
-using namespace vsg;
-
 namespace vsgvr
 {
     Instance::Instance(vsg::ref_ptr<Traits> xrTraits)
@@ -50,14 +48,14 @@ namespace vsgvr
         // TODO: This indicates the overall runtime is about to become unavailable. Given that encountering
         //       the subsequent XR_ERROR_RUNTIME_UNAVAILABLE when re-creating the instance isn't handled,
         //       just throw an exception.
-        throw Exception({"OpenXR: Instance loss pending"});
+        throw vsg::Exception({"OpenXR: Instance loss pending"});
     }
 
     void Instance::createInstance()
     {
         if (_instance)
         {
-            throw Exception({"Viewer: Instance already initialised"});
+            throw vsg::Exception({"Viewer: Instance already initialised"});
         }
         std::vector<const char *> extensions = {
             "XR_KHR_vulkan_enable"
@@ -140,7 +138,7 @@ namespace vsgvr
     {
         if (!_instance)
         {
-            throw Exception({"Viewer: Instance not initialised"});
+            throw vsg::Exception({"Viewer: Instance not initialised"});
         }
         _system = 0;
         _systemProperties = XrSystemProperties();
@@ -176,7 +174,7 @@ namespace vsgvr
             xr_check(xrEnumerateViewConfigurations(_instance, _system, static_cast<uint32_t>(types.size()), &count, types.data()));
             if (std::find(types.begin(), types.end(), _xrTraits->viewConfigurationType) == types.end())
             {
-                throw Exception({"View configuration type not supported"});
+                throw vsg::Exception({"View configuration type not supported"});
             }
         }
 
@@ -189,7 +187,7 @@ namespace vsgvr
             xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, _xrTraits->viewConfigurationType, static_cast<uint32_t>(modes.size()), &count, modes.data()));
             if (std::find(modes.begin(), modes.end(), _xrTraits->environmentBlendMode) == modes.end())
             {
-                throw Exception({"Environment blend mode not supported"});
+                throw vsg::Exception({"Environment blend mode not supported"});
             }
         }
     }
