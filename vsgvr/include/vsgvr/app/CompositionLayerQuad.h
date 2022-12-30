@@ -43,10 +43,13 @@ namespace vsgvr {
       std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
       void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
 
+      /// Image properties for the rendered quad
       uint32_t widthPixels = 1920;
       uint32_t heightPixels = 1080;
       uint32_t numSamples = 1;
 
+      /// Positioning properties
+      /// Note: XrPosef is in the OpenXR coordinate system - X-right, Y-up, Z-back
       XrPosef pose = {
         {0.0f, 0.0f, 0.0f, 1.0f},
         {0.0f, 0.0f, 0.0f}
