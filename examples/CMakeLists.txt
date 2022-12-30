@@ -6,6 +6,6 @@ if(ANDROID)
 else()
   add_subdirectory( generic )
   add_subdirectory( interaction_locomotion )
-  add_subdirectory( skybox_and_views )
+  add_subdirectory( composition_layer_quad )
 endif()
 
