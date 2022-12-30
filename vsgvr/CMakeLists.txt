@@ -9,7 +9,9 @@ set( HEADERS_ACTIONS
 set( HEADERS_APP
   include/vsgvr/app/Viewer.h
   include/vsgvr/app/UserOrigin.h
-  include/vsgvr/app/CompositionLayers.h
+  include/vsgvr/app/CompositionLayer.h
+  include/vsgvr/app/CompositionLayerProjection.h
+  include/vsgvr/app/CompositionLayerQuad.h
 )
 
 set( HEADERS_XR
@@ -31,7 +33,9 @@ set( SOURCES
   src/vsgvr/actions/ActionSet.cpp
   src/vsgvr/app/Viewer.cpp
   src/vsgvr/app/UserOrigin.cpp
-  src/vsgvr/app/CompositionLayers.cpp
+  src/vsgvr/app/CompositionLayer.cpp
+  src/vsgvr/app/CompositionLayerProjection.cpp
+  src/vsgvr/app/CompositionLayerQuad.cpp
   src/vsgvr/xr/EventHandler.cpp
   src/vsgvr/xr/GraphicsBindingVulkan.cpp
   src/vsgvr/xr/Instance.cpp

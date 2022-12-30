@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
-#include <vsgvr/app/CompositionLayers.h>
+#include <vsgvr/app/CompositionLayer.h>
 
 #include <vsg/app/CommandGraph.h>
 #include <vsg/app/CompileManager.h>

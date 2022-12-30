@@ -1,6 +1,8 @@
 
 #include "game.h"
 
+#include <vsgvr/app/CompositionLayerProjection.h>
+
 #include "../../models/controller/controller.cpp"
 #include "../../models/controller/controller2.cpp"
 #include "../../models/world/world.cpp"

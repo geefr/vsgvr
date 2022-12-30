@@ -3,7 +3,9 @@
 #include <vsgvr/xr/Instance.h>
 #include <vsgvr/xr/GraphicsBindingVulkan.h>
 #include <vsgvr/xr/ViewMatrix.h>
+
 #include <vsgvr/app/Viewer.h>
+#include <vsgvr/app/CompositionLayerprojection.h>
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/ActionPoseBinding.h>
 
