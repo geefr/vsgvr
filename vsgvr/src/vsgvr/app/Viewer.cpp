@@ -348,7 +348,7 @@ namespace vsgvr
     return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
   }
 
-  vsg::CommandGraphs Viewer::createCommandGraphsForView(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>> cameras, bool assignHeadlight) {
+  vsg::CommandGraphs Viewer::createCommandGraphsForView(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
     // * vsg::CommandGraph::createCommandGraphForView
     // * vsg::RenderGraph::createRenderGraphForView
 

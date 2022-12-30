@@ -147,7 +147,7 @@ namespace vsgvr {
             //       counterparts. Ideally these would not be duplicated, but this will likely require chnanges
             //       within vsg to correct. In the long run Viewer should only be concerned with the XR parts
             //       or may even be moved to be a 'Window' class.
-            vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>> cameras, bool assignHeadlight = true);
+            vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
             void assignRecordAndSubmitTask(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
             void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
 
