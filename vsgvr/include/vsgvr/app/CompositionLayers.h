@@ -26,7 +26,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/Common.h>
 
+#include <vsg/vk/Framebuffer.h>
+
 namespace vsgvr {
+  class Swapchain;
+  class GraphicsBindingVulkan;
+  class Instance;
+  class Session;
+  class Traits;
+
   /// Composition layer definitions used by vsgvr::Viewer
   /// 
   /// These classes only expose the user-facing components such as the pose and scale of a quad layer. Assignment
@@ -36,8 +44,49 @@ namespace vsgvr {
   class VSGVR_DECLSPEC CompositionLayer : public vsg::Inherit<vsg::Object, CompositionLayer>
   {
   public:
-    virtual ~CompositionLayer();
+    struct SwapchainImageRequirements
+    {
+      uint32_t width;
+      uint32_t height;
+      uint32_t sampleCount;
+    };
 
+    virtual ~CompositionLayer();
+    virtual void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) = 0;
+    virtual std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() = 0;
+
+    void createSwapchains(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding, vsg::ref_ptr<vsgvr::Traits> xrTraits, std::vector< SwapchainImageRequirements> imageRequirements);
+    void destroySwapchains();
+
+    vsg::ref_ptr<Swapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
+
+    /// @internal
+    vsg::ref_ptr<vsgvr::Swapchain> _swapchain;
+
+    struct Frame
+    {
+      vsg::ref_ptr<vsg::ImageView> imageView;
+      vsg::ref_ptr<vsg::Framebuffer> framebuffer;
+    };
+    using Frames = std::vector<Frame>;
+    Frame& frame(size_t view, size_t i) { return _viewData[view].frames[i]; }
+    Frames& frames(size_t view) { return _viewData[view].frames; }
+
+    struct PerViewData
+    {
+      vsg::ref_ptr<Swapchain> swapchain;
+      vsg::ref_ptr<vsg::Image> depthImage;
+      vsg::ref_ptr<vsg::ImageView> depthImageView;
+      // only used when multisampling is required
+      vsg::ref_ptr<vsg::Image> multisampleImage;
+      vsg::ref_ptr<vsg::ImageView> multisampleImageView;
+      // only used when multisampling and with Traits::requiresDepthRead == true
+      vsg::ref_ptr<vsg::Image> multisampleDepthImage;
+      vsg::ref_ptr<vsg::ImageView> multisampleDepthImageView;
+      Frames frames;
+      vsg::ref_ptr<vsg::RenderPass> renderPass;
+    };
+    std::vector<PerViewData> _viewData;
   protected:
     CompositionLayer();
   };
@@ -56,6 +105,13 @@ namespace vsgvr {
       /// @internal
       XrCompositionLayerProjection _compositionLayer;
       std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
+      // Details of chosen _xrTraits->viewConfigurationType
+      // Details of individual views - recommended size / sampling
+      XrViewConfigurationProperties _viewConfigurationProperties;
+      std::vector<XrViewConfigurationView> _viewConfigurationViews;
+
+      void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
+      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
   };
 
   /// XrCompositionLayerQuad - Rendered elements on a 2D quad, positioned in world space.
@@ -68,6 +124,9 @@ namespace vsgvr {
       CompositionLayerQuad(XrPosef inPose, XrExtent2Df inSize, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
       virtual ~CompositionLayerQuad();
       XrCompositionLayerQuad getCompositionLayer() const;
+
+      void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
+      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
 
       XrPosef pose = {
         {0.0f, 0.0f, 0.0f, 1.0f},

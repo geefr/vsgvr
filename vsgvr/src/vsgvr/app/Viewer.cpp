@@ -45,7 +45,6 @@ namespace vsgvr
     , _xrTraits(xrTraits)
     , _graphicsBinding(graphicsBinding)
   {
-    getViewConfiguration();
     createSession();
   }
 
@@ -160,8 +159,24 @@ namespace vsgvr
 
   void Viewer::recordAndSubmit()
   {
+    for( auto& compositionLayer : compositionRecordAndSubmitTasks )
+    {
+      if (auto layer = compositionLayer.layer.cast<CompositionLayerProjection>())
+      {
+        renderCompositionLayerProjection(layer, compositionLayer.recordAndSubmitTasks);
+      }
+      else if (auto layer = compositionLayer.layer.cast<CompositionLayerQuad>())
+      {
+        // TODO: What about swapchain requirements for the quad, on top of those created for the view configuration? Perhaps there's more rework to be done :(
+        renderCompositionLayerQuad(layer, compositionLayer.recordAndSubmitTasks);
+      }
+    }
+  }
+
+  void Viewer::renderCompositionLayerProjection(vsg::ref_ptr<vsgvr::CompositionLayerProjection> layer, RecordAndSubmitTasks& recordAndSubmitTasks)
+  {
     // Locate the views (at predicted frame time), to extract view/proj matrices, and fov
-    std::vector<XrView> locatedViews(_viewConfigurationViews.size(), XrView());
+    std::vector<XrView> locatedViews(layer->_viewConfigurationViews.size(), XrView());
     auto viewsValid = false;
     for (auto& v : locatedViews)
     {
@@ -186,33 +201,17 @@ namespace vsgvr
       viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
     }
 
-    for( auto& compositionLayer : compositionRecordAndSubmitTasks )
-    {
-      if (auto layer = compositionLayer.layer.cast<CompositionLayerProjection>())
-      {
-        renderCompositionLayerProjection(layer, compositionLayer.recordAndSubmitTasks, locatedViews, viewsValid);
-      }
-      else if (auto layer = compositionLayer.layer.cast<CompositionLayerQuad>())
-      {
-        // TODO: What about swapchain requirements for the quad, on top of those created for the view configuration? Perhaps there's more rework to be done :(
-        renderCompositionLayerQuad(layer, compositionLayer.recordAndSubmitTasks);
-      }
-    }
-  }
-
-  void Viewer::renderCompositionLayerProjection(vsg::ref_ptr<vsgvr::CompositionLayerProjection> layer, RecordAndSubmitTasks& recordAndSubmitTasks, const std::vector<XrView>& locatedViews, bool viewsValid)
-  {
     // Set up projection views, within a composition layer
     layer->_layerProjectionViews.clear();
-    for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
+    for (auto i = 0u; i < layer->_viewConfigurationViews.size(); ++i)
     {
       auto projectionView = XrCompositionLayerProjectionView();
       projectionView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
       projectionView.next = nullptr;
       projectionView.fov = locatedViews[i].fov;
       projectionView.pose = locatedViews[i].pose;
-      projectionView.subImage.swapchain = _session->getSwapchain(i)->getSwapchain();
-      auto extent = _session->getSwapchain(i)->getExtent();
+      projectionView.subImage.swapchain = layer->getSwapchain(i)->getSwapchain();
+      auto extent = layer->getSwapchain(i)->getExtent();
       projectionView.subImage.imageRect = XrRect2Di{ {0, 0},
         {static_cast<int>(extent.width), static_cast<int>(extent.height)}
       };
@@ -221,9 +220,9 @@ namespace vsgvr
     }
 
     // Render the scene
-    for (auto i = 0u; i < _viewConfigurationViews.size(); ++i)
+    for (auto i = 0u; i < layer->_viewConfigurationViews.size(); ++i)
     {
-      auto swapchain = _session->getSwapchain(i);
+      auto swapchain = layer->getSwapchain(i);
       uint32_t swapChainImageIndex = 0;
 
       swapchain->acquireImage(swapChainImageIndex);
@@ -243,7 +242,7 @@ namespace vsgvr
               // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
               if (auto renderGraph = commandGraph->children[0].cast<vsg::RenderGraph>())
               {
-                renderGraph->framebuffer = _session->frames(i)[swapChainImageIndex].framebuffer;
+                renderGraph->framebuffer = layer->frames(i)[swapChainImageIndex].framebuffer;
                 if (auto vsgView = renderGraph->children[0].cast<vsg::View>())
                 {
                   vsgView->camera->viewMatrix = ViewMatrix::create(locatedViews[i].pose);
@@ -274,9 +273,8 @@ namespace vsgvr
   void Viewer::renderCompositionLayerQuad(vsg::ref_ptr<vsgvr::CompositionLayerQuad> layer, RecordAndSubmitTasks& recordAndSubmitTasks)
   {
     // Render the scene
-    // TODO: Which swapchain(s) should quad layers use - Surely their own (new) ones?
     auto swapchainI = 0;
-    auto swapchain = _session->getSwapchain(swapchainI);
+    auto swapchain = layer->getSwapchain(swapchainI);
     uint32_t swapChainImageIndex = 0;
 
     swapchain->acquireImage(swapChainImageIndex);
@@ -296,7 +294,7 @@ namespace vsgvr
             // TODO: More reliable way to fetch render graph? Maybe just store a pointer to it if there's no downside?
             if (auto renderGraph = commandGraph->children[0].cast<vsg::RenderGraph>())
             {
-              renderGraph->framebuffer = _session->frames(swapchainI)[swapChainImageIndex].framebuffer;
+              renderGraph->framebuffer = layer->frames(swapchainI)[swapChainImageIndex].framebuffer;
             }
           }
         }
@@ -350,9 +348,15 @@ namespace vsgvr
     return vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(extent));
   }
 
-  vsg::CommandGraphs Viewer::createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
+  vsg::CommandGraphs Viewer::createCommandGraphsForView(vsg::ref_ptr<vsgvr::CompositionLayer> compositionLayer, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>> cameras, bool assignHeadlight) {
     // * vsg::CommandGraph::createCommandGraphForView
     // * vsg::RenderGraph::createRenderGraphForView
+
+    // vsgvr-specific: Work out what views the composition layer requires
+    // from OpenXR, and create swapchains as needed.
+    compositionLayer->populateLayerSpecificData(_instance, _xrTraits);
+    auto swapchainImageRequirements = compositionLayer->getSwapchainImageRequirements();
+    compositionLayer->createSwapchains(_session, _graphicsBinding, _xrTraits, swapchainImageRequirements);
 
     std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
 
@@ -363,16 +367,20 @@ namespace vsgvr
     {
       // TODO: Flexibility on render resolution - For now hardcoded to recommended throughout
       VkExtent2D hmdExtent{
-        _viewConfigurationViews[i].recommendedImageRectWidth,
-        _viewConfigurationViews[i].recommendedImageRectHeight,
+        swapchainImageRequirements[i].width,
+        swapchainImageRequirements[i].height,
       };
 
       // vsg::createCommandGraphForView
       auto hmdCommandGraph = vsg::CommandGraph::create(_graphicsBinding->getVkDevice(),
                               _graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
 
-      auto camera = createCamera(hmdExtent);
-      cameras.push_back(camera);
+      if( cameras.empty() )
+      {
+        auto camera = createCamera(hmdExtent);
+        cameras.push_back(camera);
+      }
+      auto camera = cameras.front();
 
       auto view = vsg::View::create(camera);
       // TODO: Need to check how this interacts with the multi-view rendering. Does this mean that each eye views the scene with
@@ -384,16 +392,13 @@ namespace vsgvr
       auto renderGraph = vsg::RenderGraph::create();
       renderGraph->addChild(view);
 
-      if (_session)
-      {
-        renderGraph->framebuffer = _session->frames(i)[0].framebuffer;
-        renderGraph->previous_extent = _session->getSwapchain(i)->getExtent();
-        renderGraph->renderArea.offset = {0, 0};
-        renderGraph->renderArea.extent = _session->getSwapchain(i)->getExtent();
+      renderGraph->framebuffer = compositionLayer->frames(i)[0].framebuffer;
+      renderGraph->previous_extent = compositionLayer->getSwapchain(i)->getExtent();
+      renderGraph->renderArea.offset = {0, 0};
+      renderGraph->renderArea.extent = compositionLayer->getSwapchain(i)->getExtent();
 
-        // TODO: Will need to pass correct values, assume it comes from the window traits / equivalent?
-        renderGraph->setClearValues();
-      }
+      // TODO: Will need to pass correct values, assume it comes from the window traits / equivalent?
+      renderGraph->setClearValues();
       hmdCommandGraph->addChild(renderGraph);
       commandGraphs.push_back(std::move(hmdCommandGraph));
     }
@@ -614,22 +619,6 @@ namespace vsgvr
     compositionRecordAndSubmitTasks.push_back({compositionLayer, recordAndSubmitTasks});
   }
 
-  void Viewer::getViewConfiguration() {
-    _viewConfigurationProperties = XrViewConfigurationProperties();
-    _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
-    _viewConfigurationProperties.next = nullptr;
-
-    xr_check(xrGetViewConfigurationProperties(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, &_viewConfigurationProperties));
-    uint32_t count = 0;
-    xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, 0, &count, nullptr));
-    _viewConfigurationViews.resize(count, XrViewConfigurationView());
-    for (auto& v : _viewConfigurationViews) {
-      v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
-      v.next = nullptr;
-    }
-    xr_check(xrEnumerateViewConfigurationViews(_instance->getInstance(), _instance->getSystem(), _xrTraits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
-  }
-
   void Viewer::syncSpaceBindings()
   {
     if( spaceBindings.empty() ) return;
@@ -744,7 +733,7 @@ namespace vsgvr
     if (_session) {
       throw vsg::Exception({ "Viewer: Session already initialised" });
     }
-    _session = Session::create(_instance, _graphicsBinding, _xrTraits->swapchainFormat, _viewConfigurationViews);
+    _session = Session::create(_instance, _graphicsBinding);
   }
 
   void Viewer::destroySession() {

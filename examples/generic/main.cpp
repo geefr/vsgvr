@@ -158,10 +158,11 @@ int main(int argc, char **argv) {
     // a Window instance. Other than some possible improvements later, it could use the same code as vsg
     // OpenXR rendering may use one or more command graphs, as decided by the viewer
     // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
-    auto xrCommandGraphs = vr->createCommandGraphsForView(vsg_scene, xrCameras, false);
+    auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create();
+    auto xrCommandGraphs = vr->createCommandGraphsForView(headsetCompositionLayer, vsg_scene, xrCameras, false);
     // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
     // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-    vr->assignRecordAndSubmitTask(vsgvr::CompositionLayerProjection::create(), xrCommandGraphs);
+    vr->assignRecordAndSubmitTask(headsetCompositionLayer, xrCommandGraphs);
     // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
     // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
     vr->compile();

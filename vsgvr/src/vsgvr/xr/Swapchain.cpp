@@ -43,11 +43,11 @@ namespace vsgvr {
     }
   }
 
-  Swapchain::Swapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
+  Swapchain::Swapchain(XrSession session, VkFormat swapchainFormat, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
     validateFormat(session);
-    createSwapchain(session, viewConfig, graphicsBinding);
+    createSwapchain(session, width, height, sampleCount, graphicsBinding);
   }
 
   Swapchain::~Swapchain()
@@ -98,13 +98,13 @@ namespace vsgvr {
     }
   }
 
-  void Swapchain::createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
+  void Swapchain::createSwapchain(XrSession session, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
   {
     XrSwapchainUsageFlags usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
     XrSwapchainCreateFlags createFlags = 0;
 
-    _extent.width = viewConfig.recommendedImageRectWidth;
-    _extent.height = viewConfig.recommendedImageRectHeight;
+    _extent.width = width;
+    _extent.height = height;
 
     auto info = XrSwapchainCreateInfo();
     info.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
@@ -112,9 +112,9 @@ namespace vsgvr {
     info.createFlags = createFlags;
     info.usageFlags = usageFlags;
     info.format = _swapchainFormat;
-    info.sampleCount = viewConfig.recommendedSwapchainSampleCount;
-    info.width = viewConfig.recommendedImageRectWidth;
-    info.height = viewConfig.recommendedImageRectHeight;
+    info.sampleCount = sampleCount;
+    info.width = width;
+    info.height = height;
     info.faceCount = 1;
     info.arraySize = 1;
     info.mipCount = 1;
@@ -142,7 +142,7 @@ namespace vsgvr {
     for (std::size_t i = 0; i < _swapchainImages.size(); ++i)
     {
       auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVkDevice()));
-      imageView->viewType = VK_IMAGE_VIEW_TYPE_2D;
+      imageView->viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
       imageView->format = _swapchainFormat;
       imageView->subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
       imageView->subresourceRange.baseMipLevel = 0;
