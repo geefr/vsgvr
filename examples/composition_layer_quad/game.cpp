@@ -54,11 +54,13 @@ void Game::initVR()
   // OpenXR rendering may use one or more command graphs, as decided by the viewer
   // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
   // Note: assignHeadlight = false -> Scene lighting is required
-  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create();
-  auto xrCommandGraphs = _vr->createCommandGraphsForView(headsetCompositionLayer, _sceneRoot, _xrCameras, false);
+  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getInstance(), _vr->getTraits());
+  auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(_vr->getSession(), _sceneRoot, _xrCameras, false);
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-  _vr->assignRecordAndSubmitTask(headsetCompositionLayer, xrCommandGraphs);
+  headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
+  headsetCompositionLayer->compile();
+  _vr->compositionLayers.push_back(headsetCompositionLayer);
 
   // TODO: Quick hack to render <something> to a CompositionLayerQuad - This should do something better
   {
@@ -71,23 +73,21 @@ void Game::initVR()
     // - The composition layer's basic parameters (pose, scale) may be modified later at any time
     // - There is a runtime-specific limit to the number of composition layers. Only a few should be used, if more than one.
     auto overheadCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(0, 0, 1920, 1080));
-    auto quadLayer = vsgvr::CompositionLayerQuad::create();
+    auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getTraits());
     quadLayer->pose.position = { 0.0, 1.0, -4.0 };
     /*auto rot = vsg::quat({0.0f, 5.0f, 2.5f}, {0.0f, 0.0f, 2.5f});
     quadLayer->pose.orientation = {
       rot.x, rot.y, rot.z, rot.w
     };*/
     // Quad size taking in to account aspect ratio
-    quadLayer->size = { 1.920, 1.080 };
+    quadLayer->size = { 1.920f, 1.080f };
 
     std::vector<vsg::ref_ptr<vsg::Camera>> cameras = { overheadCamera };
-    auto overheadCommandGraphs = _vr->createCommandGraphsForView(quadLayer, _sceneRoot, cameras, false);
-    _vr->assignRecordAndSubmitTask(quadLayer, overheadCommandGraphs);
+    auto overheadCommandGraphs = quadLayer->createCommandGraphsForView(_vr->getSession(), _sceneRoot, cameras, false);
+    quadLayer->assignRecordAndSubmitTask(overheadCommandGraphs);
+    quadLayer->compile();
+    _vr->compositionLayers.push_back(quadLayer);
   }
-
-  // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
-  // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
-  _vr->compile();
 
   if(_desktopWindowEnabled)
   {

@@ -26,6 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/Common.h>
 
+#include <vsg/app/RecordAndSubmitTask.h>
+#include <vsg/app/CommandGraph.h>
 #include <vsg/vk/Framebuffer.h>
 
 namespace vsgvr {
@@ -54,13 +56,29 @@ namespace vsgvr {
     virtual ~CompositionLayer();
     virtual void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) = 0;
     virtual std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() = 0;
+    virtual void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) = 0;
+    virtual XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() = 0;
 
-    void createSwapchains(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding, vsg::ref_ptr<vsgvr::Traits> xrTraits, std::vector< SwapchainImageRequirements> imageRequirements);
+    void createSwapchains(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding, std::vector< SwapchainImageRequirements> imageRequirements);
     void destroySwapchains();
 
     vsg::ref_ptr<Swapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
 
-    /// @internal
+    // TODO: These methods are required at the moment, and have some small differences from their vsg
+    //       counterparts. Ideally these would not be duplicated, but this will likely require chnanges
+    //       within vsg to correct. In the long run Viewer should only be concerned with the XR parts
+    //       or may even be moved to be a 'Window' class.
+
+    /// Note: Cameras are not required when building a CompositionLayerProjection
+    vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
+    void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
+    void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
+
+    void advanceToNextFrame();
+
+  protected:
+    vsg::ref_ptr<vsgvr::Instance> _instance;
+    vsg::ref_ptr<vsgvr::Traits> _xrTraits;
     vsg::ref_ptr<vsgvr::Swapchain> _swapchain;
 
     struct Frame
@@ -87,21 +105,38 @@ namespace vsgvr {
       vsg::ref_ptr<vsg::RenderPass> renderPass;
     };
     std::vector<PerViewData> _viewData;
-  protected:
-    CompositionLayer();
+
+
+    // Manage the work to do each frame using RecordAndSubmitTasks
+    // the vsgvr::Viewer renders to a series of OpenXR composition layers,
+    // each of which contains one or more RecordAndSubmitTasks (for each view/eye)
+    // Composition layers are rendered in order, following the OpenXR specification.
+    using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
+    RecordAndSubmitTasks _recordAndSubmitTasks;
+
+    CompositionLayer(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits);
   };
 
   /// XrCompositionLayerProjection - Planar projected images rendered for each eye, displaying the required view within the scene
   class VSGVR_DECLSPEC CompositionLayerProjection final : public vsg::Inherit<vsgvr::CompositionLayer, CompositionLayerProjection>
   {
     public:
-      CompositionLayerProjection();
-      CompositionLayerProjection(XrCompositionLayerFlags inFlags);
+      CompositionLayerProjection() = delete;
+      CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits);
+      CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, XrCompositionLayerFlags inFlags);
       virtual ~CompositionLayerProjection();
-      XrCompositionLayerProjection getCompositionLayer() const;
+      XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
 
       XrCompositionLayerFlags flags;
 
+      void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
+      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
+      void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
+
+      double nearPlane = 0.05;
+      double farPlane = 100.0;
+
+    protected:
       /// @internal
       XrCompositionLayerProjection _compositionLayer;
       std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
@@ -109,9 +144,6 @@ namespace vsgvr {
       // Details of individual views - recommended size / sampling
       XrViewConfigurationProperties _viewConfigurationProperties;
       std::vector<XrViewConfigurationView> _viewConfigurationViews;
-
-      void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
-      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
   };
 
   /// XrCompositionLayerQuad - Rendered elements on a 2D quad, positioned in world space.
@@ -120,23 +152,25 @@ namespace vsgvr {
   class VSGVR_DECLSPEC CompositionLayerQuad final : public vsg::Inherit<vsgvr::CompositionLayer, CompositionLayerQuad>
   {
     public:
-      CompositionLayerQuad();
-      CompositionLayerQuad(XrPosef inPose, XrExtent2Df inSize, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
+      CompositionLayerQuad() = delete;
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, XrPosef inPose, XrExtent2Df inSize, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
       virtual ~CompositionLayerQuad();
-      XrCompositionLayerQuad getCompositionLayer() const;
+      XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
 
       void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
       std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
+      void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
 
       XrPosef pose = {
         {0.0f, 0.0f, 0.0f, 1.0f},
         {0.0f, 0.0f, 0.0f}
       };
-      XrExtent2Df size = {1.0, 1.0};
+      XrExtent2Df size = { 1.0, 1.0 };
       XrCompositionLayerFlags flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
       XrEyeVisibility eyeVisibility = XrEyeVisibility::XR_EYE_VISIBILITY_BOTH;
 
-      /// @internal
+    protected:
       XrCompositionLayerQuad _compositionLayer;
   };
 }

@@ -80,7 +80,7 @@ namespace vsgvr
             }
             else
             {
-                throw Exception({"On Android an AndroidTraits structure must be provided, with valid JNI/Activity pointers."});
+                throw vsg::Exception({"On Android an AndroidTraits structure must be provided, with valid JNI/Activity pointers."});
             }
         }
 
@@ -122,7 +122,7 @@ namespace vsgvr
         }
         else
         {
-            throw Exception({"On Android an AndroidTraits structure must be provided, with valid JNI/Activity pointers."});
+            throw vsg::Exception({"On Android an AndroidTraits structure must be provided, with valid JNI/Activity pointers."});
         }
 #endif
 

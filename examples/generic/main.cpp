@@ -158,20 +158,19 @@ int main(int argc, char **argv) {
     // a Window instance. Other than some possible improvements later, it could use the same code as vsg
     // OpenXR rendering may use one or more command graphs, as decided by the viewer
     // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
-    auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create();
-    auto xrCommandGraphs = vr->createCommandGraphsForView(headsetCompositionLayer, vsg_scene, xrCameras, false);
+    auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(vr->getInstance(), vr->getTraits());
+    auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(vr->getSession(), vsg_scene, xrCameras, false);
     // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
     // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-    vr->assignRecordAndSubmitTask(headsetCompositionLayer, xrCommandGraphs);
+    headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
     // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
     // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
-    vr->compile();
+    headsetCompositionLayer->compile();
+    vr->compositionLayers.push_back(headsetCompositionLayer);
 
     // Create a CommandGraph to render the desktop window
-    // TODO: I tried to share one of the HMD's cameras here, but under steamvr that caused a deadlock when rendering
-    //       Instead, create a standard perspective camera and bind it to the hmd's position - This looks better on the desktop window anyway
-    
-    // set up the camera
+    // Directly sharing one of the HMD's cameras here is tempting, but causes a deadlock under SteamVR.
+    // To avoid that, and present a nicer view create a regular camera for the desktop, and map it to the location of the user's head
     auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
     auto perspective = vsg::Perspective::create(30.0, static_cast<double>(desktopWindow->extent2D().width) / static_cast<double>(desktopWindow->extent2D().height), 0.1, 100.0);
     auto desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));

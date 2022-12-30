@@ -55,14 +55,15 @@ void Game::initVR()
   // OpenXR rendering may use one or more command graphs, as decided by the viewer
   // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
   // Note: assignHeadlight = false -> Scene lighting is required
-  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create();
-  auto xrCommandGraphs = _vr->createCommandGraphsForView(headsetCompositionLayer, _sceneRoot, _xrCameras, false);
+  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getInstance(), _vr->getTraits());
+  auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(_vr->getSession(), _sceneRoot, _xrCameras, false);
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-  _vr->assignRecordAndSubmitTask(headsetCompositionLayer, xrCommandGraphs);
+  headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
   // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
   // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
-  _vr->compile();
+  headsetCompositionLayer->compile();
+  _vr->compositionLayers.push_back(headsetCompositionLayer);
 
   if(_desktopWindowEnabled)
   {

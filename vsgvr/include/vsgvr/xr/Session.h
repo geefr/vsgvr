@@ -49,6 +49,8 @@ namespace vsgvr {
             /// The session's reference space
             XrSpace getSpace() const { return _space; }
 
+            vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> getGraphicsBinding() { return _graphicsBinding; }
+
         protected:
             virtual ~Session();
         private:
