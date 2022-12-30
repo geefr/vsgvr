@@ -42,7 +42,7 @@ namespace vsgvr
   {
   public:
     Swapchain() = delete;
-    Swapchain(XrSession session, VkFormat swapchainFormat, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
+    Swapchain(XrSession session, VkFormat swapchainFormat, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
     ~Swapchain();
 
@@ -58,7 +58,7 @@ namespace vsgvr
 
   private:
     void validateFormat(XrSession session);
-    void createSwapchain(XrSession session, XrViewConfigurationView viewConfig, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
+    void createSwapchain(XrSession session, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
     void destroySwapchain();
 

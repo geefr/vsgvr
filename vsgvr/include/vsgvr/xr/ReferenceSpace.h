@@ -22,38 +22,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <vsg/core/Inherit.h>
-
 #include <vsgvr/xr/Common.h>
-#include <vsgvr/actions/Action.h>
 
 namespace vsgvr {
-    class Session;
+  class Session;
 
-    /**
-     * An action of type XR_INPUT_ACTION_TYPE_POSE, and an associated action space
-     * The space will only be valid while a session is running
-     */
-    class VSGVR_DECLSPEC ActionPoseBinding : public vsg::Inherit<Action, ActionPoseBinding>
-    {
-        public:
-            ActionPoseBinding(vsg::ref_ptr<Instance> instance, ActionSet* actionSet, std::string name, std::string localisedName);
-            virtual ~ActionPoseBinding();
+  /// A XrSpace handle representing a pose and orientation within one of the base reference space types
+  ///
+  /// Reference spaces are used primarily by the Session and CompositionLayers in order to position content.
+  class VSGVR_DECLSPEC ReferenceSpace : public vsg::Inherit<vsg::Object, ReferenceSpace>
+  {
+  public:
+    ReferenceSpace() = delete;
+    ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType);
+    /// Note: XrPosef is in the OpenXR coordinate system - X-right, Y-up, Z-back
+    ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
+    virtual ~ReferenceSpace();
 
-            XrSpace getActionSpace() const { return _space; }
+    XrSpace getSpace() const { return _space; }
+    XrSpaceLocation locate(XrSpace baseSpace, XrTime time);
 
-            bool getTransformValid() const { return _transformValid; }
-            vsg::dmat4 getTransform() const { return _transform; }
+  private:
+    void createSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
+    void destroySpace();
 
-            void createActionSpace(Session* session);
-            void destroyActionSpace();
-
-            void setTransform(XrSpaceLocation location);
-        private:
-            XrSpace _space = 0;
-
-            bool _transformValid = false;
-            vsg::dmat4 _transform;
-    };
+    XrSpace _space = XR_NULL_HANDLE;
+  };
 }
 
-EVSG_type_name(vsgvr::ActionPoseBinding);
+EVSG_type_name(vsgvr::ReferenceSpace);

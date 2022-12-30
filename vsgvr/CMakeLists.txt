@@ -9,6 +9,9 @@ set( HEADERS_ACTIONS
 set( HEADERS_APP
   include/vsgvr/app/Viewer.h
   include/vsgvr/app/UserOrigin.h
+  include/vsgvr/app/CompositionLayer.h
+  include/vsgvr/app/CompositionLayerProjection.h
+  include/vsgvr/app/CompositionLayerQuad.h
 )
 
 set( HEADERS_XR
@@ -17,6 +20,7 @@ set( HEADERS_XR
   include/vsgvr/xr/GraphicsBindingVulkan.h
   include/vsgvr/xr/Instance.h
   include/vsgvr/xr/ProjectionMatrix.h
+  include/vsgvr/xr/ReferenceSpace.h
   include/vsgvr/xr/Session.h
   include/vsgvr/xr/Swapchain.h
   include/vsgvr/xr/Traits.h
@@ -28,11 +32,17 @@ set( SOURCES
   src/vsgvr/actions/ActionPoseBinding.cpp
   src/vsgvr/actions/SpaceBinding.cpp
   src/vsgvr/actions/ActionSet.cpp
+
   src/vsgvr/app/Viewer.cpp
   src/vsgvr/app/UserOrigin.cpp
+  src/vsgvr/app/CompositionLayer.cpp
+  src/vsgvr/app/CompositionLayerProjection.cpp
+  src/vsgvr/app/CompositionLayerQuad.cpp
+
   src/vsgvr/xr/EventHandler.cpp
   src/vsgvr/xr/GraphicsBindingVulkan.cpp
   src/vsgvr/xr/Instance.cpp
+  src/vsgvr/xr/ReferenceSpace.cpp
   src/vsgvr/xr/Session.cpp
   src/vsgvr/xr/Swapchain.cpp
   src/vsgvr/xr/Traits.cpp

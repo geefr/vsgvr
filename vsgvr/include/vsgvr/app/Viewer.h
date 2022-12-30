@@ -34,8 +34,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
+#include <vsgvr/app/CompositionLayer.h>
+
 #include <vsg/app/CommandGraph.h>
-#include <vsg/app/RecordAndSubmitTask.h>
 #include <vsg/app/CompileManager.h>
 #include <vsg/app/UpdateOperations.h>
 #include <vsg/app/RenderGraph.h>
@@ -70,9 +71,9 @@ namespace vsgvr {
             Viewer() = delete;
             ~Viewer();
 
-            // TODO: Update this - Summary level of what to do, based on the event updates.
-            //       Simple things don't need any input from app, so it might just reduce
-            //       to a boolean good/exit status.
+            vsg::ref_ptr<Instance> getInstance() { return _instance; }
+            vsg::ref_ptr<Session> getSession() { return _session; }
+            vsg::ref_ptr<Traits> getTraits() { return _xrTraits; }
 
             /**
              * Whether polling for events succeeded, and what action the application
@@ -118,20 +119,10 @@ namespace vsgvr {
 
             /// State information on the current frame
             /// Only valid if advanceToNextFrame returned true
-            XrFrameState frameState() const { return _frameState; }
-            vsg::ref_ptr<vsg::FrameStamp> frameStamp() const { return _frameStamp; }
+            XrFrameState getFrameState() const { return _frameState; }
+            vsg::ref_ptr<vsg::FrameStamp> getFrameStamp() const { return _frameStamp; }
 
-            // Manage the work to do each frame using RecordAndSubmitTasks.
-            using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
-            RecordAndSubmitTasks recordAndSubmitTasks;
-
-            // TODO: These methods are required at the moment, and have some small differences from their vsg
-            //       counterparts. Ideally these would not be duplicated, but this will likely require chnanges
-            //       within vsg to correct. In the long run Viewer should only be concerned with the XR parts
-            //       or may even be moved to be a 'Window' class.
-            vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
-            void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
-            void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
+            std::vector<vsg::ref_ptr<vsgvr::CompositionLayer>> compositionLayers;
 
             // OpenXR spaces, which will be synced along with actions
             // Typically used for obtaining the position of the headset, via
@@ -144,14 +135,8 @@ namespace vsgvr {
             // One or more may be active at a time, depending on user interaction mode
             std::vector<vsg::ref_ptr<ActionSet>> activeActionSets;
 
-            double nearPlane = 0.05;
-            double farPlane = 100.0;
-
         private:
-            vsg::ref_ptr<vsg::Camera> createCamera(const VkExtent2D& extent);
-
             void shutdownAll();
-            void getViewConfiguration();
 
             void syncSpaceBindings();
             void syncActions();
@@ -160,9 +145,7 @@ namespace vsgvr {
             // have been suggested, and prior to scene rendering.
             // Viewer performs this automatically during the first
             // call to pollEvents
-            void createSpaceBindings();
             void createActionSpacesAndAttachActionSets();
-            void destroySpaceBindings();
             void destroyActionSpaces();
 
             vsg::ref_ptr<Instance> _instance;
@@ -170,11 +153,6 @@ namespace vsgvr {
             vsg::ref_ptr<GraphicsBindingVulkan> _graphicsBinding;
 
             EventHandler _eventHandler;
-
-            // Details of chosen _xrTraits->viewConfigurationType
-            // Details of individual views - recommended size / sampling
-            XrViewConfigurationProperties _viewConfigurationProperties;
-            std::vector<XrViewConfigurationView> _viewConfigurationViews;
 
             // Session
             void createSession();
@@ -187,10 +165,7 @@ namespace vsgvr {
             // Per-frame
             XrFrameState _frameState;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
-
             std::vector<XrCompositionLayerBaseHeader*> _layers;
-            XrCompositionLayerProjection _layerProjection;
-            std::vector<XrCompositionLayerProjectionView> _layerProjectionViews;
     };
 }
 

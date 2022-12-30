@@ -44,6 +44,16 @@ Controller models in scene   | Working
 HMD tracking                 | Working
 Desktop view                 | Working
 
+### OpenXR Spec and Extensions
+
+As a minimum OpenXR requires the following OpenXR extensions:
+* XR\_KHR\_vulkan\_enable
+* On Android: XR\_KHR\_android\_create\_instance
+
+In addition the Vulkan runtime must satisfy the requirements of OpenXR. These requirements will vary but generally relate to shared memory extensions and similar.
+
+As features are implemented vsgvr will use more extensions if available, to support common features such as additional composition layers. If specific extensions are not present, or not requested by the application these features will be inoperable.
+
 ## Setup
 
 If you don't have a VR headset there's a couple of options.

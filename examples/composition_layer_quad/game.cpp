@@ -2,6 +2,7 @@
 #include "game.h"
 
 #include <vsgvr/app/CompositionLayerProjection.h>
+#include <vsgvr/app/CompositionLayerQuad.h>
 
 #include "../../models/controller/controller.cpp"
 #include "../../models/controller/controller2.cpp"
@@ -9,7 +10,6 @@
 #include "../../models/assets/teleport_marker/teleport_marker.cpp"
 
 #include "interactions/interaction_teleport.h"
-#include "interactions/interaction_slide.h"
 
 Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow)
   : _xrInstance(xrInstance)
@@ -62,10 +62,43 @@ void Game::initVR()
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
   headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
-  // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
-  // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
   headsetCompositionLayer->compile();
   _vr->compositionLayers.push_back(headsetCompositionLayer);
+
+  // TODO: Quick hack to render <something> to a CompositionLayerQuad - This should do something better
+  {
+    auto lookAt = vsg::LookAt::create(vsg::dvec3(0.0, 0.0, 10.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, -1.0, 0.0));
+    // Camera parameters as if it's rendering to a desktop display, appropriate size for the displayed quad
+    auto perspective = vsg::Perspective::create(30.0, 1920.0 / 1080.0, 0.1, 100.0);
+
+    // Configure rendering from an overhead camera, displaying the scene
+    // - A camera is not require here, but is required if the application later wants a reference to it
+    // - The composition layer's basic parameters (pose, scale) may be modified later at any time
+    // - There is a runtime-specific limit to the number of composition layers. Only a few should be used, if more than one.
+    auto overheadCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(0, 0, 1920, 1080));
+
+    // A quad positioned in the world (scene reference space)
+    // auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getTraits(), _vr->getSession()->getSpace(), 1920, 1080);
+    // quadLayer->pose.position = { 0.0, 1.0, -4.0 };
+
+    // A quad positioned in front of the user's face
+     auto faceLockedSpace = vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
+     auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getTraits(), faceLockedSpace, 1920, 1080);
+     quadLayer->pose.position = { 0.0, 0.0, -4.0 };
+
+    /*auto rot = vsg::quat({0.0f, 5.0f, 2.5f}, {0.0f, 0.0f, 2.5f});
+    quadLayer->pose.orientation = {
+      rot.x, rot.y, rot.z, rot.w
+    };*/
+    // Quad size taking in to account aspect ratio
+    quadLayer->sizeMeters = { 1.920f, 1.080f };
+
+    std::vector<vsg::ref_ptr<vsg::Camera>> cameras = { overheadCamera };
+    auto overheadCommandGraphs = quadLayer->createCommandGraphsForView(_vr->getSession(), _sceneRoot, cameras, false);
+    quadLayer->assignRecordAndSubmitTask(overheadCommandGraphs);
+    quadLayer->compile();
+    _vr->compositionLayers.push_back(quadLayer);
+  }
 
   if(_desktopWindowEnabled)
   {
@@ -86,8 +119,7 @@ void Game::initVR()
 void Game::initActions()
 {
   // Tracking the location of the user's headset is achieved by tracking the VIEW reference space
-  // vsgvr provides a SpaceBinding class for this - Similar to the ActionPoseBindings the head's pose
-  // will be tracked during rendering, and available when performing interactions
+  // This may be done by the application, but vsgvr::Viewer can also track a set of SpaceBindings per-frame (within the session's reference space)
   _headPose = vsgvr::SpaceBinding::create(vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW));
   _vr->spaceBindings.push_back(_headPose);
 
@@ -104,7 +136,6 @@ void Game::initActions()
   };
 
   _interactions.emplace("teleport", new Interaction_teleport(_xrInstance, _headPose, _leftHandPose, _teleportMarker, _ground));
-  _interactions.emplace("slide", new Interaction_slide(_xrInstance, _headPose, _leftHandPose, _ground));
 
   // Ask OpenXR to suggest interaction bindings.
   // * If subpaths are used, list all paths that each action should be bound for
@@ -151,7 +182,6 @@ void Game::initActions()
   // TODO: Set up input action to switch between modes
   // TODO: Display active mode somewhere in the world, maybe as text panel when looking at controllers
   _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
-  // _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
 
   // add close handler to respond the close window button and pressing escape
   _desktopViewer->addEventHandler(vsg::CloseHandler::create(_desktopViewer));

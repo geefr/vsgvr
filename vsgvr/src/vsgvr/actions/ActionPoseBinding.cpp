@@ -67,7 +67,7 @@ namespace vsgvr
         }
     }
 
-    void ActionPoseBinding::setSpaceLocation(XrSpaceLocation location)
+    void ActionPoseBinding::setTransform(XrSpaceLocation location)
     {
       if ((location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) && 
           (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT))

@@ -76,8 +76,11 @@ namespace vsgvr {
     /// playerFloorPosition is typically calculated based on the user's head
     /// ```c++
     /// // Enable tracking of the headset - View space in OpenXR
-    /// headPose = vsgvr::SpaceBinding::create(_xrInstance, XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
-    /// viewer->spaceBindings.push_back(_headPose);
+    /// headPose = vsgvr::SpaceBinding::create(
+    ///   vsgvr::ReferenceSpace::create(
+    ///     _vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW
+    /// ));
+    /// viewer->spaceBindings.push_back(headPose);
     /// 
     /// // The position on the ground, beneath the player
     /// // This assumes the user is standing on a flat plane, and that z == 0 in vr space
