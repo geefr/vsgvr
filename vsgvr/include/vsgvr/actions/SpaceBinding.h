@@ -25,38 +25,44 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/Common.h>
 #include <vsgvr/xr/Instance.h>
+#include <vsgvr/xr/ReferenceSpace.h>
 
 namespace vsgvr {
-    class Session;
+  class Session;
+  /**
+   * A binding class allowing an XrSpace to be tracked by the Viewer.
+   * 
+   * The specified reference space will be kept updated during rendering (along with any ActionPoseBindings)
+   * in order to track elements such as the position of the headset (view) space, or user's local space.
+   * 
+   * SpaceBindings managed by the Viewer will be located in relation to the Session's reference space.
+   * They may be located relative to a different base space by the application if required
+   * 
+   * ```c++
+   * // After calling Viewer::advanceToNextFrame, and before Viewer::releaseFrame
+   * auto t = viewer->getFrameState()->predictedDisplayTime;
+   * auto located = spaceBinding->getSpace()->locate( someBaseReferenceSpace->getSpace(), t );
+   * spaceBinding->setTransform(located);
+   * ```
+   */
+  class VSGVR_DECLSPEC SpaceBinding : public vsg::Inherit<vsg::Object, SpaceBinding>
+  {
+  public:
+    SpaceBinding(vsg::ref_ptr<vsgvr::ReferenceSpace> space);
+    virtual ~SpaceBinding();
 
-    /**
-     * A binding class allowing an XrSpace to be tracked by the Viewer.
-     * The specified reference space will be kept updated during rendering (along with any ActionPoseBindings)
-     * in order to track elements such as the position of the headset (view) space, or user's local space.
-     */
-    class VSGVR_DECLSPEC SpaceBinding : public vsg::Inherit<vsg::Object, SpaceBinding>
-    {
-        public:
-            SpaceBinding(vsg::ref_ptr<Instance> instance, XrReferenceSpaceType spaceType);
-            virtual ~SpaceBinding();
+    vsg::ref_ptr<vsgvr::ReferenceSpace> getSpace() const { return _space; }
 
-            XrSpace getSpace() const { return _space; }
+    bool getTransformValid() const { return _transformValid; }
+    vsg::dmat4 getTransform() const { return _transform; }
 
-            bool getTransformValid() const { return _transformValid; }
-            vsg::dmat4 getTransform() const { return _transform; }
-            XrReferenceSpaceType getSpaceType() const { return _spaceType; }
+    void setTransform(XrSpaceLocation location);
+  private:
+    vsg::ref_ptr<vsgvr::ReferenceSpace> _space;
 
-            void createSpace(Session* session);
-            void destroySpace();
-
-            void setSpaceLocation(XrSpaceLocation location);
-        private:
-            XrSpace _space = XR_NULL_HANDLE;
-            XrReferenceSpaceType _spaceType;
-
-            bool _transformValid = false;
-            vsg::dmat4 _transform;
-    };
+    bool _transformValid = false;
+    vsg::dmat4 _transform;
+  };
 }
 
 EVSG_type_name(vsgvr::SpaceBinding);

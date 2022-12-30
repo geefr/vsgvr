@@ -48,24 +48,21 @@ namespace vsgvr {
     xr_check(xrCreateSession(instance->getInstance(), &info, &_session), "Failed to create OpenXR session");
     _sessionState = XR_SESSION_STATE_IDLE;
 
-    auto spaceCreateInfo = XrReferenceSpaceCreateInfo();
-    spaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
-    spaceCreateInfo.next = nullptr;
-    // Session's pose within the natural reference space
-    // In the case of STAGE, x-right, y-up, z-back
-    spaceCreateInfo.poseInReferenceSpace.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
-    spaceCreateInfo.poseInReferenceSpace.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
     // TODO: Should check what spaces are supported here
     //       STAGE is relative to the VR space bounds, but may not exist on standing-only or AR headsets
-    spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
-
-    xr_check(xrCreateReferenceSpace(_session, &spaceCreateInfo, &_space), "Failed to create Session reference space");
+    _space = vsgvr::ReferenceSpace::create(
+      _session,
+      XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_STAGE,
+      XrPosef{
+        XrQuaternionf{0.0f, 0.0f, 0.0f, 1.0f},
+        XrVector3f{0.0f, 0.0f, 0.0f},
+      }
+    );
   }
 
   void Session::destroySession()
   {
-    xr_check(xrDestroySpace(_space));
-    _space = XR_NULL_HANDLE;
+    _space = nullptr;
     xr_check(xrDestroySession(_session));
     _session = XR_NULL_HANDLE;
   }

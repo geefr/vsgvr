@@ -39,9 +39,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "../xr/Macros.cpp"
 
 namespace vsgvr {
-  CompositionLayer::CompositionLayer(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) 
+  CompositionLayer::CompositionLayer(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
     : _instance(instance)
     , _xrTraits(xrTraits)
+    , _referenceSpace(referenceSpace)
   {}
   CompositionLayer::~CompositionLayer() {}
 

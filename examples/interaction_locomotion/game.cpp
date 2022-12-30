@@ -57,7 +57,7 @@ void Game::initVR()
   // OpenXR rendering may use one or more command graphs, as decided by the viewer
   // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
   // Note: assignHeadlight = false -> Scene lighting is required
-  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getInstance(), _vr->getTraits());
+  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getInstance(), _vr->getTraits(), _vr->getSession()->getSpace());
   auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(_vr->getSession(), _sceneRoot, _xrCameras, false);
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
@@ -88,7 +88,7 @@ void Game::initActions()
   // Tracking the location of the user's headset is achieved by tracking the VIEW reference space
   // vsgvr provides a SpaceBinding class for this - Similar to the ActionPoseBindings the head's pose
   // will be tracked during rendering, and available when performing interactions
-  _headPose = vsgvr::SpaceBinding::create(_xrInstance, XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
+  _headPose = vsgvr::SpaceBinding::create(vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW));
   _vr->spaceBindings.push_back(_headPose);
 
   // Input devices are tracked via ActionPoseBindings - Tracking elements from the OpenXR device tree in the session space,
@@ -233,9 +233,9 @@ void Game::frame()
           interaction.second->actionSet()) != _vr->activeActionSets.end())
         {
           auto deltaT = static_cast<double>(
-            std::chrono::duration_cast<std::chrono::microseconds>(_vr->frameStamp()->time - _lastFrameTime).count()
+            std::chrono::duration_cast<std::chrono::microseconds>(_vr->getFrameStamp()->time - _lastFrameTime).count()
           ) / 1e6;
-          _lastFrameTime = _vr->frameStamp()->time;
+          _lastFrameTime = _vr->getFrameStamp()->time;
           interaction.second->frame(_userOrigin, *this, deltaT);
         }
       }

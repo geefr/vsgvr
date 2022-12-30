@@ -119,8 +119,8 @@ namespace vsgvr {
 
             /// State information on the current frame
             /// Only valid if advanceToNextFrame returned true
-            XrFrameState frameState() const { return _frameState; }
-            vsg::ref_ptr<vsg::FrameStamp> frameStamp() const { return _frameStamp; }
+            XrFrameState getFrameState() const { return _frameState; }
+            vsg::ref_ptr<vsg::FrameStamp> getFrameStamp() const { return _frameStamp; }
 
             std::vector<vsg::ref_ptr<vsgvr::CompositionLayer>> compositionLayers;
 
@@ -145,9 +145,7 @@ namespace vsgvr {
             // have been suggested, and prior to scene rendering.
             // Viewer performs this automatically during the first
             // call to pollEvents
-            void createSpaceBindings();
             void createActionSpacesAndAttachActionSets();
-            void destroySpaceBindings();
             void destroyActionSpaces();
 
             vsg::ref_ptr<Instance> _instance;

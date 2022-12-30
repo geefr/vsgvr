@@ -33,8 +33,9 @@ namespace vsgvr {
   {
     public:
       CompositionLayerQuad() = delete;
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits);
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, XrPosef inPose, XrExtent2Df inSize, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
       virtual ~CompositionLayerQuad();
       XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
 
@@ -42,14 +43,17 @@ namespace vsgvr {
       std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
       void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
 
+      uint32_t widthPixels = 1920;
+      uint32_t heightPixels = 1080;
+      uint32_t numSamples = 1;
+
       XrPosef pose = {
         {0.0f, 0.0f, 0.0f, 1.0f},
         {0.0f, 0.0f, 0.0f}
       };
-      XrExtent2Df size = { 1.0, 1.0 };
+      XrExtent2Df sizeMeters = { 1.0, 1.0 };
       XrCompositionLayerFlags flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
       XrEyeVisibility eyeVisibility = XrEyeVisibility::XR_EYE_VISIBILITY_BOTH;
-
     protected:
       XrCompositionLayerQuad _compositionLayer;
   };

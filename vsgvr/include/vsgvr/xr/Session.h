@@ -27,6 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/Instance.h>
 #include <vsgvr/xr/GraphicsBindingVulkan.h>
 #include <vsgvr/xr/Swapchain.h>
+#include <vsgvr/xr/ReferenceSpace.h>
 
 #include <vsg/vk/Framebuffer.h>
 
@@ -47,7 +48,7 @@ namespace vsgvr {
             void endSession();
 
             /// The session's reference space
-            XrSpace getSpace() const { return _space; }
+            vsg::ref_ptr<vsgvr::ReferenceSpace> getSpace() const { return _space; }
 
             vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> getGraphicsBinding() { return _graphicsBinding; }
 
@@ -62,7 +63,8 @@ namespace vsgvr {
             XrSession _session = XR_NULL_HANDLE;
             XrSessionState _sessionState = XrSessionState::XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;
-            XrSpace _space = XR_NULL_HANDLE;
+
+            vsg::ref_ptr<vsgvr::ReferenceSpace> _space;
     };
 }
 

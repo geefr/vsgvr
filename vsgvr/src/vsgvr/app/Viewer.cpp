@@ -68,7 +68,6 @@ namespace vsgvr
 
     if( _firstUpdate )
     {
-      createSpaceBindings();
       createActionSpacesAndAttachActionSets();
       _firstUpdate = false;
     }
@@ -182,15 +181,13 @@ namespace vsgvr
 
   void Viewer::syncSpaceBindings()
   {
+    // Update each of the space bindings
     if( spaceBindings.empty() ) return;
 
     for (auto& space : spaceBindings)
     {
-      auto location = XrSpaceLocation();
-      location.type = XR_TYPE_SPACE_LOCATION;
-      location.next = nullptr;
-      xr_check(xrLocateSpace(space->getSpace(), _session->getSpace(), _frameState.predictedDisplayTime, &location));
-      space->setSpaceLocation(location);
+      auto spaceLocation = space->getSpace()->locate(_session->getSpace()->getSpace(), _frameState.predictedDisplayTime);
+      space->setTransform(spaceLocation);
     }
   }
 
@@ -218,8 +215,8 @@ namespace vsgvr
           auto location = XrSpaceLocation();
           location.type = XR_TYPE_SPACE_LOCATION;
           location.next = nullptr;
-          xr_check(xrLocateSpace(a->getActionSpace(), _session->getSpace(), _frameState.predictedDisplayTime, &location));
-          a->setSpaceLocation(location);
+          xr_check(xrLocateSpace(a->getActionSpace(), _session->getSpace()->getSpace(), _frameState.predictedDisplayTime, &location));
+          a->setTransform(location);
         }
 
         auto subPaths = action->getSubPaths();
@@ -229,14 +226,6 @@ namespace vsgvr
           for( auto& p : subPaths ) action->syncInputState(_instance, _session, p);
         }
       }
-    }
-  }
-
-  void Viewer::createSpaceBindings()
-  {
-    for (auto& space : spaceBindings)
-    {
-      space->createSpace(_session);
     }
   }
 
@@ -265,14 +254,6 @@ namespace vsgvr
           }
         }
       }
-    }
-  }
-
-  void Viewer::destroySpaceBindings()
-  {
-    for (auto& space : spaceBindings)
-    {
-      space->destroySpace();
     }
   }
 

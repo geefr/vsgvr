@@ -34,36 +34,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  SpaceBinding::SpaceBinding(vsg::ref_ptr<Instance> instance, XrReferenceSpaceType spaceType)
+  SpaceBinding::SpaceBinding(vsg::ref_ptr<vsgvr::ReferenceSpace> space)
+    : _space(space)
   {}
 
   SpaceBinding::~SpaceBinding()
-  {
-    destroySpace();
-  }
+  {}
 
-  void SpaceBinding::createSpace(Session* session)
-  {
-    if (_space) throw vsg::Exception({ "Space already created" });
-
-    auto spaceCreateInfo = XrReferenceSpaceCreateInfo();
-    spaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
-    spaceCreateInfo.next = nullptr;
-    spaceCreateInfo.poseInReferenceSpace.orientation = XrQuaternionf{ 0.0f, 0.0f, 0.0f, 1.0f };
-    spaceCreateInfo.poseInReferenceSpace.position = XrVector3f{ 0.0f, 0.0f, 0.0f };
-    spaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
-    xr_check(xrCreateReferenceSpace(session->getSession(), &spaceCreateInfo, &_space), "Failed to create reference space");
-  }
-
-  void SpaceBinding::destroySpace()
-  {
-    if (_space) {
-      xr_check(xrDestroySpace(_space));
-      _space = 0;
-    }
-  }
-
-  void SpaceBinding::setSpaceLocation(XrSpaceLocation location)
+  void SpaceBinding::setTransform(XrSpaceLocation location)
   {
     if ((location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) &&
       (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT))

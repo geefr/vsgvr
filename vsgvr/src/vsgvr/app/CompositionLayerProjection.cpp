@@ -35,11 +35,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr {
 
-  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) 
-    : Inherit(instance, xrTraits)
+  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+    : Inherit(instance, xrTraits, referenceSpace)
     {}
-  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, XrCompositionLayerFlags inFlags)
-    : Inherit(instance, xrTraits)
+  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags)
+    : Inherit(instance, xrTraits, referenceSpace)
     , flags(inFlags)
   {}
   CompositionLayerProjection::~CompositionLayerProjection() {}
@@ -96,7 +96,7 @@ namespace vsgvr {
       auto viewLocateInfo = XrViewLocateInfo();
       viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
       viewLocateInfo.next = nullptr;
-      viewLocateInfo.space = session->getSpace();
+      viewLocateInfo.space = _referenceSpace->getSpace();
       viewLocateInfo.viewConfigurationType = _xrTraits->viewConfigurationType;
       viewLocateInfo.displayTime = frameState.predictedDisplayTime;
 
@@ -174,7 +174,7 @@ namespace vsgvr {
     _compositionLayer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
     _compositionLayer.next = nullptr;
     _compositionLayer.layerFlags = flags;
-    _compositionLayer.space = session->getSpace();
+    _compositionLayer.space = _referenceSpace->getSpace();
     _compositionLayer.viewCount = static_cast<uint32_t>(_layerProjectionViews.size());
     _compositionLayer.views = _layerProjectionViews.data();
   }

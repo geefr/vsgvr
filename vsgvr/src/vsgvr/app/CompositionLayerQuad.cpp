@@ -31,13 +31,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/ui/FrameStamp.h>
 
 namespace vsgvr {
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits)
-    : Inherit(instance, xrTraits)
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+    : Inherit(instance, xrTraits, referenceSpace)
     {}
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, XrPosef inPose, XrExtent2Df inSize, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
-    : Inherit(instance, xrTraits)
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels)
+    : Inherit(instance, xrTraits, referenceSpace)
+    , widthPixels(inWidthPixels)
+    , heightPixels(inHeightPixels)
+  {}
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
+    : Inherit(instance, xrTraits, referenceSpace)
+    , widthPixels(inWidthPixels)
+    , heightPixels(inHeightPixels)
+    , numSamples(inNumSamples)
     , pose(inPose)
-    , size(inSize)
+    , sizeMeters(inSizeMeters)
     , flags(inFlags)
     , eyeVisibility(inEyeVisibility)
   {}
@@ -54,7 +62,7 @@ namespace vsgvr {
   {
     std::vector<CompositionLayer::SwapchainImageRequirements> reqs;
     
-    reqs.push_back({1920, 1080, 1});
+    reqs.push_back({widthPixels, heightPixels, numSamples});
     return reqs;
   }
   void CompositionLayerQuad::render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
@@ -101,8 +109,8 @@ namespace vsgvr {
     _compositionLayer.layerFlags = flags;
     _compositionLayer.eyeVisibility = eyeVisibility;
     _compositionLayer.pose = pose;
-    _compositionLayer.size = size;
-    _compositionLayer.space = session->getSpace();
+    _compositionLayer.size = sizeMeters;
+    _compositionLayer.space = _referenceSpace->getSpace();
     _compositionLayer.subImage.swapchain = swapchain->getSwapchain();
     auto extent = swapchain->getExtent();
     _compositionLayer.subImage.imageRect = XrRect2Di{ {0, 0},

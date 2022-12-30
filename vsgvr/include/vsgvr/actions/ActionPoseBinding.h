@@ -47,7 +47,7 @@ namespace vsgvr {
             void createActionSpace(Session* session);
             void destroyActionSpace();
 
-            void setSpaceLocation(XrSpaceLocation location);
+            void setTransform(XrSpaceLocation location);
         private:
             XrSpace _space = 0;
 

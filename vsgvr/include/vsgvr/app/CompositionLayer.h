@@ -35,10 +35,18 @@ namespace vsgvr {
   class Instance;
   class Session;
   class Traits;
+  class ReferenceSpace;
 
   /// An OpenXR composition layer, and associated layer-specific render capability
   class VSGVR_DECLSPEC CompositionLayer : public vsg::Inherit<vsg::Object, CompositionLayer>
   {
+  protected:
+    CompositionLayer(
+      vsg::ref_ptr<vsgvr::Instance> instance, 
+      vsg::ref_ptr<vsgvr::Traits> xrTraits, 
+      vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace
+    );
+
   public:
     struct SwapchainImageRequirements
     {
@@ -57,6 +65,7 @@ namespace vsgvr {
     void destroySwapchains();
 
     vsg::ref_ptr<Swapchain> getSwapchain(size_t view) const { return _viewData[view].swapchain; }
+    vsg::ref_ptr<vsgvr::ReferenceSpace> getReferenceSpace() const { return _referenceSpace; }
 
     // TODO: Large duplication between these and vsg::Viewer - In future would be nice to unify the implementations in some way
     /// Note: Cameras are not required when building a CompositionLayerProjection
@@ -96,6 +105,7 @@ namespace vsgvr {
     };
     std::vector<PerViewData> _viewData;
 
+    vsg::ref_ptr<vsgvr::ReferenceSpace> _referenceSpace;
 
     // Manage the work to do each frame using RecordAndSubmitTasks
     // the vsgvr::Viewer renders to a series of OpenXR composition layers,
@@ -103,8 +113,6 @@ namespace vsgvr {
     // Composition layers are rendered in order, following the OpenXR specification.
     using RecordAndSubmitTasks = std::vector<vsg::ref_ptr<vsg::RecordAndSubmitTask>>;
     RecordAndSubmitTasks _recordAndSubmitTasks;
-
-    CompositionLayer(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits);
   };
 }
 
