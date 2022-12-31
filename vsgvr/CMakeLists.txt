@@ -25,6 +25,7 @@ set( HEADERS_XR
   include/vsgvr/xr/Swapchain.h
   include/vsgvr/xr/Traits.h
   include/vsgvr/xr/ViewMatrix.h
+  include/vsgvr/xr/Pose.h
 )
 
 set( SOURCES
@@ -46,6 +47,7 @@ set( SOURCES
   src/vsgvr/xr/Session.cpp
   src/vsgvr/xr/Swapchain.cpp
   src/vsgvr/xr/Traits.cpp
+  src/vsgvr/xr/Pose.cpp
 )
 
 if( ANDROID )

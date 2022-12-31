@@ -35,6 +35,8 @@ namespace vsgvr {
   public:
     ReferenceSpace() = delete;
     ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType);
+    ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, vsg::dvec3 position, vsg::dquat orientation);
+
     /// Note: XrPosef is in the OpenXR coordinate system - X-right, Y-up, Z-back
     ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
     virtual ~ReferenceSpace();

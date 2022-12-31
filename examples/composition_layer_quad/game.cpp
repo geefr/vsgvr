@@ -79,12 +79,19 @@ void Game::initVR()
 
     // A quad positioned in the world (scene reference space)
     // auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getTraits(), _vr->getSession()->getSpace(), 1920, 1080);
-    // quadLayer->pose.position = { 0.0, 1.0, -4.0 };
+    // quadLayer->setPose(
+      // {0.0, 4.0, 1.0},
+      // vsg::dquat(vsg::radians(25.0), {1.0, 0.0, 0.0})
+    // );
 
     // A quad positioned in front of the user's face
-     auto faceLockedSpace = vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
-     auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getTraits(), faceLockedSpace, 1920, 1080);
-     quadLayer->pose.position = { 0.0, 0.0, -4.0 };
+    auto faceLockedSpace = vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW);
+
+    auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getTraits(), faceLockedSpace, 1920, 1080);
+    quadLayer->setPose(
+      {0.0, 4.0, 0.0},
+      {0.0, 0.0, 0.0, 1.0}
+    );
 
     /*auto rot = vsg::quat({0.0f, 5.0f, 2.5f}, {0.0f, 0.0f, 2.5f});
     quadLayer->pose.orientation = {

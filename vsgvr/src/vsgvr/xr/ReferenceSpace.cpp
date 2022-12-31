@@ -21,18 +21,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/ReferenceSpace.h>
 #include <vsgvr/xr/Session.h>
+#include <vsgvr/xr/Pose.h>
 
 #include <vsg/core/Exception.h>
 #include "Macros.cpp"
 
-namespace vsgvr {
+#include <vsg/maths/transform.h>
 
+namespace vsgvr {
   ReferenceSpace::ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType)
   {
     createSpace(session, referenceSpaceType, XrPosef{
       XrQuaternionf{0.0f, 0.0f, 0.0f, 1.0f},
       XrVector3f{0.0f, 0.0f, 0.0f}
     });
+  }
+  ReferenceSpace::ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, vsg::dvec3 position, vsg::dquat orientation)
+  {
+    auto pose = Pose(position, orientation).getPose();
+    createSpace(session, referenceSpaceType, pose);
   }
   ReferenceSpace::ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace)
   {

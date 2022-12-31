@@ -54,6 +54,22 @@ In addition the Vulkan runtime must satisfy the requirements of OpenXR. These re
 
 As features are implemented vsgvr will use more extensions if available, to support common features such as additional composition layers. If specific extensions are not present, or not requested by the application these features will be inoperable.
 
+### Coordinate Spaces
+
+In OpenXR various coordinate spaces are available, and follow a Y-up convention: x-right, y-up, z-out (backwards from user's perspective).
+
+While it may be modified, VulkanSceneGraph by default follows a Z-up convention: x-right, y-forward, z-up.
+
+vsgvr exposes both of these in some way, but by default follows the vsg Z-up convention:
+* Any API exposing vsg::mat4, vsg::vec3, vsg::quat, etc - Z-up
+* Any API exposing OpenXR types such as XrPosef - Y-up
+
+Most classes use OpenXR types internally, but expose both vsg and OpenXR types in their interfaces. Where possible the vsg types should be used within applications.
+
+This results in a logical mapping to the scene graph for world-based coordinate spaces (STAGE, LOCAL, VIEW).
+
+Action spaces are mapped using an `ActionPoseBinding`, which presents a vsg matrix for its transform - Any action related spaces are positioned within the OpenXR Session's space, which results in the transform being mapped to the overall 'world' space of the scenne graph automatically. Advanced users may query the action space directly and re-locate against a different XrSpace if desired.
+
 ## Setup
 
 If you don't have a VR headset there's a couple of options.

@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/Swapchain.h>
 #include <vsgvr/xr/Session.h>
+#include <vsgvr/xr/Pose.h>
 
 #include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
@@ -39,6 +40,17 @@ namespace vsgvr {
     , widthPixels(inWidthPixels)
     , heightPixels(inHeightPixels)
   {}
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, vsg::dvec3 position, vsg::dquat orientation, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
+    : Inherit(instance, xrTraits, referenceSpace)
+    , widthPixels(inWidthPixels)
+    , heightPixels(inHeightPixels)
+    , numSamples(inNumSamples)
+    , sizeMeters(inSizeMeters)
+    , flags(inFlags)
+    , eyeVisibility(inEyeVisibility)
+  {
+    setPose(position, orientation);
+  }
   CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
     : Inherit(instance, xrTraits, referenceSpace)
     , widthPixels(inWidthPixels)
@@ -117,5 +129,10 @@ namespace vsgvr {
       {static_cast<int>(extent.width), static_cast<int>(extent.height)}
     };
     _compositionLayer.subImage.imageArrayIndex = 0;
+  }
+
+  void CompositionLayerQuad::setPose(vsg::dvec3 position, vsg::dquat orientation)
+  {
+    pose = Pose(position, orientation).getPose();
   }
 }

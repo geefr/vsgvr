@@ -8,6 +8,9 @@
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
+#include <vsgvr/app/CompositionLayerProjection.h>
+#include <vsgvr/app/CompositionLayerQuad.h>
+
 #include "interaction.h"
 
 #include <memory>

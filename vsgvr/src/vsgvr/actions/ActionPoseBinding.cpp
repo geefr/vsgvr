@@ -74,27 +74,16 @@ namespace vsgvr
       {
         _transformValid = true;
 
-        // In the same way as ViewMatrix, poses need some conversion for the VSG space
-        // OpenXR space: x-right, y-up, z-back
-        // VSG/Vulkan space: x-right, y-forward, z-up
-        // * Invert y -> To flip the handedness (x-right, y-back, z-up)
-        // * Rotate clockwise around x -> To move into vsg space (x-right, y-up, z-back)
-        // After this, models are built for vsg space, and default concepts in the api map across
-        //
-        // TODO: Need to double check this, but here the action spaces needed to be un-rotated,
-        //       to compensate for the rotation in ViewMatrix. Not entirely sure why..
-        auto worldRotateMat = vsg::rotate(vsg::PI / 2.0, 1.0, 0.0, 0.0);
-
+        vsg::dmat4 xrToVsg;
+        vsg::transform(vsg::CoordinateConvention::Y_UP, vsg::CoordinateConvention::Z_UP, xrToVsg);
         auto q = vsg::dquat(
           location.pose.orientation.x,
           location.pose.orientation.y,
           location.pose.orientation.z,
           location.pose.orientation.w
         );
-        auto rotateMat = vsg::rotate(q);
         auto p = vsg::dvec3(location.pose.position.x, location.pose.position.y, location.pose.position.z);
-        auto translateMat = vsg::translate(p);
-        auto transform = worldRotateMat * translateMat * rotateMat;
+        auto transform = xrToVsg * vsg::translate(p) * vsg::rotate(q);
 
         _transform = transform;
       }
