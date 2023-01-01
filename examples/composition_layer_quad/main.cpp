@@ -24,6 +24,12 @@ int main(int argc, char** argv) {
     xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
+    auto gameExtensionsNeeded = Game::requiredInstanceExtensions();
+    for (auto& ext : gameExtensionsNeeded)
+    {
+      xrTraits->xrExtensions.push_back(ext);
+    }
+
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "example_vr";
     arguments.read("--screen", windowTraits->screenNum);

@@ -41,7 +41,7 @@ private:
     
   // A transform allowing the player to move within the normal vsg scene
   vsg::ref_ptr<vsgvr::UserOrigin> _userOrigin;
-  vsg::ref_ptr<vsg::Group> _ground;
+  vsg::ref_ptr<vsg::Node> _ground;
 
   std::vector<vsg::ref_ptr<vsg::Camera>> _xrCameras;
   vsg::ref_ptr<vsg::Camera> _desktopCamera;

@@ -10,7 +10,7 @@ Interaction_slide::Interaction_slide(
   vsg::ref_ptr<vsgvr::Instance> xrInstance,
   vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
   vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose, 
-  vsg::ref_ptr<vsg::Group> ground)
+  vsg::ref_ptr<vsg::Node> ground)
     : _headPose(headPose)
     , _leftHandPose(leftHandPose)
     , _ground(ground)

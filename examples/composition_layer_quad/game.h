@@ -8,10 +8,10 @@
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
-#include <vsgvr/app/CompositionLayerProjection.h>
-#include <vsgvr/app/CompositionLayerQuad.h>
+#include <vsgvr/extensions/KHRCompositionLayerEquirect2.h>
 
 #include "interaction.h"
+#include "ui.h"
 
 #include <memory>
 
@@ -19,6 +19,8 @@ class Game {
 public:
   Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow);
   ~Game();
+
+  static std::vector<std::string> requiredInstanceExtensions();
 
   bool shouldExit = false;
 
@@ -58,4 +60,8 @@ private:
   std::map<std::string, std::unique_ptr<Interaction>> _interactions;
 
   vsg::time_point _lastFrameTime;
+
+  vsg::ref_ptr<vsgvr::KHRCompositionLayerEquirect2> _skyboxLayer;
+
+  SampleImGUIComponent _ui;
 };

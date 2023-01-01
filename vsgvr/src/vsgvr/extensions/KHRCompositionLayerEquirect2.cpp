@@ -19,7 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <vsgvr/app/CompositionLayerQuad.h>
+#include <vsgvr/extensions/KHRCompositionLayerEquirect2.h>
 
 #include <vsgvr/xr/Swapchain.h>
 #include <vsgvr/xr/Session.h>
@@ -32,30 +32,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/ui/FrameStamp.h>
 
 namespace vsgvr {
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+  KHRCompositionLayerEquirect2::KHRCompositionLayerEquirect2(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
     : Inherit(instance, session, xrTraits, referenceSpace)
   {
     init(session);
   }
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels)
+  KHRCompositionLayerEquirect2::KHRCompositionLayerEquirect2(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace,
+    uint32_t inWidthPixels, uint32_t inHeightPixels)
     : Inherit(instance, session, xrTraits, referenceSpace)
     , widthPixels(inWidthPixels)
     , heightPixels(inHeightPixels)
   {
     init(session);
   }
-  CompositionLayerQuad::~CompositionLayerQuad() {}
+  KHRCompositionLayerEquirect2::~KHRCompositionLayerEquirect2() {}
 
-  void CompositionLayerQuad::populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) {}
+  void KHRCompositionLayerEquirect2::populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) {}
 
-  std::vector<CompositionLayer::SwapchainImageRequirements> CompositionLayerQuad::getSwapchainImageRequirements()
+  std::vector<CompositionLayer::SwapchainImageRequirements> KHRCompositionLayerEquirect2::getSwapchainImageRequirements()
   {
     std::vector<CompositionLayer::SwapchainImageRequirements> reqs;
-    
     reqs.push_back({widthPixels, heightPixels, numSamples});
     return reqs;
   }
-  void CompositionLayerQuad::render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
+  void KHRCompositionLayerEquirect2::render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
   {
     // Render the scene
     auto swapchainI = 0;
@@ -94,22 +94,26 @@ namespace vsgvr {
     }
 
     // Add the composition layer for the frame end info
-    _compositionLayer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+    _compositionLayer.type = XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR;
     _compositionLayer.next = nullptr;
     _compositionLayer.layerFlags = flags;
-    _compositionLayer.eyeVisibility = eyeVisibility;
-    _compositionLayer.pose = pose;
-    _compositionLayer.size = sizeMeters;
     _compositionLayer.space = _referenceSpace->getSpace();
+    _compositionLayer.eyeVisibility = eyeVisibility;
     _compositionLayer.subImage.swapchain = swapchain->getSwapchain();
     auto extent = swapchain->getExtent();
     _compositionLayer.subImage.imageRect = XrRect2Di{ {0, 0},
       {static_cast<int>(extent.width), static_cast<int>(extent.height)}
     };
     _compositionLayer.subImage.imageArrayIndex = 0;
+    _compositionLayer.pose = pose;
+    _compositionLayer.radius = radius;
+
+    _compositionLayer.centralHorizontalAngle = centralHorizontalAngle;
+    _compositionLayer.lowerVerticalAngle = lowerVerticalAngle;
+    _compositionLayer.upperVerticalAngle = upperVerticalAngle;
   }
 
-  void CompositionLayerQuad::setPose(vsg::dvec3 position, vsg::dquat orientation)
+  void KHRCompositionLayerEquirect2::setPose(vsg::dvec3 position, vsg::dquat orientation)
   {
     pose = Pose(position, orientation).getPose();
   }

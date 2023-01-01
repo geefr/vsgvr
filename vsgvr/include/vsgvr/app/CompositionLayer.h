@@ -27,6 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/Common.h>
 
 #include <vsg/app/CommandGraph.h>
+#include <vsg/app/RenderGraph.h>
 #include <vsg/app/RecordAndSubmitTask.h>
 
 namespace vsgvr {
@@ -43,6 +44,7 @@ namespace vsgvr {
   protected:
     CompositionLayer(
       vsg::ref_ptr<vsgvr::Instance> instance, 
+      vsg::ref_ptr<vsgvr::Session> session,
       vsg::ref_ptr<vsgvr::Traits> xrTraits, 
       vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace
     );
@@ -68,17 +70,33 @@ namespace vsgvr {
     vsg::ref_ptr<vsgvr::ReferenceSpace> getReferenceSpace() const { return _referenceSpace; }
 
     // TODO: Large duplication between these and vsg::Viewer - In future would be nice to unify the implementations in some way
+
+    /// Build command graphs for rendering a vsg::View to the composition layer
     /// Note: Cameras are not required when building a CompositionLayerProjection
     vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
+
+    /// Build command graphs for rendering a vsg::RenderGraph to the composition layer
+    vsg::CommandGraphs createCommandGraphsForRenderGraph(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::RenderGraph> renderGraph);
+
+    // TODO: If we can provide a RenderGraph, do we need this capability at all?
+    // TODO: Should at least document what the above does, and why it's important to have it in here - The reason being how swapchains are acquired etc.
+    vsg::CommandGraphs createCommandGraphsForImage(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::Image> image);
+
     void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);
     void compile(vsg::ref_ptr<vsg::ResourceHints> hints = {});
 
     void advanceToNextFrame();
 
+    VkClearColorValue clearColor = { {0.2f, 0.2f, 0.4f, 1.0f} };
+    VkClearDepthStencilValue clearDepthStencil = { 0.0f, 0 };
+
   protected:
+    void init(vsg::ref_ptr<vsgvr::Session> session);
+
     vsg::ref_ptr<vsgvr::Instance> _instance;
     vsg::ref_ptr<vsgvr::Traits> _xrTraits;
     vsg::ref_ptr<vsgvr::Swapchain> _swapchain;
+    std::vector<CompositionLayer::SwapchainImageRequirements> _swapchainImageRequirements;
 
     struct Frame
     {

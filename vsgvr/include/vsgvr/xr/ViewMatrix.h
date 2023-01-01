@@ -42,6 +42,9 @@ namespace vsgvr {
       // OpenXR space: x-right, y-up, z-back
       // VSG/Vulkan space: x-right, y-forward, z-up
       // * Invert y -> To flip the handedness (x-right, y-back, z-up)
+      //   * TODO: This is wrong, right!? Both vsg and OpenXR are right-handed, so this shouldn't be required here
+      //   * TODO: Also, it relates to the extra w *= -1 in Pose.cpp
+      //   * TODO: Really should work this stuff out finally, it's always been a bit of a mess
       // * Rotate clockwise around x -> To move into vsg space (x-right, y-up, z-back)
       // After this, models are built for vsg space, and default concepts in the api map across
       // 

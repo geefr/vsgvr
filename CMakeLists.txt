@@ -10,6 +10,7 @@ set(VSGVR_SOVERSION 0)
 
 option( BUILD_SHARED_LIBS "Build shared libraries" OFF )
 option( VSGVR_BUILD_EXAMPLES "Whether to build VSGVR examples" ON )
+option( VSGVR_ENABLE_VSGIMGUI "Whether to enable ImGui support through vsgImGui" OFF )
 
 if( NOT VSGVR_XR_PLATFORM )
   # OPENXR_GENERIC - The standard openxr_loader.so, built from deps/openxr
@@ -29,6 +30,15 @@ if(ANDROID)
   find_package(vsg 1.0.0 NO_CMAKE_FIND_ROOT_PATH)
 else()
   find_package(vsg 1.0.0)
+endif()
+
+if(VSGVR_ENABLE_VSGIMGUI)
+  if(ANDROID)
+    # On Android, allow vsg to be located outside the Android sysroot
+    find_package(vsgImGui 0.0.0 NO_CMAKE_FIND_ROOT_PATH)
+  else()
+    find_package(vsgImGui 0.0.0)
+  endif()
 endif()
 
 # Other Dependencies

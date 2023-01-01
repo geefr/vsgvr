@@ -71,9 +71,10 @@ namespace vsgvr {
             Viewer() = delete;
             ~Viewer();
 
-            vsg::ref_ptr<Instance> getInstance() { return _instance; }
-            vsg::ref_ptr<Session> getSession() { return _session; }
-            vsg::ref_ptr<Traits> getTraits() { return _xrTraits; }
+            vsg::ref_ptr<Instance> getInstance() const { return _instance; }
+            vsg::ref_ptr<Session> getSession() const { return _session; }
+            vsg::ref_ptr<Traits> getTraits() const { return _xrTraits; }
+            vsg::ref_ptr<GraphicsBindingVulkan> getGraphicsBinding() const { return _graphicsBinding; }
 
             /**
              * Whether polling for events succeeded, and what action the application

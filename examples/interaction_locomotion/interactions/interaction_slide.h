@@ -12,7 +12,7 @@ class Interaction_slide : public Interaction
     Interaction_slide(vsg::ref_ptr<vsgvr::Instance> xrInstance,
       vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
       vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose, 
-      vsg::ref_ptr<vsg::Group> ground);
+      vsg::ref_ptr<vsg::Node> ground);
 
     void frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT) final override;
     virtual ~Interaction_slide();
@@ -28,6 +28,6 @@ class Interaction_slide : public Interaction
     vsg::ref_ptr<vsgvr::SpaceBinding> _headPose;
     vsg::ref_ptr<vsgvr::ActionPoseBinding> _leftHandPose;
 
-    vsg::ref_ptr<vsg::Group> _ground;
+    vsg::ref_ptr<vsg::Node> _ground;
     double _rotation = 0.0;
 };

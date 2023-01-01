@@ -155,6 +155,7 @@ static int vsg_init(struct AppData* appData)
         // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
 
         auto projectionLayer = vsgvr::CompositionLayerProjection::create(vr->getInstance(),
+                                                                         vr->getSession(),
                                                                          vr->getTraits(),
                                                                          vr->getSession()->getSpace());
         auto xrCommandGraphs = projectionLayer->createCommandGraphsForView(vr->getSession(),

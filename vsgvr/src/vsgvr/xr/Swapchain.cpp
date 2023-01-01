@@ -141,7 +141,7 @@ namespace vsgvr {
     // Create image views, used by Session::creatSwapchain to bind to vsg::Framebuffer
     for (std::size_t i = 0; i < _swapchainImages.size(); ++i)
     {
-      auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVkDevice()));
+      auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVsgDevice()));
       imageView->viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
       imageView->format = _swapchainFormat;
       imageView->subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -149,7 +149,7 @@ namespace vsgvr {
       imageView->subresourceRange.levelCount = 1;
       imageView->subresourceRange.baseArrayLayer = 0;
       imageView->subresourceRange.layerCount = 1;
-      imageView->compile(graphicsBinding->getVkDevice());
+      imageView->compile(graphicsBinding->getVsgDevice());
 
       _imageViews.push_back(imageView);
     }

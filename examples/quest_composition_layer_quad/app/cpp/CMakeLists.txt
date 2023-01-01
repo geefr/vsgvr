@@ -17,6 +17,9 @@ set(CMAKE_RELWITHDEBINFO_POSTFIX "")
 
 # find vsg
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../VulkanSceneGraph" vsg)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../vsgImGui" vsgImGui)
+
+set(VSGVR_ENABLE_VSGIMGUI TRUE CACHE BOOL "")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../" vsgvr)
 
 # Export ANativeActivity_onCreate(),

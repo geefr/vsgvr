@@ -35,13 +35,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr {
 
-  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
-    : Inherit(instance, xrTraits, referenceSpace)
-    {}
-  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+    : Inherit(instance, session, xrTraits, referenceSpace)
+  {
+    init(session);
+  }
+  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags)
+    : Inherit(instance, session, xrTraits, referenceSpace)
     , flags(inFlags)
-  {}
+  {
+    init(session);
+  }
   CompositionLayerProjection::~CompositionLayerProjection() {}
 
   void CompositionLayerProjection::populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits)

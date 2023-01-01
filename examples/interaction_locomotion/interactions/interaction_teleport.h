@@ -13,7 +13,7 @@ class Interaction_teleport : public Interaction
       vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
       vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose,
       vsg::ref_ptr<vsg::Switch> teleportTarget,
-      vsg::ref_ptr<vsg::Group> ground);
+      vsg::ref_ptr<vsg::Node> ground);
 
     void frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT) final override;
     virtual ~Interaction_teleport();
@@ -33,5 +33,5 @@ class Interaction_teleport : public Interaction
 
     double _playerRotation = 0.0;
 
-    vsg::ref_ptr<vsg::Group> _ground;
+    vsg::ref_ptr<vsg::Node> _ground;
 };

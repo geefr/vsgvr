@@ -57,7 +57,7 @@ void Game::initVR()
   // OpenXR rendering may use one or more command graphs, as decided by the viewer
   // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
   // Note: assignHeadlight = false -> Scene lighting is required
-  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getInstance(), _vr->getTraits(), _vr->getSession()->getSpace());
+  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getInstance(), _vr->getSession(), _vr->getTraits(), _vr->getSession()->getSpace());
   auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(_vr->getSession(), _sceneRoot, _xrCameras, false);
   // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
   // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
@@ -150,8 +150,8 @@ void Game::initActions()
   
   // TODO: Set up input action to switch between modes
   // TODO: Display active mode somewhere in the world, maybe as text panel when looking at controllers
-  _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
-  // _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
+  // _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
+  _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
 
   // add close handler to respond the close window button and pressing escape
   _desktopViewer->addEventHandler(vsg::CloseHandler::create(_desktopViewer));

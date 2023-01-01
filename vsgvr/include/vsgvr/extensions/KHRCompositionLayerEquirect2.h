@@ -22,22 +22,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <vsgvr/app/CompositionLayer.h>
+#include <vsg/maths/common.h>
 
 namespace vsgvr {
-  /// XrCompositionLayerQuad - Rendered elements on a 2D quad, positioned in world space.
-  /// 
-  /// This composition layer is typically used for rendering UI panels or other content,
-  /// as a plane within the world. Note that this plane will obscure the world, ignoring
-  /// depth.
-  class VSGVR_DECLSPEC CompositionLayerQuad final : public vsg::Inherit<vsgvr::CompositionLayer, CompositionLayerQuad>
+  /// XrCompositionLayerEquirect2KHR - equirectangular image mapped to the inside of a sphere
+  class VSGVR_DECLSPEC KHRCompositionLayerEquirect2 final : public vsg::Inherit<vsgvr::CompositionLayer, KHRCompositionLayerEquirect2>
   {
     public:
-      CompositionLayerQuad() = delete;
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels);
-      virtual ~CompositionLayerQuad();
-      XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
+      static const char* instanceExtension() { return "XR_KHR_composition_layer_equirect2"; }
 
+      KHRCompositionLayerEquirect2() = delete;
+      KHRCompositionLayerEquirect2(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
+      KHRCompositionLayerEquirect2(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace,
+        uint32_t inWidthPixels, uint32_t inHeightPixels);
+
+      virtual ~KHRCompositionLayerEquirect2();
+      
+      XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
       void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
       std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
       void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
@@ -45,22 +46,26 @@ namespace vsgvr {
       void setPose(vsg::dvec3 position, vsg::dquat orientation);
 
       /// Image properties for the rendered quad
-      uint32_t widthPixels = 1920;
-      uint32_t heightPixels = 1080;
+      uint32_t widthPixels = 3600;
+      uint32_t heightPixels = 1800;
       uint32_t numSamples = 1;
 
       /// Positioning properties
-      /// Note: XrPosef is in the OpenXR coordinate system - X-right, Y-up, Z-back
       XrPosef pose = {
         {0.0f, 0.0f, 0.0f, 1.0f},
         {0.0f, 0.0f, 0.0f}
       };
-      XrExtent2Df sizeMeters = { 1.0, 1.0 };
+      float radius = 0.0f; // 0 == Infinite sphere
+      float centralHorizontalAngle = static_cast<float>(vsg::PI * 2.0);
+      float upperVerticalAngle = static_cast<float>(vsg::PI / 2.0);
+      float lowerVerticalAngle = static_cast<float>(- vsg::PI / 2.0);
+
+      // Composition properties
       XrCompositionLayerFlags flags = 0x00;
       XrEyeVisibility eyeVisibility = XrEyeVisibility::XR_EYE_VISIBILITY_BOTH;
     protected:
-      XrCompositionLayerQuad _compositionLayer;
+      XrCompositionLayerEquirect2KHR _compositionLayer;
   };
 }
 
-EVSG_type_name(vsgvr::CompositionLayerQuad);
+EVSG_type_name(vsgvr::KHRCompositionLayerEquirect2);

@@ -28,6 +28,15 @@ set( HEADERS_XR
   include/vsgvr/xr/Pose.h
 )
 
+set( HEADERS_EXT 
+  include/vsgvr/extensions/KHRCompositionLayerEquirect.h
+  include/vsgvr/extensions/KHRCompositionLayerEquirect2.h
+)
+
+set( HEADERS_IMGUI
+  include/vsgvr/imgui/RenderImGui.h
+)
+
 set( SOURCES
   src/vsgvr/actions/Action.cpp
   src/vsgvr/actions/ActionPoseBinding.cpp
@@ -50,6 +59,15 @@ set( SOURCES
   src/vsgvr/xr/Pose.cpp
 )
 
+set( SOURCES_EXT
+  src/vsgvr/extensions/KHRCompositionLayerEquirect.cpp
+  src/vsgvr/extensions/KHRCompositionLayerEquirect2.cpp
+)
+
+set( SOURCES_IMGUI
+  src/vsgvr/imgui/RenderImGui.cpp
+)
+
 if( ANDROID )
   list(APPEND HEADERS_XR
     include/vsgvr/xr/AndroidTraits.h
@@ -59,14 +77,29 @@ if( ANDROID )
   )
 endif()
 
-add_library( vsgvr ${HEADERS_ACTIONS} ${HEADERS_APP} ${HEADERS_XR} ${SOURCES} )
+set( HEADERS ${HEADERS_ACTIONS} ${HEADERS_APP} ${HEADERS_XR} ${HEADERS_EXT} )
+set( SOURCES ${SOURCES} ${SOURCES_EXT} )
+if(VSGVR_ENABLE_VSGIMGUI)
+  list( APPEND HEADERS ${HEADERS_IMGUI} )
+  list( APPEND SOURCES ${SOURCES_IMGUI} )
+endif()
+
+add_library( vsgvr  ${HEADERS}  ${SOURCES} )
 
 target_include_directories(vsgvr PUBLIC  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-
 target_link_libraries( vsgvr PUBLIC vsg::vsg ${OpenXR_LIBRARY} )
+
+if(VSGVR_ENABLE_VSGIMGUI)
+  # TODO
+  target_include_directories(vsgvr PUBLIC 
+	$<BUILD_INTERFACE:${vsgImGui_DIR}/../../../include/vsgImGui>
+	$<INSTALL_INTERFACE:include/vsgImGui>
+  )
+  target_link_libraries( vsgvr PUBLIC vsgImGui::vsgImGui )
+endif()
 
 set_target_properties( vsgvr PROPERTIES FOLDER "vsgvr" )
 

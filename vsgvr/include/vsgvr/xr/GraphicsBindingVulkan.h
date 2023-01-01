@@ -53,22 +53,22 @@ namespace vsgvr {
     {
         public:
             static VulkanRequirements getVulkanRequirements(vsg::ref_ptr<Instance> xrInstance);
-            static VkPhysicalDevice getVulkanDeviceRequirements(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs);
+            static VkPhysicalDevice getVulkanDeviceRequirements(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<vsg::Instance> vsgInstance, const VulkanRequirements& versionReqs);
 
             GraphicsBindingVulkan() = delete;
-            GraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex);
+            GraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vsgInstance, vsg::ref_ptr<vsg::PhysicalDevice> vsgPhysicalDevice, vsg::ref_ptr<vsg::Device> vsgDevice, uint32_t queueFamilyIndex, uint32_t queueIndex);
             ~GraphicsBindingVulkan();
 
             const XrGraphicsBindingVulkanKHR& getBinding() const { return _binding; }
 
-            vsg::ref_ptr<vsg::Instance> getVkInstance() const { return _vkInstance; }
-            vsg::ref_ptr<vsg::PhysicalDevice> getVkPhysicalDevice() const { return _vkPhysicalDevice; }
-            vsg::ref_ptr<vsg::Device> getVkDevice() const { return _vkDevice; }
+            vsg::ref_ptr<vsg::Instance> getVsgInstance() const { return _vsgInstance; }
+            vsg::ref_ptr<vsg::PhysicalDevice> getVsgPhysicalDevice() const { return _vsgPhysicalDevice; }
+            vsg::ref_ptr<vsg::Device> getVsgDevice() const { return _vsgDevice; }
 
         private:
-            vsg::ref_ptr<vsg::Instance> _vkInstance;
-            vsg::ref_ptr<vsg::PhysicalDevice> _vkPhysicalDevice;
-            vsg::ref_ptr<vsg::Device> _vkDevice;
+            vsg::ref_ptr<vsg::Instance> _vsgInstance;
+            vsg::ref_ptr<vsg::PhysicalDevice> _vsgPhysicalDevice;
+            vsg::ref_ptr<vsg::Device> _vsgDevice;
 
             XrGraphicsBindingVulkanKHR _binding;
     };
