@@ -11,8 +11,9 @@ add_library(native_app_glue STATIC
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_VISIBILITY_PRESET default)
 
-# To prevent errors when loading the native activity, ensure library name is the same in debug builds
+# To prevent errors when loading the native activity, ensure library name is the same in all builds
 set(CMAKE_DEBUG_POSTFIX "")
+set(CMAKE_RELWITHDEBINFO_POSTFIX "")
 
 # find vsg
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../VulkanSceneGraph" vsg)

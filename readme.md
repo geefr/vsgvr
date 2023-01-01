@@ -22,20 +22,17 @@ The following configurations have been tested:
 * Rendering to SteamVR + Oculus Link (Quest 2) on Windows
 * Rendering to Oculus OpenXR runtime + Oculus Link (Quest 2) on Windows
 * Rendering to Oculus Quest 2, native build for Android
+* Rendering to the Monado runtime, on an Android phone (Moto G Pro, Android 12)
 
 The following should work:
 * All other desktop OpenXR runtimes, which use the standard OpenXR loader
 
-The following might work / support is planned:
-* Monado running on an Android phone / tablet
-
-
-Feature                      | Status
------------------------------|--------
-Linux Build                  | Done
-Windows Build                | Done
-Android Build (Oculus)       | Done
-Android Build (Generic)      | Done, untested
+Feature                             | Status
+------------------------------------|--------
+Linux Build                         | Done
+Windows Build                       | Done
+Android Build (Oculus loader)       | Done
+Android Build (Generic loader)      | Done
 Code quality / API           | Messy, but in roughly the right structure for now
 OpenXR Rendering             | Working, could do with a cleanup and better vsg integration at some point
 OpenXR Input                 | Working
@@ -72,7 +69,9 @@ Action spaces are mapped using an `ActionPoseBinding`, which presents a vsg matr
 
 ## Setup
 
-If you don't have a VR headset there's a couple of options.
+If you have a VR headset, simply build vsgvr against the appropriate OpenXR loader, and run applications.
+
+If you don't have a VR headset there's a couple of options outlined below
 
 ### SteamVR Mock HMD
 
@@ -95,20 +94,23 @@ rm /tmp/monado_comp_ipc
 monado-service
 ```
 
-### Android Phone / Tablet
+### Android Phone / Tablet (Monado)
 
-TODO: Currently vsgvr can be built for Android against the generic OpenXR loader - In theory this means it will work against Monado running on a phone/tablet.
-This is however unverified, if you know how to install Monado on a phone, or otherwise have a functional OpenXR runtime on your phone please get in touch.
+Monado can also run on Android devices, providing a basic HMD-like display. I haven't tested this approach extensively, but it should be usable on most phones / tablets.
 
-## Compilation
+For more information see `examples/android-monado`.
+
+## VSGVR Compilation
 
 Required:
 * cmake > 3.14
 * vulkan sdk
 * VulkanSceneGraph
 * The OpenXR loader - From a variety of sources
-  * OPENXR\_GENERIC - The generic OpenXR loader, included as a git submodule at deps/openxr
+  * (default) OPENXR\_GENERIC - The generic OpenXR loader, included as a git submodule at deps/openxr
+  * OPENXR\_SYSTEM - The generic OpenXR loader, from system packages
   * OPENXR\_OCULUS\_MOBILE - The Oculus mobile SDK, available from https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/
+    * This loader is required when building for Oculus / Meta headsets - The generic OpenXR loader is non-functional on these devices
 
 ```sh
 # Ensure submodules are available
