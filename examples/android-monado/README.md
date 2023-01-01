@@ -6,7 +6,37 @@ Build Requirements:
 * Android Studio
 * Android SDK API Level 24
 * Android NDK 25
-* TODO: Monado setup details
+* Android device with Monado OpenXR runtime installed
+
+Quirks / Issues:
+* If ANDROID_STL=C++_static the OpenXR runtime will not load correctly. The runtime could be rebuilt with a static STL, but the simpler option is to use c++_shared in the vsgvr application
+* Monado on Android is currently targetted at cardboard-like HMDs - Configuring as a single-screen handheld display is not currently possible
+* When starting the application, ensure phone is held horizontally - Tracking is relative to the starting position
+* Performance will likely be quite low
+
+Project / Gradle requirements
+* C++ settings for vsgvr
+* `implementation 'org.khronos.openxr:openxr_loader_for_android:1.0.23'`
+
+## Installing Monado
+
+Firstly, build and install the monado runtime from https://gitlab.freedesktop.org/monado/monado
+* Clone the repo
+* Open the repo in Android Studio
+* Build and install the runtime APK
+
+Also build and install the monado broker application from https://gitlab.freedesktop.org/monado/utilities/openxr-android-broker
+* Clone the repo
+* Open the repo in Android Studio
+* Build and install the APK for `installable_runtime_broker`
+
+On the phone, configure the runtime
+* Open the app `OpenXR Runtime Broker`
+* Ensure the Monado runtime is selected
+
+The device should now have an OpenXR runtime, and vsgvr applications built with the following settings should function:
+* VSGVR_XR_PLATFORM=OPENXR_GENERIC
+* ANDROID_STL=c++_shared
 
 ## Build Configuration
 
