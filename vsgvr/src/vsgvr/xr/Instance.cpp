@@ -30,8 +30,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr
 {
   Instance::Instance(XrFormFactor formFactor, vsg::ref_ptr<vsgvr::Traits> xrTraits)
-    : _formFactor(formFactor)
-    , traits(xrTraits)
+    : traits(xrTraits)
+    , _formFactor(formFactor)
   {
     createInstance();
     createSystem();
@@ -108,7 +108,7 @@ namespace vsgvr
     auto fn = (PFN_xrInitializeLoaderKHR)xr_pfn_noexcept(XR_NULL_HANDLE, "xrInitializeLoaderKHR");
     if (fn)
     {
-      auto androidTraits = _xrTraits.cast<vsgvr::AndroidTraits>();
+      auto androidTraits = traits.cast<vsgvr::AndroidTraits>();
       if (androidTraits && androidTraits->vm && androidTraits->activity)
       {
         XrLoaderInitInfoAndroidKHR loaderInitInfo;
