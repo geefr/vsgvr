@@ -10,7 +10,7 @@ Interaction_teleport::Interaction_teleport(vsg::ref_ptr<vsgvr::Instance> xrInsta
   vsg::ref_ptr<vsgvr::SpaceBinding> headPose,
   vsg::ref_ptr<vsgvr::ActionPoseBinding> leftHandPose,
   vsg::ref_ptr<vsg::Switch> teleportTarget,
-  vsg::ref_ptr<vsg::Group> ground)
+  vsg::ref_ptr<vsg::Node> ground)
   : _headPose(headPose)
   , _leftHandPose(leftHandPose)
   , _teleportTarget(teleportTarget)
