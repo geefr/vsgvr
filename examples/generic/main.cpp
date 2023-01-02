@@ -57,7 +57,7 @@ XrEnvironmentBlendMode selectEnvironmentBlendMode(vsg::ref_ptr<vsgvr::Instance> 
   return instance->getSupportedEnvironmentBlendModes(viewConfigurationType).front();
 }
 
-void configureXrVulkanRequirements(vsg::ref_ptr<vsg::WindowTraits> windowTraits, vsgvr::VulkanRequirements xrVulkanReqs)
+void configureXrVulkanRequirements(vsg::ref_ptr<vsg::WindowTraits> windowTraits, vsgvr::VulkanRequirements& xrVulkanReqs)
 {
   if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
   {
@@ -73,6 +73,7 @@ void configureXrVulkanRequirements(vsg::ref_ptr<vsg::WindowTraits> windowTraits,
   xrVulkanReqs.deviceExtensions.erase("VK_EXT_debug_marker");
   xrVulkanReqs.instanceExtensions.erase("VK_EXT_debug_report");
   // Add any other requirements of OpenXR to the window traits, this mostly includes memory sharing and synchronisation extensions
+  // Note: windowsTraits stores vector<const char*> - These are references to xrVulkanReqs
   for (auto& ext : xrVulkanReqs.instanceExtensions)
   {
     if (std::find(windowTraits->instanceExtensionNames.begin(), windowTraits->instanceExtensionNames.end(), ext) == windowTraits->instanceExtensionNames.end()) {
@@ -210,7 +211,7 @@ int main(int argc, char **argv) {
     xrTraits->setApplicationVersion(0, 0, 0);
     // An application could check for an exception when creating the instance and retry with different form factor,
     // but OpenXR applications are typically built around a known platform / configuration.
-    auto xrInstance = vsgvr::Instance::create(XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);
+    auto xrInstance = vsgvr::Instance::create(XrFormFactor::XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);
     xrTraits->viewConfigurationType = selectViewConfigurationType(xrInstance);
     xrTraits->environmentBlendMode = selectEnvironmentBlendMode(xrInstance, xrTraits->viewConfigurationType);
 
@@ -273,6 +274,7 @@ int main(int argc, char **argv) {
     // Configure world space to be the origin of the selected reference space type
     // Our reference space may be rotated or translated if required
     auto referenceSpace = vsgvr::ReferenceSpace::create(vrSession, referenceSpaceType);
+    vrViewer->referenceSpace = referenceSpace;
 
     // Configure rendering of the vsg scene into a composition layer
     // Multiple composition layers may be provided, but at minimum a single CompositionLayerProjection is needed
