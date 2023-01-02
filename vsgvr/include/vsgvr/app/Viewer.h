@@ -124,9 +124,8 @@ namespace vsgvr {
             std::vector<vsg::ref_ptr<vsgvr::CompositionLayer>> compositionLayers;
 
             // The reference space used by the viewer when tracking space bindings and action spaces
-            // If a reference space is not set the viewer will operate, but actions will not be synced each frame
-            void setReferenceSpace( vsg::ref_ptr<vsgvr::ReferenceSpace> space ) { _space = space; }
-            vsg::ref_ptr<vsgvr::ReferenceSpace> getReferenceSpace() const { return _space; }
+            // If a reference space is not set the viewer will operate, but actions and poses will not be synced
+            vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace;
 
             // OpenXR spaces, which will be synced along with actions
             // Typically used for obtaining the position of the headset, via
@@ -160,7 +159,6 @@ namespace vsgvr {
             void createSession(vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding);
             void destroySession();
             vsg::ref_ptr<Session> _session;
-            vsg::ref_ptr<vsgvr::ReferenceSpace> _space;
 
             bool _firstUpdate = true;
             std::vector<XrActionSet> _attachedActionSets;

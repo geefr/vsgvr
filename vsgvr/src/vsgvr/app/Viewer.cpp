@@ -178,11 +178,11 @@ namespace vsgvr
   {
     // Update each of the space bindings
     if( spaceBindings.empty() ) return;
-    if( !_space ) return;
+    if( !referenceSpace ) return;
 
     for (auto& space : spaceBindings)
     {
-      auto spaceLocation = space->getSpace()->locate(_space->getSpace(), _frameState.predictedDisplayTime);
+      auto spaceLocation = space->getSpace()->locate(referenceSpace->getSpace(), _frameState.predictedDisplayTime);
       space->setTransform(spaceLocation);
     }
   }
@@ -190,7 +190,7 @@ namespace vsgvr
   void Viewer::syncActions()
   {
     if( activeActionSets.empty() ) return;
-    if( !_space ) return;
+    if( !referenceSpace) return;
 
     // Sync the active action sets
     auto info = XrActionsSyncInfo();
@@ -212,7 +212,7 @@ namespace vsgvr
           auto location = XrSpaceLocation();
           location.type = XR_TYPE_SPACE_LOCATION;
           location.next = nullptr;
-          xr_check(xrLocateSpace(a->getActionSpace(), _space->getSpace(), _frameState.predictedDisplayTime, &location));
+          xr_check(xrLocateSpace(a->getActionSpace(), referenceSpace->getSpace(), _frameState.predictedDisplayTime, &location));
           a->setTransform(location);
         }
 
