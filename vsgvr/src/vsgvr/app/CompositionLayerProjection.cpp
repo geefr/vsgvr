@@ -47,20 +47,19 @@ namespace vsgvr {
   {
     if (_viewConfigurationViews.empty())
     {
-      auto xrTraits = instance->getTraits();
       _viewConfigurationProperties = XrViewConfigurationProperties();
       _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
       _viewConfigurationProperties.next = nullptr;
 
-      xr_check(xrGetViewConfigurationProperties(instance->getInstance(), instance->getSystem(), xrTraits->viewConfigurationType, &_viewConfigurationProperties));
+      xr_check(xrGetViewConfigurationProperties(instance->getInstance(), instance->getSystem(), instance->traits->viewConfigurationType, &_viewConfigurationProperties));
       uint32_t count = 0;
-      xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), xrTraits->viewConfigurationType, 0, &count, nullptr));
+      xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), instance->traits->viewConfigurationType, 0, &count, nullptr));
       _viewConfigurationViews.resize(count, XrViewConfigurationView());
       for (auto& v : _viewConfigurationViews) {
         v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
         v.next = nullptr;
       }
-      xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), xrTraits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
+      xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), instance->traits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
     }
 
     std::vector<CompositionLayer::SwapchainImageRequirements> reqs;
@@ -78,7 +77,6 @@ namespace vsgvr {
   void CompositionLayerProjection::render(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
   {
     // Locate the views (at predicted frame time), to extract view/proj matrices, and fov
-    auto xrTraits = instance->getTraits();
     std::vector<XrView> locatedViews(_viewConfigurationViews.size(), XrView());
     auto viewsValid = false;
     for (auto& v : locatedViews)
@@ -91,7 +89,7 @@ namespace vsgvr {
       viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
       viewLocateInfo.next = nullptr;
       viewLocateInfo.space = _referenceSpace->getSpace();
-      viewLocateInfo.viewConfigurationType = xrTraits->viewConfigurationType;
+      viewLocateInfo.viewConfigurationType = instance->traits->viewConfigurationType;
       viewLocateInfo.displayTime = frameState.predictedDisplayTime;
 
       auto viewState = XrViewState();

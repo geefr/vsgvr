@@ -46,7 +46,6 @@ namespace vsgvr {
   Swapchain::Swapchain(XrSession session, VkFormat swapchainFormat, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
-    validateFormat(session);
     createSwapchain(session, width, height, sampleCount, graphicsBinding);
   }
 
@@ -82,20 +81,6 @@ namespace vsgvr {
     info.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
     info.next = nullptr;
     xr_check(xrReleaseSwapchainImage(_swapchain, &info), "Failed to release image");
-  }
-
-
-  void Swapchain::validateFormat(XrSession session)
-  {
-    uint32_t count = 0;
-    xr_check(xrEnumerateSwapchainFormats(session, 0, &count, nullptr));
-    std::vector<int64_t> formats(count);
-    xr_check(xrEnumerateSwapchainFormats(session, static_cast<uint32_t>(formats.size()), &count, formats.data()));
-
-    if (std::find(formats.begin(), formats.end(), static_cast<int64_t>(_swapchainFormat)) == formats.end())
-    {
-      throw Exception({ "OpenXR runtime doesn't support selected swapchain format" });
-    }
   }
 
   void Swapchain::createSwapchain(XrSession session, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)

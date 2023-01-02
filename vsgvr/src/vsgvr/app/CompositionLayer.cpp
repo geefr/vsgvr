@@ -58,12 +58,11 @@ namespace vsgvr {
       _swapchainImageRequirements = getSwapchainImageRequirements(instance);
     }
 
-    auto xrTraits = instance->getTraits();
     auto graphicsBinding = session->getGraphicsBinding();
     for (auto& viewConfig : _swapchainImageRequirements)
     {
       PerViewData v;
-      v.swapchain = Swapchain::create(session->getSession(), xrTraits->swapchainFormat, viewConfig.width, viewConfig.height, viewConfig.sampleCount, graphicsBinding);
+      v.swapchain = Swapchain::create(session->getSession(), instance->traits->swapchainFormat, viewConfig.width, viewConfig.height, viewConfig.sampleCount, graphicsBinding);
 
       auto extent = v.swapchain->getExtent();
       VkSampleCountFlagBits framebufferSamples;
@@ -100,7 +99,7 @@ namespace vsgvr {
       {
         v.multisampleImage = vsg::Image::create();
         v.multisampleImage->imageType = VK_IMAGE_TYPE_2D;
-        v.multisampleImage->format = xrTraits->swapchainFormat;
+        v.multisampleImage->format = instance->traits->swapchainFormat;
         v.multisampleImage->extent.width = extent.width;
         v.multisampleImage->extent.height = extent.height;
         v.multisampleImage->extent.depth = 1;
@@ -127,11 +126,11 @@ namespace vsgvr {
       {
         if (framebufferSamples == VK_SAMPLE_COUNT_1_BIT)
         {
-          v.renderPass = vsg::createRenderPass(graphicsBinding->getVsgDevice(), xrTraits->swapchainFormat, VK_FORMAT_D32_SFLOAT, requiresDepthRead);
+          v.renderPass = vsg::createRenderPass(graphicsBinding->getVsgDevice(), instance->traits->swapchainFormat, VK_FORMAT_D32_SFLOAT, requiresDepthRead);
         }
         else
         {
-          v.renderPass = vsg::createMultisampledRenderPass(graphicsBinding->getVsgDevice(), xrTraits->swapchainFormat, VK_FORMAT_D32_SFLOAT, framebufferSamples, requiresDepthRead);
+          v.renderPass = vsg::createMultisampledRenderPass(graphicsBinding->getVsgDevice(), instance->traits->swapchainFormat, VK_FORMAT_D32_SFLOAT, framebufferSamples, requiresDepthRead);
         }
       }
 

@@ -87,7 +87,7 @@ namespace vsgvr
       interactionProfileBinding.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
       interactionProfileBinding.next = nullptr;
       interactionProfileBinding.interactionProfile = xrProfilePath;
-      interactionProfileBinding.countSuggestedBindings = actionBindings.size();
+      interactionProfileBinding.countSuggestedBindings = static_cast<uint32_t>(actionBindings.size());
       interactionProfileBinding.suggestedBindings = actionBindings.data();
       auto result = xrSuggestInteractionProfileBindings(instance->getInstance(), &interactionProfileBinding);
       if (XR_SUCCEEDED(result))

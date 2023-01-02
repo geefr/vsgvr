@@ -68,7 +68,6 @@ namespace vsgvr
     vsg::ImageViews getImageViews() const { return _imageViews; }
 
   private:
-    void validateFormat(XrSession session);
     void createSwapchain(XrSession session, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
     void destroySwapchain();

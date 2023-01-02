@@ -34,16 +34,16 @@ namespace vsgvr {
   {
   public:
     ReferenceSpace() = delete;
-    ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType);
-    ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, vsg::dvec3 position, vsg::dquat orientation);
-    ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
+    ReferenceSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType);
+    ReferenceSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType, vsg::dvec3 position, vsg::dquat orientation);
+    ReferenceSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
     virtual ~ReferenceSpace();
 
     XrSpace getSpace() const { return _space; }
     XrSpaceLocation locate(XrSpace baseSpace, XrTime time);
 
   private:
-    void createSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
+    void createSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace);
     void destroySpace();
 
     XrSpace _space = XR_NULL_HANDLE;

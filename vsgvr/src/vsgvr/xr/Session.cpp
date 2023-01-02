@@ -26,41 +26,126 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgvr {
 
   Session::Session(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
-    : _graphicsBinding(graphicsBinding)
+    : _instance(instance)
+    , _graphicsBinding(graphicsBinding)
   {
-    createSession(instance);
+    createSession();
   }
 
   Session::~Session()
   {
     destroySession();
   }
+  
+  std::vector<XrReferenceSpaceType> Session::getSupportedReferenceSpaceTypes()
+  {
+    uint32_t count = 0;
+    xr_check(xrEnumerateReferenceSpaces(_session, 0, &count, nullptr));
+    std::vector<XrReferenceSpaceType> spaceTypes(count);
+    xr_check(xrEnumerateReferenceSpaces(_session, static_cast<uint32_t>(spaceTypes.size()), &count, spaceTypes.data()));
+    return spaceTypes;
+  }
 
-  void Session::createSession(vsg::ref_ptr<Instance> instance)
+  std::vector<VkFormat> Session::getSupportedSwapchainFormats()
+  {
+    uint32_t count = 0;
+    xr_check(xrEnumerateSwapchainFormats(_session, 0, &count, nullptr));
+    std::vector<int64_t> formats(count);
+    xr_check(xrEnumerateSwapchainFormats(_session, static_cast<uint32_t>(formats.size()), &count, formats.data()));
+
+    std::vector<VkFormat> vkFormats;
+    for( auto& format : formats ) vkFormats.emplace_back(static_cast<VkFormat>(format));
+    return vkFormats;
+  }
+
+  XrViewConfigurationProperties Session::getViewConfigurationProperties()
+  {
+    auto viewConfigProperties = XrViewConfigurationProperties();
+    viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
+    viewConfigProperties.next = nullptr;
+
+    xr_check(xrGetViewConfigurationProperties(
+      _instance->getInstance(),
+      _instance->getSystem(),
+      _instance->traits->viewConfigurationType,
+      &viewConfigProperties)
+    );
+    return viewConfigProperties;
+  }
+
+  std::vector<XrViewConfigurationView> Session::getViewConfigurationViews()
+  {
+    uint32_t count = 0;
+    std::vector<XrViewConfigurationView> viewConfigurationViews;
+    xr_check(xrEnumerateViewConfigurationViews(
+      _instance->getInstance(), 
+      _instance->getSystem(), 
+      _instance->traits->viewConfigurationType, 
+      0, &count, nullptr
+    ));
+    viewConfigurationViews.resize(count, XrViewConfigurationView());
+    for (auto& v : viewConfigurationViews) {
+      v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
+      v.next = nullptr;
+    }
+    xr_check(xrEnumerateViewConfigurationViews(
+      _instance->getInstance(),
+      _instance->getSystem(),
+      _instance->traits->viewConfigurationType,
+      static_cast<uint32_t>(viewConfigurationViews.size()),
+      &count,
+      viewConfigurationViews.data())
+    );
+    return viewConfigurationViews;
+  }
+
+  bool Session::checkSwapchainFormatSupported(VkFormat format)
+  {
+    auto formats = getSupportedSwapchainFormats();
+    if (std::find(formats.begin(), formats.end(), static_cast<int64_t>(format)) == formats.end())
+    {
+      return false;
+    }
+    return true;
+  }
+
+  bool Session::checkSwapchainSampleCountSupported(uint32_t numSamples)
+  {
+    if (numSamples == 0) return false;
+    auto viewConfigurationViews = getViewConfigurationViews();
+    for (auto i = 0; i < viewConfigurationViews.size(); ++i)
+    {
+      if (numSamples > viewConfigurationViews[i].maxSwapchainSampleCount)
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool Session::checkReferenceSpaceTypeSupported(XrReferenceSpaceType referenceSpaceType)
+  {
+    auto supportedTypes = getSupportedReferenceSpaceTypes();
+    if (std::find(supportedTypes.begin(), supportedTypes.end(), referenceSpaceType) == supportedTypes.end())
+    {
+      return false;
+    }
+    return true;
+  }
+
+  void Session::createSession()
   {
     auto info = XrSessionCreateInfo();
     info.type = XR_TYPE_SESSION_CREATE_INFO;
     info.next = &_graphicsBinding->getBinding();
-    info.systemId = instance->getSystem();
+    info.systemId = _instance->getSystem();
 
-    xr_check(xrCreateSession(instance->getInstance(), &info, &_session), "Failed to create OpenXR session");
+    xr_check(xrCreateSession(_instance->getInstance(), &info, &_session), "Failed to create OpenXR session");
     _sessionState = XR_SESSION_STATE_IDLE;
-
-    // TODO: Should check what spaces are supported here
-    //       STAGE is relative to the VR space bounds, but may not exist on standing-only or AR headsets
-    _space = vsgvr::ReferenceSpace::create(
-      _session,
-      XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_STAGE,
-      XrPosef{
-        XrQuaternionf{0.0f, 0.0f, 0.0f, 1.0f},
-        XrVector3f{0.0f, 0.0f, 0.0f},
-      }
-    );
   }
 
   void Session::destroySession()
   {
-    _space = nullptr;
     xr_check(xrDestroySession(_session));
     _session = XR_NULL_HANDLE;
   }

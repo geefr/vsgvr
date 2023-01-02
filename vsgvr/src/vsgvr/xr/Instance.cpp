@@ -29,8 +29,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  Instance::Instance(vsg::ref_ptr<Traits> xrTraits)
-    : _xrTraits(xrTraits)
+  Instance::Instance(XrFormFactor formFactor, vsg::ref_ptr<vsgvr::Traits> xrTraits)
+    : _formFactor(formFactor)
+    , traits(xrTraits)
   {
     createInstance();
     createSystem();
@@ -39,6 +40,46 @@ namespace vsgvr
   Instance::~Instance()
   {
     destroyInstance();
+  }
+
+  std::vector<XrViewConfigurationType> Instance::getSupportedViewConfigurationTypes()
+  {
+    std::vector<XrViewConfigurationType> types;
+    uint32_t count = 0;
+    xr_check(xrEnumerateViewConfigurations(_instance, _system, 0, &count, nullptr));
+    types.resize(count);
+    xr_check(xrEnumerateViewConfigurations(_instance, _system, static_cast<uint32_t>(types.size()), &count, types.data()));
+    return types;
+  }
+
+  std::vector<XrEnvironmentBlendMode> Instance::getSupportedEnvironmentBlendModes(XrViewConfigurationType viewConfiguration)
+  {
+    std::vector<XrEnvironmentBlendMode> modes;
+    uint32_t count = 0;
+    xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, viewConfiguration, 0, &count, nullptr));
+    modes.resize(count);
+    xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, viewConfiguration, static_cast<uint32_t>(modes.size()), &count, modes.data()));
+    return modes;
+  }
+
+  bool Instance::checkViewConfigurationSupported(XrViewConfigurationType viewConfiguration)
+  {
+    auto types = getSupportedViewConfigurationTypes();
+    if (std::find(types.begin(), types.end(), viewConfiguration) == types.end())
+    {
+      return false;
+    }
+    return true;
+  }
+
+  bool Instance::checkEnvironmentBlendModeSupported(XrViewConfigurationType viewConfiguration, XrEnvironmentBlendMode environmentBlendMode)
+  {
+    auto modes = getSupportedEnvironmentBlendModes(viewConfiguration);
+    if (std::find(modes.begin(), modes.end(), environmentBlendMode) == modes.end())
+    {
+      return false;
+    }
+    return true;
   }
 
   void Instance::onEventInstanceLossPending([[maybe_unused]] const XrEventDataInstanceLossPending& event)
@@ -86,11 +127,11 @@ namespace vsgvr
     extensions.push_back("XR_KHR_android_create_instance");
 #endif
 
-    for (auto& e : _xrTraits->xrExtensions)
+    for (auto& e : traits->xrExtensions)
       extensions.push_back(e.c_str());
 
     std::vector<const char*> layers = {};
-    for (auto& l : _xrTraits->xrLayers)
+    for (auto& l : traits->xrLayers)
       layers.push_back(l.c_str());
 
     XrInstanceCreateInfo info;
@@ -102,14 +143,14 @@ namespace vsgvr
     info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     info.enabledExtensionNames = extensions.empty() ? nullptr : extensions.data();
 
-    strncpy(info.applicationInfo.applicationName, _xrTraits->applicationName.c_str(), std::min(static_cast<int>(_xrTraits->applicationName.size() + 1), XR_MAX_APPLICATION_NAME_SIZE));
-    info.applicationInfo.applicationVersion = _xrTraits->applicationVersion;
-    strncpy(info.applicationInfo.engineName, _xrTraits->engineName.c_str(), std::min(static_cast<int>(_xrTraits->engineName.size() + 1), XR_MAX_ENGINE_NAME_SIZE));
-    info.applicationInfo.apiVersion = _xrTraits->apiVersion;
-    info.applicationInfo.engineVersion = _xrTraits->engineVersion;
+    strncpy(info.applicationInfo.applicationName, traits->applicationName.c_str(), std::min(static_cast<int>(traits->applicationName.size() + 1), XR_MAX_APPLICATION_NAME_SIZE));
+    info.applicationInfo.applicationVersion = traits->applicationVersion;
+    strncpy(info.applicationInfo.engineName, traits->engineName.c_str(), std::min(static_cast<int>(traits->engineName.size() + 1), XR_MAX_ENGINE_NAME_SIZE));
+    info.applicationInfo.apiVersion = traits->apiVersion;
+    info.applicationInfo.engineVersion = traits->engineVersion;
 
 #ifdef ANDROID
-    auto androidTraits = _xrTraits.cast<vsgvr::AndroidTraits>();
+    auto androidTraits = traits.cast<vsgvr::AndroidTraits>();
     if (androidTraits && androidTraits->vm && androidTraits->activity)
     {
       XrInstanceCreateInfoAndroidKHR androidCreateInfo;
@@ -150,7 +191,7 @@ namespace vsgvr
     XrSystemGetInfo info;
     info.type = XR_TYPE_SYSTEM_GET_INFO;
     info.next = nullptr;
-    info.formFactor = _xrTraits->formFactor;
+    info.formFactor = _formFactor;
 
     xr_check(xrGetSystem(_instance, &info, &_system), "Failed to get OpenXR system");
 
@@ -160,34 +201,5 @@ namespace vsgvr
     _systemProperties.graphicsProperties = { 0, 0, 0 };
     _systemProperties.trackingProperties = { XR_FALSE, XR_FALSE };
     xr_check(xrGetSystemProperties(_instance, _system, &_systemProperties), "Failed to get OpenXR system properties");
-  }
-
-  void Instance::validateTraits()
-  {
-    // View configuration type
-    {
-      std::vector<XrViewConfigurationType> types;
-      uint32_t count = 0;
-      xr_check(xrEnumerateViewConfigurations(_instance, _system, 0, &count, nullptr));
-      types.resize(count);
-      xr_check(xrEnumerateViewConfigurations(_instance, _system, static_cast<uint32_t>(types.size()), &count, types.data()));
-      if (std::find(types.begin(), types.end(), _xrTraits->viewConfigurationType) == types.end())
-      {
-        throw Exception({ "View configuration type not supported" });
-      }
-    }
-
-    // Environment blend mode
-    {
-      std::vector<XrEnvironmentBlendMode> modes;
-      uint32_t count = 0;
-      xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, _xrTraits->viewConfigurationType, 0, &count, nullptr));
-      modes.resize(count);
-      xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, _xrTraits->viewConfigurationType, static_cast<uint32_t>(modes.size()), &count, modes.data()));
-      if (std::find(modes.begin(), modes.end(), _xrTraits->environmentBlendMode) == modes.end())
-      {
-        throw Exception({ "Environment blend mode not supported" });
-      }
-    }
   }
 }

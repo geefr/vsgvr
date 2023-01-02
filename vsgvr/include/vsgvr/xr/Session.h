@@ -43,8 +43,20 @@ namespace vsgvr {
             XrSession getSession() const { return _session; }
             XrSessionState getSessionState() const { return _sessionState; }
             bool getSessionRunning() const { return _sessionRunning; }
+
             /// The session's reference space
-            vsg::ref_ptr<vsgvr::ReferenceSpace> getSpace() const { return _space; }
+            vsg::ref_ptr<vsgvr::ReferenceSpace> space;
+
+            XrViewConfigurationProperties getViewConfigurationProperties();
+            std::vector<XrViewConfigurationView> getViewConfigurationViews();
+
+            std::vector<VkFormat> getSupportedSwapchainFormats();
+            std::vector<uint32_t> getSupportedSwapchainSamples();
+            std::vector<XrReferenceSpaceType> getSupportedReferenceSpaceTypes();
+
+            bool checkSwapchainFormatSupported(VkFormat format);
+            bool checkSwapchainSampleCountSupported(uint32_t numSamples);
+            bool checkReferenceSpaceTypeSupported(XrReferenceSpaceType referenceSpaceType);
 
             void onEventStateChanged(const XrEventDataSessionStateChanged& event);
 
@@ -54,16 +66,15 @@ namespace vsgvr {
         protected:
             virtual ~Session();
         private:
-            void createSession(vsg::ref_ptr<Instance> instance);
+            void createSession();
             void destroySession();
 
+            vsg::ref_ptr<Instance> _instance;
             vsg::ref_ptr<GraphicsBindingVulkan> _graphicsBinding;
             
             XrSession _session = XR_NULL_HANDLE;
             XrSessionState _sessionState = XrSessionState::XR_SESSION_STATE_UNKNOWN;
             bool _sessionRunning = false;
-
-            vsg::ref_ptr<vsgvr::ReferenceSpace> _space;
     };
 }
 

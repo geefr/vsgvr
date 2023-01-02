@@ -28,19 +28,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/maths/transform.h>
 
 namespace vsgvr {
-  ReferenceSpace::ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType)
+  ReferenceSpace::ReferenceSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType)
   {
     createSpace(session, referenceSpaceType, XrPosef{
       XrQuaternionf{0.0f, 0.0f, 0.0f, 1.0f},
       XrVector3f{0.0f, 0.0f, 0.0f}
     });
   }
-  ReferenceSpace::ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, vsg::dvec3 position, vsg::dquat orientation)
+  ReferenceSpace::ReferenceSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType, vsg::dvec3 position, vsg::dquat orientation)
   {
     auto pose = Pose(position, orientation).getPose();
     createSpace(session, referenceSpaceType, pose);
   }
-  ReferenceSpace::ReferenceSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace)
+  ReferenceSpace::ReferenceSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace)
   {
     createSpace(session, referenceSpaceType, poseInReferenceSpace);
   }
@@ -58,14 +58,14 @@ namespace vsgvr {
     return s;
   }
 
-  void ReferenceSpace::createSpace(XrSession session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace)
+  void ReferenceSpace::createSpace(vsg::ref_ptr<vsgvr::Session> session, XrReferenceSpaceType referenceSpaceType, XrPosef poseInReferenceSpace)
   {
     XrReferenceSpaceCreateInfo info;
     info.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
     info.next = nullptr;
     info.referenceSpaceType = referenceSpaceType;
     info.poseInReferenceSpace = poseInReferenceSpace;
-    xr_check(xrCreateReferenceSpace(session, &info, &_space));
+    xr_check(xrCreateReferenceSpace(session->getSession(), &info, &_space));
   }
 
   void ReferenceSpace::destroySpace()

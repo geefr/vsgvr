@@ -30,16 +30,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
+  // Application and runtime settings for vsgvr
   class VSGVR_DECLSPEC Traits : public vsg::Inherit<vsg::Object, Traits>
   {
   public:
     Traits();
+
+    // OpenXR extensions required by the application
     std::vector<std::string> xrExtensions = {
         // "XR_EXT_debug_utils"
     };
     std::vector<std::string> xrLayers = {
         // "XR_APILAYER_LUNARG_core_validation"
     };
+
+    // Application metadata provided to the OpenXR runtime
     XrVersion apiVersion = XR_MAKE_VERSION(1, 0, 0);
     std::string applicationName = "VSGVR Application";
     std::string engineName = "VSGVR";
@@ -49,16 +54,22 @@ namespace vsgvr
     void setApplicationVersion(uint32_t maj, uint32_t min, uint32_t patch);
     void setEngineVersion(uint32_t maj, uint32_t min, uint32_t patch);
 
-    /// Mode and format selections
-    /// TODO: For now, applications chose a single option, which is validated. Abstracting
-    ///       this to a more general set of view preferences would be better.
-    XrFormFactor formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-
-    std::vector<XrFormFactor> enumeratorFormFactors();
-
+    // The configuration of displays used for the form factor
+    // May be validated via Instance::checkViewConfigurationSupported
     XrViewConfigurationType viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+
+    // The mode used to blend rendered data with the environment. This may vary based on the
+    // capabilities of a headset, such as whether visual or camera-based environment is supported
+    // May be validated via Instance::checkEnvironmentBlendModeSupported
     XrEnvironmentBlendMode environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
-    VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_SRGB; // Runtimes _should_ support this, as a preferred option
+
+    // The Vulkan image format used for OpenXR swapchain images (i.e. the render target for vsg content)
+    // May be validated via Session::checkSwapchainFormatSupported
+    // Runtimes should support VK_FORMAT_R8G8B8A8_UNORM and VK_FORMAT_R8G8B8A8_SRGB as preferred formats
+    VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
+    // The number of samples used for swapchain images
+    // May be validated via Session::checkSwapchainSampleCountSupported
     uint32_t swapchainSampleCount = 1;
 
   protected:

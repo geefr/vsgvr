@@ -66,14 +66,13 @@ namespace vsgvr {
              * * That the required instance and device extensions are present - GraphicsBindingVulkan::getVulkanRequirements
              * * A specific PhysicalDevice is used - GraphicsBindingVulkan::getVulkanDeviceRequirements
              */
-            Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<Traits> xrTraits, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
+            Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
             Viewer() = delete;
             ~Viewer();
 
             vsg::ref_ptr<Instance> getInstance() { return _instance; }
             vsg::ref_ptr<Session> getSession() { return _session; }
-            vsg::ref_ptr<Traits> getTraits() { return _xrTraits; }
 
             /**
              * Whether polling for events succeeded, and what action the application
@@ -124,6 +123,11 @@ namespace vsgvr {
 
             std::vector<vsg::ref_ptr<vsgvr::CompositionLayer>> compositionLayers;
 
+            // The reference space used by the viewer when tracking space bindings and action spaces
+            // If a reference space is not set the viewer will operate, but actions will not be synced each frame
+            void setReferenceSpace( vsg::ref_ptr<vsgvr::ReferenceSpace> space ) { _space = space; }
+            vsg::ref_ptr<vsgvr::ReferenceSpace> getReferenceSpace() const { return _space; }
+
             // OpenXR spaces, which will be synced along with actions
             // Typically used for obtaining the position of the headset, via
             // a binding to the origin of XR_REFERENCE_SPACE_TYPE_VIEW
@@ -149,7 +153,6 @@ namespace vsgvr {
             void destroyActionSpaces();
 
             vsg::ref_ptr<Instance> _instance;
-            vsg::ref_ptr<Traits> _xrTraits;
 
             EventHandler _eventHandler;
 
@@ -157,6 +160,7 @@ namespace vsgvr {
             void createSession(vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding);
             void destroySession();
             vsg::ref_ptr<Session> _session;
+            vsg::ref_ptr<vsgvr::ReferenceSpace> _space;
 
             bool _firstUpdate = true;
             std::vector<XrActionSet> _attachedActionSets;

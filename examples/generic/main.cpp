@@ -16,6 +16,134 @@
 #include "../../models/controller/controller2.cpp"
 #include "../../models/world/world.cpp"
 
+XrViewConfigurationType selectViewConfigurationType(vsg::ref_ptr<vsgvr::Instance> instance)
+{
+  // Most likely will be stereo for a head-mounted display.
+  // Mono will be used if supported otherwise.
+  // QUAD_VARJO and other extension-based configs could be selected here, but the application would
+  // also need to enable these extensions during Instance::create.
+  std::vector<XrViewConfigurationType> viewPrefs = {
+    XrViewConfigurationType::XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+    XrViewConfigurationType::XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO,
+  };
+  for (auto& view : viewPrefs)
+  {
+    if (instance->checkViewConfigurationSupported(view))
+    {
+      return view;
+    }
+  }
+  // Fall back to first-supported
+  return instance->getSupportedViewConfigurationTypes().front();
+}
+
+XrEnvironmentBlendMode selectEnvironmentBlendMode(vsg::ref_ptr<vsgvr::Instance> instance, XrViewConfigurationType viewConfigurationType)
+{
+  // VR headsets should support OPAQUE
+  // AR headsets should support ADDITIVE or ALPHA_BLEND
+  std::vector<XrEnvironmentBlendMode> blendModes = {
+    XrEnvironmentBlendMode::XR_ENVIRONMENT_BLEND_MODE_OPAQUE,
+    XrEnvironmentBlendMode::XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND,
+    XrEnvironmentBlendMode::XR_ENVIRONMENT_BLEND_MODE_ADDITIVE,
+  };
+  for (auto& mode : blendModes)
+  {
+    if (instance->checkEnvironmentBlendModeSupported(viewConfigurationType, mode))
+    {
+      return mode;
+    }
+  }
+  // Fall back to first-supported
+  return instance->getSupportedEnvironmentBlendModes(viewConfigurationType).front();
+}
+
+void configureXrVulkanRequirements(vsg::ref_ptr<vsg::WindowTraits> windowTraits, vsgvr::VulkanRequirements xrVulkanReqs)
+{
+  if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
+  {
+    throw std::runtime_error("Vulkan API too low for OpenXR");
+  }
+  if (windowTraits->vulkanVersion > xrVulkanReqs.maxVersion)
+  {
+    std::cout << "Warning: Vulkan API higher than OpenXR maximum. Maximum tested version is " << xrVulkanReqs.maxVersionStr << std::endl;
+  }
+
+  // Encountered with SteamVR: debug_marker is requested in device extensions but is not present, causing device creation to fail
+  // This doesn't actually appear to be required by SteamVR to work, so drop it if present.
+  xrVulkanReqs.deviceExtensions.erase("VK_EXT_debug_marker");
+  xrVulkanReqs.instanceExtensions.erase("VK_EXT_debug_report");
+  // Add any other requirements of OpenXR to the window traits, this mostly includes memory sharing and synchronisation extensions
+  for (auto& ext : xrVulkanReqs.instanceExtensions)
+  {
+    if (std::find(windowTraits->instanceExtensionNames.begin(), windowTraits->instanceExtensionNames.end(), ext) == windowTraits->instanceExtensionNames.end()) {
+      windowTraits->instanceExtensionNames.push_back(ext.c_str());
+    }
+  }
+  for (auto& ext : xrVulkanReqs.deviceExtensions)
+  {
+    if (std::find(windowTraits->deviceExtensionNames.begin(), windowTraits->deviceExtensionNames.end(), ext) == windowTraits->deviceExtensionNames.end()) {
+      windowTraits->deviceExtensionNames.push_back(ext.c_str());
+    }
+  }
+}
+
+VkFormat selectSwapchainFormat(vsg::ref_ptr<vsgvr::Session> vrSession)
+{
+  // The specific swapchain format shouldn't impact the application much, but a compatible
+  // image format must be selected for OpenXR to operate
+  // These two formats are listed in the OpenXR specification, and should be supported by
+  // most runtimes.
+  std::vector<VkFormat> formats = {
+    VkFormat::VK_FORMAT_R8G8B8A8_UNORM,
+    VkFormat::VK_FORMAT_R8G8B8A8_SRGB
+  };
+  for (auto& format : formats) {
+    if (vrSession->checkSwapchainFormatSupported(format))
+    {
+      return format;
+    }
+  }
+  // Fall back to first-supported
+  return vrSession->getSupportedSwapchainFormats().front();
+}
+
+uint32_t selectSwapchainSampleCount(vsg::ref_ptr<vsgvr::Session> vrSession, VkSampleCountFlags samples)
+{
+  // Similar to swapchain image format, the number of samples shouldn't matter much, but if
+  // possible should match the multisample settings of the vsg rendering.
+  // After rendering, swapchain images are handed to the OpenXR compositor, which should
+  // have access to the highest-quality image available.
+  if (vrSession->checkSwapchainSampleCountSupported(samples))
+  {
+    return samples;
+  }
+  return 1;
+}
+
+XrReferenceSpaceType selectReferenceSpaceType(vsg::ref_ptr<vsgvr::Session> vrSession)
+{
+  // The spaces available will depend upon the OpenXR runtime
+  // Typically STAGE is supported for room-scale systems,
+  // with LOCAL supported for standing-only scale systems.
+  // Most runtimes will support multiple however, or support
+  // additional extension-based spaces.
+  //
+  // For common VR headsets, the difference between STAGE and LOCAL may be quite subtle,
+  // and have little impact on this application.
+  std::vector<XrReferenceSpaceType> spaces = {
+    XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_STAGE,
+    XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_LOCAL,
+  };
+  for (auto& space : spaces)
+  {
+    if (vrSession->checkReferenceSpaceTypeSupported(space))
+    {
+      return space;
+    }
+  }
+  return vrSession->getSupportedReferenceSpaceTypes().front();
+}
+
 int main(int argc, char **argv) {
   try
   {
@@ -66,57 +194,38 @@ int main(int argc, char **argv) {
     auto controllerNodeRight = controller2();
     vsg_scene->addChild(controllerNodeRight);
 
-    // Initialise OpenXR
-    // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
-    //       This should be improved in the future, at least to query what form factors are available.
-    // TODO: Some parameters on xrTraits are non-functional at the moment
-    auto xrTraits = vsgvr::Traits::create();
-    xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-    xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "example_vr";
     arguments.read("--screen", windowTraits->screenNum);
     arguments.read("--display", windowTraits->display);
 
-    // Retrieve vulkan requirements
-    // OpenXR will require certain vulkan versions, along with a specific physical device, and instance/device extensions
-    auto xrInstance = vsgvr::Instance::create(xrTraits);
+    // Initialise OpenXR through vsgvr
+    // vsgvr has a similar Traits mechanism to a vsg::Window, however they affect multiple aspects of the runtime.
+    // Some parts of these are configured up front, while others cannot be configured until later - Traits may
+    // be accessed through vsgvr::Instance, but once configured should not be modified.
+    //
+    // Firstly an OpenXR Instance is required - In this case the application can only work for stereo head-mounted displays
+    auto xrTraits = vsgvr::Traits::create();
+    xrTraits->applicationName = "VSGVR Generic OpenXR Example";
+    xrTraits->setApplicationVersion(0, 0, 0);
+    // An application could check for an exception when creating the instance and retry with different form factor,
+    // but OpenXR applications are typically built around a known platform / configuration.
+    auto xrInstance = vsgvr::Instance::create(XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);
+    xrTraits->viewConfigurationType = selectViewConfigurationType(xrInstance);
+    xrTraits->environmentBlendMode = selectEnvironmentBlendMode(xrInstance, xrTraits->viewConfigurationType);
+
+    // Retrieve the vulkan requirements - The OpenXR runtime will require certain vulkan versions,
+    // along with a specific physical device, and instance/device extensions
     auto xrVulkanReqs = vsgvr::GraphicsBindingVulkan::getVulkanRequirements(xrInstance);
+    configureXrVulkanRequirements(windowTraits, xrVulkanReqs);
 
-    if (windowTraits->vulkanVersion < xrVulkanReqs.minVersion)
-    {
-      std::cout << "Vulkan API too low for OpenXR. Minimum required is " << xrVulkanReqs.minVersionStr << std::endl;
-      return EXIT_FAILURE;
-    }
-    if (windowTraits->vulkanVersion > xrVulkanReqs.maxVersion)
-    {
-      std::cout << "Warning: Vulkan API higher than OpenXR maximum. Maximum tested version is " << xrVulkanReqs.maxVersionStr << std::endl;
-    }
-
-    // Encountered with SteamVR: debug_marker is requested in device extensions, causing device creation to fail
-    // This doesn't actually appear to be required by SteamVR to work, so drop it if present.
-    // debug_report doesn't appear to be present, but drop it as well.
-    // SteamVR doesn't appear to need these to run, or the replacement VK_EXT_debug_utils.
-    xrVulkanReqs.deviceExtensions.erase("VK_EXT_debug_marker");
-    xrVulkanReqs.instanceExtensions.erase("VK_EXT_debug_report");
-    // Add any other requirements of OpenXR to the window traits, this mostly includes memory sharing and synchronisation extensions
-    for (auto& ext : xrVulkanReqs.instanceExtensions)
-    {
-      if (std::find(windowTraits->instanceExtensionNames.begin(), windowTraits->instanceExtensionNames.end(), ext) == windowTraits->instanceExtensionNames.end() ) {
-        windowTraits->instanceExtensionNames.push_back(ext.c_str());
-      }
-    }
-    for (auto& ext : xrVulkanReqs.deviceExtensions)
-    {
-      if (std::find(windowTraits->deviceExtensionNames.begin(), windowTraits->deviceExtensionNames.end(), ext) == windowTraits->deviceExtensionNames.end()) {
-        windowTraits->deviceExtensionNames.push_back(ext.c_str());
-      }
-    }
-    
-    // VSync must be disabled - In this example we're driving a desktop window and HMD from the same thread,
-    // the OpenXRViewer must never be waiting for the desktop window to sync
+    // Configure a desktop Window and Viewer, for both Vulkan initialisation and mirror window
+    // VSync must be disabled - The desktop window and HMD are being rendered from a single thread,
+    // the vsgvr Viewer must never be waiting for the desktop window to sync, otherwise the VR framerate will be limites as well.
     windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+
+    // And enable multisampling
+    windowTraits->samples = VK_SAMPLE_COUNT_4_BIT;
 
     auto desktopViewer = vsg::Viewer::create();
     auto desktopWindow = vsg::Window::create(windowTraits);
@@ -146,63 +255,65 @@ int main(int argc, char **argv) {
     }
     desktopWindow->setPhysicalDevice(physicalDevice);
 
-    // Bind OpenXR to the Device
+    // Bind OpenXR to the desktop window's vulkan instance
     desktopWindow->getOrCreateSurface();
     auto vkDevice = desktopWindow->getOrCreateDevice();
     auto graphicsBinding = vsgvr::GraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
 
-    // Set up a renderer to OpenXR, similar to a vsg::Viewer
-    auto vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
+    // Configure the OpenXR session, managed by a vsgvr Viewer
+    // As part of this, perform further trait validation, and selection of appropriate rendering parameters
+    auto vrViewer = vsgvr::Viewer::create(xrInstance, graphicsBinding);
+    auto vrSession = vrViewer->getSession();
+    xrTraits->swapchainFormat = selectSwapchainFormat(vrSession);
+    xrTraits->swapchainSampleCount = selectSwapchainSampleCount(vrSession, windowTraits->samples);
 
-    // Create CommandGraphs to render the scene to the HMD
+    // Lastly define the world space used for the application, from one of the OpenXR reference spaces
+    // This is required both for rendering, and as a reference to locate tracked devices within.
+    auto referenceSpaceType = selectReferenceSpaceType(vrSession);
+    // Configure world space to be the origin of the selected reference space type
+    // Our reference space may be rotated or translated if required
+    auto referenceSpace = vsgvr::ReferenceSpace::create(vrSession, referenceSpaceType);
+
+    // Configure rendering of the vsg scene into a composition layer
+    // Multiple composition layers may be provided, but at minimum a single CompositionLayerProjection is needed
+    // to display the scene within the headset / OpenXR displays.
+    //
+    // CompositionLayerProjection is somewhat special in that it doesn't represent an object within the world,
+    // rather it is always bound to the headset, and cameras / views within the layer will be auto-assigned.
+    //
+    // Other object-based layers such as CompositionLayerQuad appear within the world as textured objects,
+    // and may be moved / rotated by defining another ReferenceSpace, based upon our defined world space
     std::vector<vsg::ref_ptr<vsg::Camera>> xrCameras;
-    // TODO: This only really exists because vsg::createCommandGraphForView requires
-    // a Window instance. Other than some possible improvements later, it could use the same code as vsg
-    // OpenXR rendering may use one or more command graphs, as decided by the viewer
-    // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
-    auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(vr->getSession()->getSpace());
-    auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(vr->getInstance(), vr->getSession(), vsg_scene, xrCameras, false);
-    // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
-    // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
+    auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(referenceSpace);
+    auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(xrInstance, vrSession, vsg_scene, xrCameras, false);
     headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
-    // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
-    // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
     headsetCompositionLayer->compile();
-    vr->compositionLayers.push_back(headsetCompositionLayer);
+    vrViewer->compositionLayers.push_back(headsetCompositionLayer);
 
     // Create a CommandGraph to render the desktop window
-    // Directly sharing one of the HMD's cameras here is tempting, but causes a deadlock under SteamVR.
-    // To avoid that, and present a nicer view create a regular camera for the desktop, and map it to the location of the user's head
+    // Directly sharing one of the HMD's cameras here is tempting, but will cause a deadlock under SteamVR.
+    // To avoid that, and present a nicer view create a regular camera for the desktop, and mirror the position / matrices across.
+    // A vsgvr::SpaceBinding may also be used to track the VIEW space relative to referenceSpace - To obtain the pose of
+    // the user's head within world space.
     auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
     auto perspective = vsg::Perspective::create(30.0, static_cast<double>(desktopWindow->extent2D().width) / static_cast<double>(desktopWindow->extent2D().height), 0.1, 100.0);
     auto desktopCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(desktopWindow->extent2D()));
     auto desktopCommandGraph = vsg::createCommandGraphForView(desktopWindow, desktopCamera, vsg_scene);
-
     desktopViewer->assignRecordAndSubmitTaskAndPresentation({desktopCommandGraph});
     desktopViewer->compile();
     
-    // Configure OpenXR action sets and pose bindings - These allow elements of the OpenXR device tree to be located and tracked in space,
-    // along with binding the OpenXR input subsystem through to usable actions.
+    // This example shows 2 models at the location of the user's controllers, for this an ActionSet is required.
+    // Also bind the controller triggers such that we can detect the trigger press while rendering (See further interaction examples)
     auto baseActionSet = vsgvr::ActionSet::create(xrInstance, "gameplay", "Gameplay");
-
-    // Pose bindings - One for each hand
     auto leftHandPoseBinding = vsgvr::ActionPoseBinding::create(xrInstance, baseActionSet, "left_hand", "Left Hand");
     auto rightHandPoseBinding = vsgvr::ActionPoseBinding::create(xrInstance, baseActionSet, "right_hand", "Right Hand");
-
-    // An action - In this case applied to both left and right hands
-    // Two separate actions could also be used (Note: Though may not work on the Oculus Quest runtime)
     auto example_trigger_action = vsgvr::Action::create(xrInstance, baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT,
       "hand_select", "Hand Select", std::vector<std::string>{ "/user/hand/left", "/user/hand/right" });
-
     baseActionSet->actions = {
       leftHandPoseBinding,
       rightHandPoseBinding,
       example_trigger_action,
     };
-
-    // Ask OpenXR to suggest interaction bindings.
-    // * If subpaths are used, list all paths that each action should be bound for
-    // * Note that this may only be called once for each interaction profile (but may be across multiple overlapping action sets)
     if (vsgvr::ActionSet::suggestInteractionBindings(xrInstance, "/interaction_profiles/khr/simple_controller", {
           {leftHandPoseBinding, "/user/hand/left/input/aim/pose"},
           {rightHandPoseBinding, "/user/hand/right/input/aim/pose"},
@@ -210,31 +321,26 @@ int main(int argc, char **argv) {
           {example_trigger_action, "/user/hand/right/input/select/click"},
        }))
     {
-      // All action sets, which will be initialised in the viewer's session
-      vr->actionSets.push_back(baseActionSet);
-
-      // The active action set(s)
-      // These will be updated during the render loop, and update the scene graph accordingly
-      // Active action sets may be changed before calling pollEvents
-      vr->activeActionSets.push_back(baseActionSet);
+      vrViewer->actionSets.push_back(baseActionSet);
+      vrViewer->activeActionSets.push_back(baseActionSet);
     }
     else
     {
-      std::cout << "Failed to configure interaction bindings for controllers" << std::endl;
-      return EXIT_FAILURE;
+      throw std::runtime_error("Failed to configure interaction bindings for controllers");
     }
 
     // add close handler to respond the close window button and pressing escape
     desktopViewer->addEventHandler(vsg::CloseHandler::create(desktopViewer));
-
     double leftRot = 0.0;
     double rightRot = 0.0;
 
-    // Render loop
+    // vsgvr render loop
+    // This render loop is more complex than a desktop equivalent, as the application must perform
+    // certain actions, based on the OpenXR runtime's session lifecycle. See vsgvr::Viewer::PollEventsResult.
     for(;;)
     {
       // OpenXR events must be checked first
-      auto pol = vr->pollEvents();
+      auto pol = vrViewer->pollEvents();
       if( pol == vsgvr::Viewer::PollEventsResult::Exit )
       {
         // User exited through VR overlay / XR runtime
@@ -252,10 +358,7 @@ int main(int argc, char **argv) {
         continue;
       }
 
-      // Scene graph updates
-      // TODO: This should be automatic, or handled by a graph traversal / node tags?
-      // TODO: The transforms / spaces on these need to be validated. Visually they're correct,
-      //       but there's probably bugs in here.
+      // Scene graph updates, to position controller models
       if (leftHandPoseBinding->getTransformValid())
       {
         controllerNodeLeft->matrix = leftHandPoseBinding->getTransform();
@@ -265,8 +368,7 @@ int main(int argc, char **argv) {
         controllerNodeRight->matrix = rightHandPoseBinding->getTransform();
       }
 
-      // Quick input test - When triggers pressed (select action binding) make controllers spin
-      // Note coordinate space of controllers - Z is forward
+      // Simple input check - When triggers are pulled, rotate the controllers
       if(example_trigger_action->getStateValid("/user/hand/left"))
       {
         auto lState = example_trigger_action->getStateBool("/user/hand/left");
@@ -286,21 +388,15 @@ int main(int argc, char **argv) {
       controllerNodeLeft->matrix = controllerNodeLeft->matrix * vsg::rotate(leftRot, { 0.0, 0.0, 1.0 });
       controllerNodeRight->matrix = controllerNodeRight->matrix * vsg::rotate(rightRot, { 0.0, 0.0, 1.0 });
 
-      // Match the desktop camera to the HMD view
-      // Ideally OpenXR would provide /user/head as a pose, but at least in the simple_controller profile it won't be available
-      // Instead place the camera on one of the user's eyes, it'll be close enough
+      // Match the desktop camera to the HMD view - mirroring the projectionMatrix exactly
+      // is non-optimal here, but works as a simple desktop mirror setup.
       desktopCamera->viewMatrix = xrCameras.front()->viewMatrix;
-      // TODO: Just mirroring the projection matrix here isn't quite right but works as a desktop mirror window
-      //       What may be better is placing the camera at the average of the xr cameras (between the eyes)
       desktopCamera->projectionMatrix = xrCameras.front()->projectionMatrix;
-
-      // The session is running in some form, and a frame must be processed
-      // The OpenXR frame loop takes priority - Acquire a frame to render into
-      auto shouldQuit = false;
 
       // Desktop render
       // * The scene graph is updated by the desktop render
       // * if PollEventsResult::RunningDontRender the desktop render could be skipped
+      auto shouldQuit = false;
       if (desktopViewer->advanceToNextFrame())
       {
         desktopViewer->handleEvents();
@@ -314,24 +410,27 @@ int main(int argc, char **argv) {
         shouldQuit = true;
       }
 
-      if (vr->advanceToNextFrame())
+      // The PollEventsResult signifies that the session is running in some form.
+      // In this case a frame must be rendered by the application, even if it is empty,
+      // this is important to maintain sync between the application's render loop
+      // and OpenXR runtime.
+      if (vrViewer->advanceToNextFrame())
       {
         if (pol == vsgvr::Viewer::PollEventsResult::RunningDontRender)
         {
           // XR Runtime requested that rendering is not performed (not visible to user)
-          // While this happens frames must still be acquired and released however, in
-          // order to synchronise with the OpenXR runtime
+          // While this happens frames must still be acquired and released
         }
         else
         {
-          // Render to the HMD
-          vr->recordAndSubmit(); // Render XR frame
+          // Render each of the composition layers to their swapchains
+          vrViewer->recordAndSubmit();
         }
       }
 
-      // End the frame, and present to user
-      // Frames must be explicitly released, even if the previous advanceToNextFrame returned false (PollEventsResult::RunningDontRender)
-      vr->releaseFrame();
+      // End the frame, and present composition layers to the OpenXR compositor
+      // Frames must be explicitly released, even if the previous advanceToNextFrame returned false
+      vrViewer->releaseFrame();
 
       if(shouldQuit)
       {
