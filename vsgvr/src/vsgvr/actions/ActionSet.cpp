@@ -22,7 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionSet.h>
 #include <vsgvr/xr/Instance.h>
 
-#include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
 
 #include <iostream>
@@ -64,7 +63,7 @@ namespace vsgvr
     {
       if (suggestInteractionBindingsCalledFor.find(interactionProfile) != suggestInteractionBindingsCalledFor.end())
       {
-        throw vsg::Exception({"suggestInteractionBindings may only be called once for each interaction profile - Collate your calls together"});
+        throw Exception({"suggestInteractionBindings may only be called once for each interaction profile - Collate your calls together"});
       }
       suggestInteractionBindingsCalledFor.insert(interactionProfile);
 
@@ -88,7 +87,7 @@ namespace vsgvr
       interactionProfileBinding.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
       interactionProfileBinding.next = nullptr;
       interactionProfileBinding.interactionProfile = xrProfilePath;
-      interactionProfileBinding.countSuggestedBindings = actionBindings.size();
+      interactionProfileBinding.countSuggestedBindings = static_cast<uint32_t>(actionBindings.size());
       interactionProfileBinding.suggestedBindings = actionBindings.data();
       auto result = xrSuggestInteractionProfileBindings(instance->getInstance(), &interactionProfileBinding);
       if (XR_SUCCEEDED(result))

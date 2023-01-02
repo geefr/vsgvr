@@ -34,3 +34,4 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #include <openxr/openxr_platform.h>
 
+#include <vsgvr/xr/Exception.h>

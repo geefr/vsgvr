@@ -25,23 +25,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/Session.h>
 #include <vsgvr/xr/Pose.h>
 
-#include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
 
 #include <vsg/app/RenderGraph.h>
 #include <vsg/ui/FrameStamp.h>
 
 namespace vsgvr {
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+    : Inherit(referenceSpace)
     {}
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples)
+    : Inherit(referenceSpace)
     , widthPixels(inWidthPixels)
     , heightPixels(inHeightPixels)
+    , numSamples(inNumSamples)
   {}
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, vsg::dvec3 position, vsg::dquat orientation, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, vsg::dvec3 position, vsg::dquat orientation, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
+    : Inherit(referenceSpace)
     , widthPixels(inWidthPixels)
     , heightPixels(inHeightPixels)
     , numSamples(inNumSamples)
@@ -51,8 +51,8 @@ namespace vsgvr {
   {
     setPose(position, orientation);
   }
-  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerQuad::CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility)
+    : Inherit(referenceSpace)
     , widthPixels(inWidthPixels)
     , heightPixels(inHeightPixels)
     , numSamples(inNumSamples)
@@ -63,21 +63,13 @@ namespace vsgvr {
   {}
   CompositionLayerQuad::~CompositionLayerQuad() {}
 
-  void CompositionLayerQuad::populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits)
-  {
-    // TODO: What to put here? Perhaps it's entirely up to the user in this case, since they're just rendering <a quad> in space
-    //       Image size for swapchain of course matters, but that'll just be the image resolution that's passed to OpenXR, before
-    //       composition - There's nothing in OpenXR to recommend a size for us here.
-  }
-
-  std::vector<CompositionLayer::SwapchainImageRequirements> CompositionLayerQuad::getSwapchainImageRequirements()
+  std::vector<CompositionLayer::SwapchainImageRequirements> CompositionLayerQuad::getSwapchainImageRequirements(vsg::ref_ptr<vsgvr::Instance> instance)
   {
     std::vector<CompositionLayer::SwapchainImageRequirements> reqs;
-    
     reqs.push_back({widthPixels, heightPixels, numSamples});
     return reqs;
   }
-  void CompositionLayerQuad::render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
+  void CompositionLayerQuad::render(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
   {
     // Render the scene
     auto swapchainI = 0;

@@ -23,7 +23,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/Instance.h>
 #include <vsgvr/xr/Session.h>
 
-#include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
 
 #include <vsg/maths/mat4.h>

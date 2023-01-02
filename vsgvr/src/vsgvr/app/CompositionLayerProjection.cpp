@@ -26,7 +26,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/ViewMatrix.h>
 #include <vsgvr/xr/ProjectionMatrix.h>
 
-#include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
 
 #include <vsg/app/RenderGraph.h>
@@ -35,41 +34,34 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr {
 
-  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+    : Inherit(referenceSpace)
     {}
-  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags)
-    : Inherit(instance, xrTraits, referenceSpace)
+  CompositionLayerProjection::CompositionLayerProjection(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags)
+    : Inherit(referenceSpace)
     , flags(inFlags)
   {}
   CompositionLayerProjection::~CompositionLayerProjection() {}
 
-  void CompositionLayerProjection::populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits)
+  std::vector<CompositionLayer::SwapchainImageRequirements> CompositionLayerProjection::getSwapchainImageRequirements(vsg::ref_ptr<vsgvr::Instance> instance)
   {
-    if (!_viewConfigurationViews.empty())
+    if (_viewConfigurationViews.empty())
     {
-      // This is fine - User may have called manually
-      // TODO: Could have more flexible layer width/height selection here, etc.
-      return;
+      _viewConfigurationProperties = XrViewConfigurationProperties();
+      _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
+      _viewConfigurationProperties.next = nullptr;
+
+      xr_check(xrGetViewConfigurationProperties(instance->getInstance(), instance->getSystem(), instance->traits->viewConfigurationType, &_viewConfigurationProperties));
+      uint32_t count = 0;
+      xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), instance->traits->viewConfigurationType, 0, &count, nullptr));
+      _viewConfigurationViews.resize(count, XrViewConfigurationView());
+      for (auto& v : _viewConfigurationViews) {
+        v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
+        v.next = nullptr;
+      }
+      xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), instance->traits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
     }
 
-    _viewConfigurationProperties = XrViewConfigurationProperties();
-    _viewConfigurationProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
-    _viewConfigurationProperties.next = nullptr;
-
-    xr_check(xrGetViewConfigurationProperties(instance->getInstance(), instance->getSystem(), xrTraits->viewConfigurationType, &_viewConfigurationProperties));
-    uint32_t count = 0;
-    xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), xrTraits->viewConfigurationType, 0, &count, nullptr));
-    _viewConfigurationViews.resize(count, XrViewConfigurationView());
-    for (auto& v : _viewConfigurationViews) {
-      v.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
-      v.next = nullptr;
-    }
-    xr_check(xrEnumerateViewConfigurationViews(instance->getInstance(), instance->getSystem(), xrTraits->viewConfigurationType, static_cast<uint32_t>(_viewConfigurationViews.size()), &count, _viewConfigurationViews.data()));
-  }
-
-  std::vector<CompositionLayer::SwapchainImageRequirements> CompositionLayerProjection::getSwapchainImageRequirements()
-  {
     std::vector<CompositionLayer::SwapchainImageRequirements> reqs;
     for (auto& config : _viewConfigurationViews)
     {
@@ -82,7 +74,7 @@ namespace vsgvr {
     return reqs;
   }
 
-  void CompositionLayerProjection::render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
+  void CompositionLayerProjection::render(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp)
   {
     // Locate the views (at predicted frame time), to extract view/proj matrices, and fov
     std::vector<XrView> locatedViews(_viewConfigurationViews.size(), XrView());
@@ -97,7 +89,7 @@ namespace vsgvr {
       viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
       viewLocateInfo.next = nullptr;
       viewLocateInfo.space = _referenceSpace->getSpace();
-      viewLocateInfo.viewConfigurationType = _xrTraits->viewConfigurationType;
+      viewLocateInfo.viewConfigurationType = instance->traits->viewConfigurationType;
       viewLocateInfo.displayTime = frameState.predictedDisplayTime;
 
       auto viewState = XrViewState();
@@ -105,7 +97,7 @@ namespace vsgvr {
       viewState.next = nullptr;
       uint32_t numViews = 0;
       xr_check(xrLocateViews(session->getSession(), &viewLocateInfo, &viewState, static_cast<uint32_t>(locatedViews.size()), &numViews, locatedViews.data()), "Failed to locate views");
-      if (numViews != locatedViews.size()) throw vsg::Exception({ "Failed to locate views (Incorrect numViews)" });
+      if (numViews != locatedViews.size()) throw Exception({ "Failed to locate views (Incorrect numViews)" });
 
       viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
     }

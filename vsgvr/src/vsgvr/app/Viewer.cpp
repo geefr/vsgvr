@@ -26,8 +26,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
-#include <vsg/core/Exception.h>
-
 #include <openxr/openxr_reflection.h>
 #include "../xr/Macros.cpp"
 
@@ -40,12 +38,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
-  Viewer::Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<Traits> xrTraits, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
+  Viewer::Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
-    , _xrTraits(xrTraits)
-    , _graphicsBinding(graphicsBinding)
   {
-    createSession();
+    createSession(graphicsBinding);
   }
 
   Viewer::~Viewer()
@@ -80,7 +76,7 @@ namespace vsgvr
       if (!_session->getSessionRunning())
       {
         // Begin session. Transition to synchronised after a few begin/end frames
-        _session->beginSession(_xrTraits->viewConfigurationType);
+        _session->beginSession(_instance->traits->viewConfigurationType);
       }
       return PollEventsResult::RunningDontRender;
     case XR_SESSION_STATE_SYNCHRONIZED:
@@ -157,7 +153,7 @@ namespace vsgvr
   {
     for( auto& layer : compositionLayers )
     {
-      layer->render(_session, _frameState, _frameStamp);
+      layer->render(_instance, _session, _frameState, _frameStamp);
       // Add the composition layer for the frame end info
       _layers.push_back(layer->getCompositionLayerBaseHeaderPtr());
     }
@@ -169,8 +165,7 @@ namespace vsgvr
     info.type = XR_TYPE_FRAME_END_INFO;
     info.next = nullptr;
     info.displayTime = _frameState.predictedDisplayTime;
-    // TODO: Non-opaque blend modes needed for AR content - Should probably just be exposed on traits
-    info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+    info.environmentBlendMode = _instance->traits->environmentBlendMode;
     info.layerCount = static_cast<uint32_t>(_layers.size());
     info.layers = _layers.data();
 
@@ -183,10 +178,11 @@ namespace vsgvr
   {
     // Update each of the space bindings
     if( spaceBindings.empty() ) return;
+    if( !referenceSpace ) return;
 
     for (auto& space : spaceBindings)
     {
-      auto spaceLocation = space->getSpace()->locate(_session->getSpace()->getSpace(), _frameState.predictedDisplayTime);
+      auto spaceLocation = space->getSpace()->locate(referenceSpace->getSpace(), _frameState.predictedDisplayTime);
       space->setTransform(spaceLocation);
     }
   }
@@ -194,6 +190,7 @@ namespace vsgvr
   void Viewer::syncActions()
   {
     if( activeActionSets.empty() ) return;
+    if( !referenceSpace) return;
 
     // Sync the active action sets
     auto info = XrActionsSyncInfo();
@@ -215,7 +212,7 @@ namespace vsgvr
           auto location = XrSpaceLocation();
           location.type = XR_TYPE_SPACE_LOCATION;
           location.next = nullptr;
-          xr_check(xrLocateSpace(a->getActionSpace(), _session->getSpace()->getSpace(), _frameState.predictedDisplayTime, &location));
+          xr_check(xrLocateSpace(a->getActionSpace(), referenceSpace->getSpace(), _frameState.predictedDisplayTime, &location));
           a->setTransform(location);
         }
 
@@ -231,7 +228,7 @@ namespace vsgvr
 
   void Viewer::createActionSpacesAndAttachActionSets()
   {
-    if( !_attachedActionSets.empty() ) throw vsg::Exception({"Action spaces have already been attached"});
+    if( !_attachedActionSets.empty() ) throw Exception({"Action spaces have already been attached"});
     // Attach action sets to the session
     if( !actionSets.empty() )
     {
@@ -271,16 +268,17 @@ namespace vsgvr
     }
   }
 
-  void Viewer::createSession() {
+  void Viewer::createSession(vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding) {
     if (_session) {
-      throw vsg::Exception({ "Viewer: Session already initialised" });
+      throw Exception({ "Viewer: Session already initialised" });
     }
-    _session = Session::create(_instance, _graphicsBinding);
+
+    _session = Session::create(_instance, graphicsBinding);
   }
 
   void Viewer::destroySession() {
     if (!_session) {
-      throw vsg::Exception({ "Viewer: Session not initialised" });
+      throw Exception({ "Viewer: Session not initialised" });
     }
     destroyActionSpaces();
     _session = 0;

@@ -28,6 +28,11 @@ set( HEADERS_XR
   include/vsgvr/xr/Pose.h
 )
 
+set( HEADERS_EXT
+  include/vsgvr/extensions/KHRCompositionLayerEquirect.h
+  include/vsgvr/extensions/KHRCompositionLayerEquirect2.h
+)
+
 set( SOURCES
   src/vsgvr/actions/Action.cpp
   src/vsgvr/actions/ActionPoseBinding.cpp
@@ -48,6 +53,9 @@ set( SOURCES
   src/vsgvr/xr/Swapchain.cpp
   src/vsgvr/xr/Traits.cpp
   src/vsgvr/xr/Pose.cpp
+
+  src/vsgvr/extensions/KHRCompositionLayerEquirect.cpp
+  src/vsgvr/extensions/KHRCompositionLayerEquirect2.cpp
 )
 
 if( ANDROID )
@@ -59,7 +67,7 @@ if( ANDROID )
   )
 endif()
 
-add_library( vsgvr ${HEADERS_ACTIONS} ${HEADERS_APP} ${HEADERS_XR} ${SOURCES} )
+add_library( vsgvr ${HEADERS_ACTIONS} ${HEADERS_APP} ${HEADERS_XR} ${HEADERS_EXT} ${SOURCES} )
 
 target_include_directories(vsgvr PUBLIC  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

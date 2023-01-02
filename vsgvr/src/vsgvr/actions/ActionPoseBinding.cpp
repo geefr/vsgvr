@@ -22,7 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <vsgvr/xr/Session.h>
 
-#include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
 
 #include <vsg/maths/mat4.h>
@@ -44,7 +43,7 @@ namespace vsgvr
 
     void ActionPoseBinding::createActionSpace(Session* session)
     {
-        if( _space ) throw vsg::Exception({"Space already created: " + _name});
+        if( _space ) throw Exception({"Space already created: " + _name});
 
         // Create the action space
         { 

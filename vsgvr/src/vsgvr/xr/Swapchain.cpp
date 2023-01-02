@@ -21,7 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/Swapchain.h>
 
-#include <vsg/core/Exception.h>
 #include "Macros.cpp"
 
 #include <iostream>
@@ -29,6 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using namespace vsg;
 
 namespace vsgvr {
+
   SwapchainImage::SwapchainImage(VkImage image, Device* device) :
     Inherit(image, device)
   {
@@ -46,7 +46,6 @@ namespace vsgvr {
   Swapchain::Swapchain(XrSession session, VkFormat swapchainFormat, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _swapchainFormat(swapchainFormat)
   {
-    validateFormat(session);
     createSwapchain(session, width, height, sampleCount, graphicsBinding);
   }
 
@@ -58,7 +57,7 @@ namespace vsgvr {
   VkImage Swapchain::acquireImage(uint32_t& index)
   {
     xr_check(xrAcquireSwapchainImage(_swapchain, nullptr, &index), "Failed to acquire image");
-    return _swapchainImages[index];
+    return _images[index];
   }
 
   bool Swapchain::waitImage(XrDuration timeout)
@@ -82,20 +81,6 @@ namespace vsgvr {
     info.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
     info.next = nullptr;
     xr_check(xrReleaseSwapchainImage(_swapchain, &info), "Failed to release image");
-  }
-
-
-  void Swapchain::validateFormat(XrSession session)
-  {
-    uint32_t count = 0;
-    xr_check(xrEnumerateSwapchainFormats(session, 0, &count, nullptr));
-    std::vector<int64_t> formats(count);
-    xr_check(xrEnumerateSwapchainFormats(session, static_cast<uint32_t>(formats.size()), &count, formats.data()));
-
-    if (std::find(formats.begin(), formats.end(), static_cast<int64_t>(_swapchainFormat)) == formats.end())
-    {
-      throw Exception({ "OpenXR runtime doesn't support selected swapchain format (TODO: Preference based selection)" });
-    }
   }
 
   void Swapchain::createSwapchain(XrSession session, uint32_t width, uint32_t height, uint32_t sampleCount, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
@@ -135,13 +120,13 @@ namespace vsgvr {
 
     for (auto& i : images)
     {
-      _swapchainImages.push_back(i.image);
+      _images.push_back(i.image);
     }
 
-    // Create image views, used by Session::creatSwapchain to bind to vsg::Framebuffer
-    for (std::size_t i = 0; i < _swapchainImages.size(); ++i)
+    // Create image views, used by Session::createSwapchain to bind to vsg::Framebuffer
+    for (std::size_t i = 0; i < _images.size(); ++i)
     {
-      auto imageView = ImageView::create(SwapchainImage::create(_swapchainImages[i], graphicsBinding->getVkDevice()));
+      auto imageView = ImageView::create(SwapchainImage::create(_images[i], graphicsBinding->getVsgDevice()));
       imageView->viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
       imageView->format = _swapchainFormat;
       imageView->subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -149,7 +134,7 @@ namespace vsgvr {
       imageView->subresourceRange.levelCount = 1;
       imageView->subresourceRange.baseArrayLayer = 0;
       imageView->subresourceRange.layerCount = 1;
-      imageView->compile(graphicsBinding->getVkDevice());
+      imageView->compile(graphicsBinding->getVsgDevice());
 
       _imageViews.push_back(imageView);
     }

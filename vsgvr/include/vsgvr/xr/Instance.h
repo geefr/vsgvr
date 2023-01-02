@@ -29,40 +29,48 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionSet.h>
 
 namespace vsgvr {
-    class VSGVR_DECLSPEC Instance : public vsg::Inherit<vsg::Object, Instance>
-    {
-        public:
-            Instance() = delete;
-            Instance(vsg::ref_ptr<Traits> xrTraits);
-            ~Instance();
+  class VSGVR_DECLSPEC Instance : public vsg::Inherit<vsg::Object, Instance>
+  {
+  public:
+    Instance() = delete;
+    /// Create an OpenXR instance, and configure the overall XrSystem
+    /// Once initialised applications should configure Instance::traits
+    /// as needed, in order to continue to initialisation of a Viewer / Session
+    /// 
+    /// An exception will be thrown if the formFactor is unsupported. In this case applications
+    /// may attempt to re-create the Instance with an alternate form factor.
+    Instance(XrFormFactor formFactor, vsg::ref_ptr<vsgvr::Traits> xrTraits);
+    ~Instance();
 
-            XrInstance getInstance() const { return _instance; }
-            XrInstanceProperties getInstanceProperties() const { return _instanceProperties; }
-            XrSystemId getSystem() const { return _system; }
+    std::vector<XrViewConfigurationType> getSupportedViewConfigurationTypes();
+    std::vector<XrEnvironmentBlendMode> getSupportedEnvironmentBlendModes(XrViewConfigurationType viewConfiguration);
 
-            // TODO: Greater control over view configuration - At the moment traits
-            // are specified, and if invalid init fails. Between system init and
-            // session init there should be a point where view config can be chosen
-            // such as choosing whether multisampling should be on, the size of
-            // view images and such (based on _viewConfigurationViews)
-            // TODO: Choices in traits should be a preference list?
-            void onEventInstanceLossPending(const XrEventDataInstanceLossPending& event);
+    /// Check whether instance-level features are supported by the OpenXR runtime
+    bool checkViewConfigurationSupported(XrViewConfigurationType viewConfiguration);
+    bool checkEnvironmentBlendModeSupported(XrViewConfigurationType viewConfiguration, XrEnvironmentBlendMode environmentBlendMode);
 
-        private:
-            void createInstance();
-            void destroyInstance();
-            void createSystem();
-            // TODO: Support/validation of xr layers - Debug/validation, view type extensions
-            void validateTraits();
+    vsg::ref_ptr<vsgvr::Traits> traits;
 
-            vsg::ref_ptr<Traits> _xrTraits;
+    XrInstance getInstance() const { return _instance; }
+    XrInstanceProperties getInstanceProperties() const { return _instanceProperties; }
+    XrSystemId getSystem() const { return _system; }
+    XrSystemProperties getSystemProperties() const { return _systemProperties; }
 
-            XrInstance _instance = 0;
-            XrInstanceProperties _instanceProperties;
+    void onEventInstanceLossPending(const XrEventDataInstanceLossPending& event);
 
-            XrSystemId _system = 0;
-            XrSystemProperties _systemProperties;
-    };
+  private:
+    void createInstance();
+    void destroyInstance();
+    void createSystem();
+
+    XrFormFactor _formFactor;
+
+    XrInstance _instance = XR_NULL_HANDLE;
+    XrInstanceProperties _instanceProperties;
+
+    XrSystemId _system = XR_NULL_SYSTEM_ID;
+    XrSystemProperties _systemProperties;
+  };
 }
 
 EVSG_type_name(vsgvr::Instance);

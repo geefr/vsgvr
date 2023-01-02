@@ -33,16 +33,15 @@ namespace vsgvr {
   {
     public:
       CompositionLayerQuad() = delete;
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels);
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, vsg::dvec3 position, vsg::dquat orientation, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
-      CompositionLayerQuad(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, vsg::dvec3 position, vsg::dquat orientation, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
+      CompositionLayerQuad(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, uint32_t inWidthPixels, uint32_t inHeightPixels, uint32_t inNumSamples, XrPosef inPose, XrExtent2Df inSizeMeters, XrCompositionLayerFlags inFlags, XrEyeVisibility inEyeVisibility);
       virtual ~CompositionLayerQuad();
       XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
 
-      void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
-      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
-      void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
+      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements(vsg::ref_ptr<vsgvr::Instance> instance) override;
+      void render(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
 
       void setPose(vsg::dvec3 position, vsg::dquat orientation);
 

@@ -1,11 +1,13 @@
 
 if(ANDROID)
-# Quest samples are loaded backwards - Open the project in Android Studio, and VSGVR will be included through CMake
-# - minimal_quest
-# - locomotion/quest
+# Android applications are loaded backwards
+# The android studio project is opened, which will include
+# VSGVR, VSG, and other dependencies from parent directories
+# See Android example README.md files for the required directory
+# layouts and setup instructions.
 else()
-  add_subdirectory( generic )
-  add_subdirectory( interaction_locomotion )
-  add_subdirectory( composition_layer_quad )
+  add_subdirectory( platform/generic )
+  add_subdirectory( features/interaction_locomotion )
+  add_subdirectory( features/composition_layer_quad )
 endif()
 
