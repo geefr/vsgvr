@@ -21,7 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsgvr/xr/Swapchain.h>
 
-#include <vsg/core/Exception.h>
 #include "Macros.cpp"
 
 #include <iostream>
@@ -95,7 +94,7 @@ namespace vsgvr {
 
     if (std::find(formats.begin(), formats.end(), static_cast<int64_t>(_swapchainFormat)) == formats.end())
     {
-      throw Exception({ "OpenXR runtime doesn't support selected swapchain format (TODO: Preference based selection)" });
+      throw Exception({ "OpenXR runtime doesn't support selected swapchain format" });
     }
   }
 

@@ -26,8 +26,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
-#include <vsg/core/Exception.h>
-
 #include <openxr/openxr_reflection.h>
 #include "../xr/Macros.cpp"
 
@@ -230,7 +228,7 @@ namespace vsgvr
 
   void Viewer::createActionSpacesAndAttachActionSets()
   {
-    if( !_attachedActionSets.empty() ) throw vsg::Exception({"Action spaces have already been attached"});
+    if( !_attachedActionSets.empty() ) throw Exception({"Action spaces have already been attached"});
     // Attach action sets to the session
     if( !actionSets.empty() )
     {
@@ -272,14 +270,14 @@ namespace vsgvr
 
   void Viewer::createSession(vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding) {
     if (_session) {
-      throw vsg::Exception({ "Viewer: Session already initialised" });
+      throw Exception({ "Viewer: Session already initialised" });
     }
     _session = Session::create(_instance, graphicsBinding);
   }
 
   void Viewer::destroySession() {
     if (!_session) {
-      throw vsg::Exception({ "Viewer: Session not initialised" });
+      throw Exception({ "Viewer: Session not initialised" });
     }
     destroyActionSpaces();
     _session = 0;

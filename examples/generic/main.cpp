@@ -341,9 +341,19 @@ int main(int argc, char **argv) {
 
     return EXIT_SUCCESS;
   }
-  catch( const vsg::Exception& e )
+  catch (const vsg::Exception& e)
   {
     std::cerr << "VSG Exception: " << e.message << std::endl;
+    return EXIT_FAILURE;
+  }
+  catch (const vsgvr::Exception& e)
+  {
+    std::cerr << "VSGVR Exception: " << e.message << std::endl;
+    return EXIT_FAILURE;
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Exception: " << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 }

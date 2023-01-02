@@ -53,6 +53,9 @@ namespace vsgvr
     /// TODO: For now, applications chose a single option, which is validated. Abstracting
     ///       this to a more general set of view preferences would be better.
     XrFormFactor formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+
+    std::vector<XrFormFactor> enumeratorFormFactors();
+
     XrViewConfigurationType viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     XrEnvironmentBlendMode environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
     VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_SRGB; // Runtimes _should_ support this, as a preferred option

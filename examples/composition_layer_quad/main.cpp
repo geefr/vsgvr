@@ -24,6 +24,12 @@ int main(int argc, char** argv) {
     xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
+    auto gameExtensionsNeeded = Game::requiredInstanceExtensions();
+    for (auto& ext : gameExtensionsNeeded)
+    {
+      xrTraits->xrExtensions.push_back(ext);
+    }
+
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "example_vr";
     arguments.read("--screen", windowTraits->screenNum);
@@ -116,6 +122,16 @@ int main(int argc, char** argv) {
   catch (const vsg::Exception& e)
   {
     std::cerr << "VSG Exception: " << e.message << std::endl;
+    return EXIT_FAILURE;
+  }
+  catch (const vsgvr::Exception& e)
+  {
+    std::cerr << "VSGVR Exception: " << e.message << std::endl;
+    return EXIT_FAILURE;
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Exception: " << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 }

@@ -23,7 +23,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/Session.h>
 #include <vsgvr/xr/Pose.h>
 
-#include <vsg/core/Exception.h>
 #include "Macros.cpp"
 
 #include <vsg/maths/transform.h>

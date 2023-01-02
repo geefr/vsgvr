@@ -38,8 +38,9 @@ namespace {
   }
   [[maybe_unused]] void xr_check(XrResult result, std::string msg = "") {
     if (XR_SUCCEEDED(result)) return;
-    vsg::Exception e;
+    vsgvr::XrException e;
     e.message = msg + " (" + to_string(result) + ")";
+    e.result = result;
     throw e;
   }
   [[maybe_unused]] PFN_xrVoidFunction xr_pfn(XrInstance instance, std::string name) {

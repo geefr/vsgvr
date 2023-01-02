@@ -24,8 +24,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/app/Viewer.h>
 #include <vsgvr/xr/Session.h>
 
-#include <vsg/core/Exception.h>
-
 #include "Macros.cpp"
 
 using namespace vsg;

@@ -40,6 +40,7 @@ namespace vsgvr {
             XrInstance getInstance() const { return _instance; }
             XrInstanceProperties getInstanceProperties() const { return _instanceProperties; }
             XrSystemId getSystem() const { return _system; }
+            XrSystemProperties getSystemProperties() const { return _systemProperties; }
 
             // TODO: Greater control over view configuration - At the moment traits
             // are specified, and if invalid init fails. Between system init and
@@ -64,6 +65,8 @@ namespace vsgvr {
             XrSystemId _system = 0;
             XrSystemProperties _systemProperties;
     };
+
+    bool checkFormFactorSupported(XrFormFactor formFactor);
 }
 
 EVSG_type_name(vsgvr::Instance);

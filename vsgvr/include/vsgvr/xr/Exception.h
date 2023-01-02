@@ -21,17 +21,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include <openxr/openxr.h>
-#include <openxr/openxr_reflection.h>
+#include <vsgvr/xr/Common.h>
+#include <string>
 
-#include <vulkan/vulkan.h>
+namespace vsgvr
+{
+  /// A general error within vsgvr
+  struct Exception
+  {
+    std::string message;
+  };
 
-#define XR_USE_GRAPHICS_API_VULKAN
-#ifdef ANDROID
-# define XR_USE_PLATFORM_ANDROID
-# define XR_USE_PLATFORM_ANDROID_KHR
-# include <jni.h>
-#endif
-#include <openxr/openxr_platform.h>
-
-#include <vsgvr/xr/Exception.h>
+  /// An OpenXR API error
+  struct XrException : public Exception
+  {
+    XrResult result = XR_SUCCESS;
+  };
+}

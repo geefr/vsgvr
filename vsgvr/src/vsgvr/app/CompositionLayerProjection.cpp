@@ -26,7 +26,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsgvr/xr/ViewMatrix.h>
 #include <vsgvr/xr/ProjectionMatrix.h>
 
-#include <vsg/core/Exception.h>
 #include "../xr/Macros.cpp"
 
 #include <vsg/app/RenderGraph.h>
@@ -100,7 +99,7 @@ namespace vsgvr {
       viewState.next = nullptr;
       uint32_t numViews = 0;
       xr_check(xrLocateViews(session->getSession(), &viewLocateInfo, &viewState, static_cast<uint32_t>(locatedViews.size()), &numViews, locatedViews.data()), "Failed to locate views");
-      if (numViews != locatedViews.size()) throw vsg::Exception({ "Failed to locate views (Incorrect numViews)" });
+      if (numViews != locatedViews.size()) throw Exception({ "Failed to locate views (Incorrect numViews)" });
 
       viewsValid = (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) && (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT);
     }
