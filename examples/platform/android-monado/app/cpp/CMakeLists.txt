@@ -16,8 +16,9 @@ set(CMAKE_DEBUG_POSTFIX "")
 set(CMAKE_RELWITHDEBINFO_POSTFIX "")
 
 # find vsg
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../VulkanSceneGraph" vsg)
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../" vsgvr)
+set(VSG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../")
+add_subdirectory("${VSG_ROOT}/VulkanSceneGraph" vsg)
+add_subdirectory("${VSG_ROOT}/vsgvr" vsgvr)
 
 # Export ANativeActivity_onCreate(),
 # Refer to: https://github.com/android-ndk/ndk/issues/381.
@@ -31,6 +32,7 @@ add_library(vsgvrnative SHARED main.cpp)
 target_include_directories(vsgvrnative PRIVATE
     ${ANDROID_NDK}/sources/android/native_app_glue
     ${CMAKE_CURRENT_SOURCE_DIR}/../../vsgvr/include
+    ${VSG_ROOT}/vsgvr/models
     )
 
 # add lib dependencies

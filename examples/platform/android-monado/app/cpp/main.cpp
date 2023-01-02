@@ -20,7 +20,7 @@
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <openxr/openxr_platform.h>
 
-#include "../../../../models/world/world.cpp"
+#include <world/world.cpp>
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "vsgnative", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "vsgnative", __VA_ARGS__))
@@ -48,30 +48,27 @@ static int vsg_init(struct AppData* appData)
         auto vsg_scene = vsg::Group::create();
         vsg_scene->addChild(world());
 
-        // Initialise OpenXR
-        // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
-        //       This should be improved in the future, at least to query what form factors are available.
-        // TODO: Some parameters on xrTraits are non-functional at the moment
+        // Initialise OpenXR - On Android additional traits
+        // are required to pass through platform handles
         auto xrTraits = vsgvr::AndroidTraits::create();
-
-        // While HANDHELD_DISPLAY may seem more appropriate for a phone/tablet,
-        // it's not a supported form factor in Monado
-        xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-        // Likewise PRIMARY_MONO isn't supported by Monado
-        // Note: At time of writing Android support appears to target cardboard-like hmds
-        xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-
         xrTraits->vm = appData->app->activity->vm;
         xrTraits->activity = appData->app->activity->clazz;
+
+        // Remaining parameters configured for Monado
+        // Note: At time of writing Android support appears to target cardboard-like hmds,
+        // rather than configuring a handheld display
+        xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+        xrTraits->environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+        xrTraits->swapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+        xrTraits->swapchainSampleCount = 1;
 
         // Initialise OpenXR, and retrieve vulkan requirements
         // OpenXR will require certain vulkan versions, along with a specific physical device
         // Use a desktop window to create the instance, and select the correct device
-        auto xrInstance = vsgvr::Instance::create(xrTraits);
+        auto xrInstance = vsgvr::Instance::create(XrFormFactor::XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);
         auto xrVulkanReqs = vsgvr::GraphicsBindingVulkan::getVulkanRequirements(xrInstance);
-
-
         appData->viewer = vsg::Viewer::create();
+
         // setup VSG traits, to provide a compatible Vulkan instance
         appData->traits = vsg::WindowTraits::create();
         appData->traits->setValue("nativeWindow", appData->app->window);
@@ -113,7 +110,6 @@ static int vsg_init(struct AppData* appData)
         }
         // cast the window to an android window so we can pass it events
         appData->window = window.cast<vsgAndroid::Android_Window>();
-
         // Attach the window to the viewer
         // For a vr-only view this window won't be rendered to, but is helpful for handling system window events
         appData->viewer->addWindow(window);
@@ -145,26 +141,17 @@ static int vsg_init(struct AppData* appData)
                                                                     0);
 
         // Set up a renderer to OpenXR, similar to a vsg::Viewer
-        auto vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
+        auto vr = vsgvr::Viewer::create(xrInstance, graphicsBinding);
+        vr->referenceSpace = vsgvr::ReferenceSpace::create(
+                vr->getSession(),
+                XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_STAGE
+        );
 
         // Create CommandGraphs to render the scene to the HMD
         std::vector<vsg::ref_ptr<vsg::Camera>> xrCameras;
-        // TODO: This only really exists because vsg::createCommandGraphForView requires
-        // a Window instance. Other than some possible improvements later, it could use the same code as vsg
-        // OpenXR rendering may use one or more command graphs, as decided by the viewer
-        // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
-
-        auto projectionLayer = vsgvr::CompositionLayerProjection::create(vr->getInstance(),
-                                                                         vr->getTraits(),
-                                                                         vr->getSession()->getSpace());
-        auto xrCommandGraphs = projectionLayer->createCommandGraphsForView(vr->getSession(),
-                                                                           vsg_scene, xrCameras,
-                                                                           false);
-        // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
-        // that Viewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
+        auto projectionLayer = vsgvr::CompositionLayerProjection::create(vr->referenceSpace);
+        auto xrCommandGraphs = projectionLayer->createCommandGraphsForView(xrInstance, vr->getSession(), vsg_scene, xrCameras, false);
         projectionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
-        // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
-        // Viewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
         projectionLayer->compile();
         vr->compositionLayers.emplace_back(projectionLayer);
 
