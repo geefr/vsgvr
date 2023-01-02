@@ -88,6 +88,8 @@ endif()
 # vsg_add_target_clobber()
 
 vsg_add_target_uninstall()
+set_target_properties(uninstall-vsgvr PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+
 vsg_add_feature_summary()
 vsg_add_cmake_support_files(
   CONFIG_TEMPLATE vsgvrConfig.cmake.in
