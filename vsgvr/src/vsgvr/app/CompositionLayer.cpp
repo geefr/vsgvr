@@ -321,12 +321,6 @@ namespace vsgvr {
     std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
 
     auto i = 0u;
-    // TODO: Flexibility on render resolution - For now hardcoded to recommended throughout
-    VkExtent2D hmdExtent{
-      _swapchainImageRequirements[i].width,
-      _swapchainImageRequirements[i].height,
-    };
-
     auto commandGraph = vsg::CommandGraph::create(graphicsBinding->getVsgDevice(),
       graphicsBinding->getVsgPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
 

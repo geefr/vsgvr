@@ -52,18 +52,9 @@ void Game::loadScene()
 void Game::initVR()
 {
   // Create CommandGraphs to render the scene to the HMD
-  // TODO: This only really exists because vsg::createCommandGraphForView requires
-  // a Window instance. Other than some possible improvements later, it could use the same code as vsg
-  // OpenXR rendering may use one or more command graphs, as decided by the viewer
-  // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
-  // Note: assignHeadlight = false -> Scene lighting is required
-  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->getSession()->getSpace());
+  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->referenceSpace);
   auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(_vr->getInstance(), _vr->getSession(), _sceneRoot, _xrCameras, false);
-  // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
-  // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
   headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
-  // TODO: This is identical to Viewer::compile, except CompileManager requires a child class of Viewer
-  // OpenXRViewer can't be a child class of Viewer yet (Think this was due to the assumption that a Window/Viewer has presentation / A Surface)
   headsetCompositionLayer->compile();
   _vr->compositionLayers.push_back(headsetCompositionLayer);
 
@@ -88,7 +79,7 @@ void Game::initActions()
   // Tracking the location of the user's headset is achieved by tracking the VIEW reference space
   // vsgvr provides a SpaceBinding class for this - Similar to the ActionPoseBindings the head's pose
   // will be tracked during rendering, and available when performing interactions
-  _headPose = vsgvr::SpaceBinding::create(vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW));
+  _headPose = vsgvr::SpaceBinding::create(vsgvr::ReferenceSpace::create(_vr->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW));
   _vr->spaceBindings.push_back(_headPose);
 
   // Input devices are tracked via ActionPoseBindings - Tracking elements from the OpenXR device tree in the session space,
@@ -98,13 +89,17 @@ void Game::initActions()
   _leftHandPose = vsgvr::ActionPoseBinding::create(_xrInstance, _baseActionSet, "left_hand", "Left Hand");
   _rightHandPose = vsgvr::ActionPoseBinding::create(_xrInstance, _baseActionSet, "right_hand", "Right Hand");
 
+  // Action to bind right trigger to switching between locomotion modes
+  _switchInteractionAction = vsgvr::Action::create(_xrInstance, _baseActionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "switch_locomotion_mode", "Switch Locomotion Mode");
+
   _baseActionSet->actions = {
     _leftHandPose,
     _rightHandPose,
+    _switchInteractionAction,
   };
 
-  _interactions.emplace("teleport", new Interaction_teleport(_xrInstance, _headPose, _leftHandPose, _teleportMarker, _ground));
-  _interactions.emplace("slide", new Interaction_slide(_xrInstance, _headPose, _leftHandPose, _ground));
+  _interactions.emplace(InteractionMethod::Teleport, new Interaction_teleport(_xrInstance, _headPose, _leftHandPose, _teleportMarker, _ground));
+  _interactions.emplace(InteractionMethod::Slide, new Interaction_slide(_xrInstance, _headPose, _leftHandPose, _ground));
 
   // Ask OpenXR to suggest interaction bindings.
   // * If subpaths are used, list all paths that each action should be bound for
@@ -115,10 +110,13 @@ void Game::initActions()
   actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
         {_leftHandPose, "/user/hand/left/input/aim/pose"},
         {_rightHandPose, "/user/hand/right/input/aim/pose"},
+        {_switchInteractionAction, "/user/hand/right/input/select/click"},
   };
   actionsToSuggest["/interaction_profiles/oculus/touch_controller"] = {
       {_leftHandPose, "/user/hand/left/input/aim/pose"},
       {_rightHandPose, "/user/hand/right/input/aim/pose"},
+      // A boolean action on a float input will be converted by the OpenXR runtime
+      {_switchInteractionAction, "/user/hand/right/input/trigger/value"},
   };
   for(auto& interaction : _interactions )
   {
@@ -134,7 +132,7 @@ void Game::initActions()
   {
     if (! vsgvr::ActionSet::suggestInteractionBindings(_xrInstance, p.first, p.second))
     {
-      throw vsg::Exception({ "Failed to configure interaction bindings for controllers" });
+      throw std::runtime_error("Failed to configure interaction bindings for controllers");
     }
   }
 
@@ -145,16 +143,17 @@ void Game::initActions()
     _vr->actionSets.push_back(interaction.second->actionSet());
   }
 
-  // The action sets which are currently active (will be synced each frame)
-  _vr->activeActionSets.push_back(_baseActionSet);
-  
-  // TODO: Set up input action to switch between modes
-  // TODO: Display active mode somewhere in the world, maybe as text panel when looking at controllers
-  _vr->activeActionSets.push_back(_interactions["teleport"]->actionSet());
-  // _vr->activeActionSets.push_back(_interactions["slide"]->actionSet());
+  updateActiveInteraction(_currentInteractionMethod);
 
   // add close handler to respond the close window button and pressing escape
   _desktopViewer->addEventHandler(vsg::CloseHandler::create(_desktopViewer));
+}
+
+void Game::updateActiveInteraction(InteractionMethod method) {
+  // The action sets which are currently active (will be synced each frame)
+  _vr->activeActionSets.clear();
+  _vr->activeActionSets.push_back(_baseActionSet);
+  _vr->activeActionSets.push_back(_interactions[method]->actionSet());
 }
 
 void Game::frame()
@@ -227,6 +226,17 @@ void Game::frame()
     }
     else
     {
+      if (_switchInteractionAction->getStateValid())
+      {
+        auto state = _switchInteractionAction->getStateBool();
+        if (state.isActive && state.changedSinceLastSync && state.currentState)
+        {
+          _currentInteractionMethod = static_cast<InteractionMethod>(_currentInteractionMethod + 1);
+          if( _currentInteractionMethod == InteractionMethod::InteractionMethod_Max ) _currentInteractionMethod = static_cast<InteractionMethod>(InteractionMethod::InteractionMethod_Min + 1);
+          updateActiveInteraction(_currentInteractionMethod);
+        }
+      }
+
       for (auto& interaction : _interactions)
       {
         if (std::find(_vr->activeActionSets.begin(), _vr->activeActionSets.end(),

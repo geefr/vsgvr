@@ -14,7 +14,10 @@
 
 class Game {
 public:
-  Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow);
+  Game(
+    vsg::ref_ptr<vsgvr::Instance> xrInstance, 
+    vsg::ref_ptr<vsgvr::Viewer> vr,
+    vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow);
   ~Game();
 
   bool shouldExit = false;
@@ -51,8 +54,17 @@ private:
   vsg::ref_ptr<vsgvr::ActionPoseBinding> _leftHandPose;
   vsg::ref_ptr<vsgvr::ActionPoseBinding> _rightHandPose;
   vsg::ref_ptr<vsgvr::SpaceBinding> _headPose;
+  vsg::ref_ptr<vsgvr::Action> _switchInteractionAction;
 
-  std::map<std::string, std::unique_ptr<Interaction>> _interactions;
+  enum InteractionMethod {
+    InteractionMethod_Min,
+    Teleport,
+    Slide,
+    InteractionMethod_Max
+  };
+  std::map<InteractionMethod, std::unique_ptr<Interaction>> _interactions;
+  InteractionMethod _currentInteractionMethod = InteractionMethod::Teleport;
+  void updateActiveInteraction(InteractionMethod method);
 
   vsg::time_point _lastFrameTime;
 };

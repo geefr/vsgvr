@@ -16,6 +16,7 @@ class Interaction_teleport : public Interaction
       vsg::ref_ptr<vsg::Node> ground);
 
     void frame(vsg::ref_ptr<vsg::Group> scene, Game& game, double deltaT) final override;
+
     virtual ~Interaction_teleport();
   protected:
 
