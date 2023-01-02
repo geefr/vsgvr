@@ -56,7 +56,7 @@ namespace vsgvr
     XrViewConfigurationType viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     XrEnvironmentBlendMode environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
     VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_SRGB; // Runtimes _should_ support this, as a preferred option
-    uint32_t swapchainSampleCount = 4;
+    uint32_t swapchainSampleCount = 1;
 
   protected:
     virtual ~Traits();

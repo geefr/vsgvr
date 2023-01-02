@@ -36,11 +36,11 @@ namespace vsgvr {
             Action(vsg::ref_ptr<Instance> instance, ActionSet* actionSet, XrActionType actionType, std::string name, std::string localisedName, std::vector<std::string> subPaths = {} );
             virtual ~Action();
 
-            XrAction getAction() const { return _action; }
             XrActionType getActionType() const { return _actionType; }
             std::string getName() const { return _name; }
             std::string getLocalisedName() const { return _localisedName; }
             const std::vector<std::string>& getSubPaths() const { return _subPaths; }
+            XrAction getAction() const { return _action; }
              
             void syncInputState(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<Session> session, std::string subPath = {});
 

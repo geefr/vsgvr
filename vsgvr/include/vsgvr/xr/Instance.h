@@ -33,9 +33,10 @@ namespace vsgvr {
     {
         public:
             Instance() = delete;
-            Instance(vsg::ref_ptr<Traits> xrTraits);
+            Instance(vsg::ref_ptr<vsgvr::Traits> xrTraits);
             ~Instance();
 
+            vsg::ref_ptr<vsgvr::Traits> getTraits() const { return _xrTraits; }
             XrInstance getInstance() const { return _instance; }
             XrInstanceProperties getInstanceProperties() const { return _instanceProperties; }
             XrSystemId getSystem() const { return _system; }

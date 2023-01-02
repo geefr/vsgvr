@@ -33,17 +33,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using namespace vsg;
 
 namespace vsgvr {
-  GraphicsBindingVulkan::GraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vkInstance, vsg::ref_ptr<vsg::PhysicalDevice> vkPhysicalDevice, vsg::ref_ptr<vsg::Device> vkDevice, uint32_t queueFamilyIndex, uint32_t queueIndex)
-    : _vkInstance(vkInstance)
-    , _vkPhysicalDevice(vkPhysicalDevice)
-    , _vkDevice(vkDevice)
+  GraphicsBindingVulkan::GraphicsBindingVulkan(vsg::ref_ptr<vsg::Instance> vsgInstance, vsg::ref_ptr<vsg::PhysicalDevice> vsgPhysicalDevice, vsg::ref_ptr<vsg::Device> vsgDevice, uint32_t queueFamilyIndex, uint32_t queueIndex)
+    : _vsgInstance(vsgInstance)
+    , _vsgPhysicalDevice(vsgPhysicalDevice)
+    , _vsgDevice(vsgDevice)
   {
     _binding = XrGraphicsBindingVulkanKHR();
     _binding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR;
     _binding.next = nullptr;
-    _binding.instance = _vkInstance->vk();
-    _binding.physicalDevice = _vkPhysicalDevice->vk();
-    _binding.device = _vkDevice->vk();
+    _binding.instance = _vsgInstance->vk();
+    _binding.physicalDevice = _vsgPhysicalDevice->vk();
+    _binding.device = _vsgDevice->vk();
     _binding.queueFamilyIndex = queueFamilyIndex;
     _binding.queueIndex = queueIndex;
   }
@@ -111,16 +111,16 @@ namespace vsgvr {
     return reqs;
   }
 
-  VkPhysicalDevice GraphicsBindingVulkan::getVulkanDeviceRequirements(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<vsg::Instance> vkInstance, const VulkanRequirements& versionReqs)
+  VkPhysicalDevice GraphicsBindingVulkan::getVulkanDeviceRequirements(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<vsg::Instance> vsgInstance, const VulkanRequirements& versionReqs)
   {
-    if (vkInstance->apiVersion < versionReqs.minVersion) {
+    if (vsgInstance->apiVersion < versionReqs.minVersion) {
       throw Exception({ "OpenXR runtime doesn't support requested Vulkan version" });
     }
 
     VkPhysicalDevice vkPhysicalDevice;
     {
       auto fn = (PFN_xrGetVulkanGraphicsDeviceKHR)xr_pfn(xrInstance->getInstance(), "xrGetVulkanGraphicsDeviceKHR");
-      xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), vkInstance->vk(), &vkPhysicalDevice), "Failed to get Vulkan physical device from OpenXR");
+      xr_check(fn(xrInstance->getInstance(), xrInstance->getSystem(), vsgInstance->vk(), &vkPhysicalDevice), "Failed to get Vulkan physical device from OpenXR");
     }
     return vkPhysicalDevice;
   }

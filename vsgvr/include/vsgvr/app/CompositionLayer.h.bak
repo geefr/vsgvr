@@ -69,7 +69,7 @@ namespace vsgvr {
     /// Note: Cameras are not required when building a CompositionLayerProjection
     vsg::CommandGraphs createCommandGraphsForView(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight = true);
 
-    /// Build command graphs for rendering a vsg::RenderGraph to the composition layer
+	  /// Build command graphs for rendering a vsg::RenderGraph to the composition layer
     vsg::CommandGraphs createCommandGraphsForRenderGraph(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::RenderGraph> renderGraph);
 
     void assignRecordAndSubmitTask(std::vector<vsg::ref_ptr<vsg::CommandGraph>> in_commandGraphs);

@@ -52,8 +52,8 @@ namespace vsgvr {
      * This class is similar to vsg::Viewer, however:
      * * The event handling loop is somewhat different, requiring the application to behave correctly, based on the result of Viewer::pollEvents
      * * This viewer has no presentation surface or vsg::Window association - Rendered data is passed to OpenXR only
-     *   * Any elements in vsg which require a vsg::Window cannot work with this viewer (TODO)
-     * * While some functions are similar, this class does not directly inherit from vsg::Viewer (TODO)
+     *   * Any elements in vsg which require a vsg::Window cannot work with this viewer
+     *   * While some functions are similar, this class does not directly inherit from vsg::Viewer
      */
     class VSGVR_DECLSPEC Viewer : public vsg::Inherit<vsg::Object, Viewer>
     {
@@ -150,12 +150,11 @@ namespace vsgvr {
 
             vsg::ref_ptr<Instance> _instance;
             vsg::ref_ptr<Traits> _xrTraits;
-            vsg::ref_ptr<GraphicsBindingVulkan> _graphicsBinding;
 
             EventHandler _eventHandler;
 
             // Session
-            void createSession();
+            void createSession(vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding);
             void destroySession();
             vsg::ref_ptr<Session> _session;
 

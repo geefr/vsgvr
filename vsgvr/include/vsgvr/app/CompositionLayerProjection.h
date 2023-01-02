@@ -36,16 +36,15 @@ namespace vsgvr {
   {
     public:
       CompositionLayerProjection() = delete;
-      CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
-      CompositionLayerProjection(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags);
+      CompositionLayerProjection(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace);
+      CompositionLayerProjection(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace, XrCompositionLayerFlags inFlags);
       virtual ~CompositionLayerProjection();
       XrCompositionLayerBaseHeader* getCompositionLayerBaseHeaderPtr() override { return reinterpret_cast<XrCompositionLayerBaseHeader*>(&_compositionLayer); }
 
       XrCompositionLayerFlags flags;
 
-      void populateLayerSpecificData(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits) override;
-      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements() override;
-      void render(vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
+      std::vector<SwapchainImageRequirements> getSwapchainImageRequirements(vsg::ref_ptr<vsgvr::Instance> instance) override;
+      void render(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, XrFrameState frameState, vsg::ref_ptr<vsg::FrameStamp> frameStamp) override;
 
       double nearPlane = 0.05;
       double farPlane = 100.0;

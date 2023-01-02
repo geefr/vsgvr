@@ -43,9 +43,8 @@ namespace vsgvr
   Viewer::Viewer(vsg::ref_ptr<Instance> xrInstance, vsg::ref_ptr<Traits> xrTraits, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding)
     : _instance(xrInstance)
     , _xrTraits(xrTraits)
-    , _graphicsBinding(graphicsBinding)
   {
-    createSession();
+    createSession(graphicsBinding);
   }
 
   Viewer::~Viewer()
@@ -157,7 +156,7 @@ namespace vsgvr
   {
     for( auto& layer : compositionLayers )
     {
-      layer->render(_session, _frameState, _frameStamp);
+      layer->render(_instance, _session, _frameState, _frameStamp);
       // Add the composition layer for the frame end info
       _layers.push_back(layer->getCompositionLayerBaseHeaderPtr());
     }
@@ -271,11 +270,11 @@ namespace vsgvr
     }
   }
 
-  void Viewer::createSession() {
+  void Viewer::createSession(vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding) {
     if (_session) {
       throw vsg::Exception({ "Viewer: Session already initialised" });
     }
-    _session = Session::create(_instance, _graphicsBinding);
+    _session = Session::create(_instance, graphicsBinding);
   }
 
   void Viewer::destroySession() {

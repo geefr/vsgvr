@@ -40,7 +40,6 @@ namespace vsgvr {
             virtual ~ActionPoseBinding();
 
             XrSpace getActionSpace() const { return _space; }
-
             bool getTransformValid() const { return _transformValid; }
             vsg::dmat4 getTransform() const { return _transform; }
 

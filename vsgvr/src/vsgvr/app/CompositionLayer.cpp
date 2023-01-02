@@ -39,22 +39,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "../xr/Macros.cpp"
 
 namespace vsgvr {
-  CompositionLayer::CompositionLayer(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Traits> xrTraits, vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
-    : _instance(instance)
-    , _xrTraits(xrTraits)
-    , _referenceSpace(referenceSpace)
+  CompositionLayer::CompositionLayer(vsg::ref_ptr<vsgvr::ReferenceSpace> referenceSpace)
+    : _referenceSpace(referenceSpace)
   {}
   CompositionLayer::~CompositionLayer() {}
 
 
-  void CompositionLayer::createSwapchains(vsg::ref_ptr<vsgvr::Session> session,vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> graphicsBinding, std::vector< SwapchainImageRequirements> imageRequirements)
+  void CompositionLayer::createSwapchains(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session)
   {
-    if (!_viewData.empty()) throw vsg::Exception({ "Swapchain already initialised" });
+    if (!_viewData.empty())
+    {
+      // Swapchain configuration comes from the OpenXR instance / configuration, and cannot change over time
+      // This shouldn't be called multiple times, but it's okay if it is.
+      return;
+    }
 
-    for (auto& viewConfig : imageRequirements)
+    if( _swapchainImageRequirements.empty() )
+    {
+      _swapchainImageRequirements = getSwapchainImageRequirements(instance);
+    }
+
+    auto xrTraits = instance->getTraits();
+    auto graphicsBinding = session->getGraphicsBinding();
+    for (auto& viewConfig : _swapchainImageRequirements)
     {
       PerViewData v;
-      v.swapchain = Swapchain::create(session->getSession(), _xrTraits->swapchainFormat, viewConfig.width, viewConfig.height, viewConfig.sampleCount, graphicsBinding);
+      v.swapchain = Swapchain::create(session->getSession(), xrTraits->swapchainFormat, viewConfig.width, viewConfig.height, viewConfig.sampleCount, graphicsBinding);
 
       auto extent = v.swapchain->getExtent();
       VkSampleCountFlagBits framebufferSamples;
@@ -91,7 +101,7 @@ namespace vsgvr {
       {
         v.multisampleImage = vsg::Image::create();
         v.multisampleImage->imageType = VK_IMAGE_TYPE_2D;
-        v.multisampleImage->format = _xrTraits->swapchainFormat;
+        v.multisampleImage->format = xrTraits->swapchainFormat;
         v.multisampleImage->extent.width = extent.width;
         v.multisampleImage->extent.height = extent.height;
         v.multisampleImage->extent.depth = 1;
@@ -104,11 +114,11 @@ namespace vsgvr {
         v.multisampleImage->flags = 0;
         v.multisampleImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        v.multisampleImage->compile(graphicsBinding->getVkDevice());
-        v.multisampleImage->allocateAndBindMemory(graphicsBinding->getVkDevice());
+        v.multisampleImage->compile(graphicsBinding->getVsgDevice());
+        v.multisampleImage->allocateAndBindMemory(graphicsBinding->getVsgDevice());
 
         v.multisampleImageView = vsg::ImageView::create(v.multisampleImage, VK_IMAGE_ASPECT_COLOR_BIT);
-        v.multisampleImageView->compile(graphicsBinding->getVkDevice());
+        v.multisampleImageView->compile(graphicsBinding->getVsgDevice());
       }
 
       bool requiresDepthRead = false; // (_traits->depthImageUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != 0;
@@ -118,11 +128,11 @@ namespace vsgvr {
       {
         if (framebufferSamples == VK_SAMPLE_COUNT_1_BIT)
         {
-          v.renderPass = vsg::createRenderPass(graphicsBinding->getVkDevice(), _xrTraits->swapchainFormat, VK_FORMAT_D32_SFLOAT, requiresDepthRead);
+          v.renderPass = vsg::createRenderPass(graphicsBinding->getVsgDevice(), xrTraits->swapchainFormat, VK_FORMAT_D32_SFLOAT, requiresDepthRead);
         }
         else
         {
-          v.renderPass = vsg::createMultisampledRenderPass(graphicsBinding->getVkDevice(), _xrTraits->swapchainFormat, VK_FORMAT_D32_SFLOAT, framebufferSamples, requiresDepthRead);
+          v.renderPass = vsg::createMultisampledRenderPass(graphicsBinding->getVsgDevice(), xrTraits->swapchainFormat, VK_FORMAT_D32_SFLOAT, framebufferSamples, requiresDepthRead);
         }
       }
 
@@ -143,11 +153,11 @@ namespace vsgvr {
       v.depthImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
       v.depthImage->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT; // _traits->depthImageUsage;
 
-      v.depthImage->compile(graphicsBinding->getVkDevice());
-      v.depthImage->allocateAndBindMemory(graphicsBinding->getVkDevice());
+      v.depthImage->compile(graphicsBinding->getVsgDevice());
+      v.depthImage->allocateAndBindMemory(graphicsBinding->getVsgDevice());
 
       v.depthImageView = vsg::ImageView::create(v.depthImage);
-      v.depthImageView->compile(graphicsBinding->getVkDevice());
+      v.depthImageView->compile(graphicsBinding->getVsgDevice());
 
       if (requiresDepthResolve)
       {
@@ -169,14 +179,14 @@ namespace vsgvr {
         v.depthImage->samples = VK_SAMPLE_COUNT_1_BIT;
         v.depthImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        v.depthImage->compile(graphicsBinding->getVkDevice());
-        v.depthImage->allocateAndBindMemory(graphicsBinding->getVkDevice());
+        v.depthImage->compile(graphicsBinding->getVsgDevice());
+        v.depthImage->allocateAndBindMemory(graphicsBinding->getVsgDevice());
 
         v.depthImageView = vsg::ImageView::create(v.depthImage);
-        v.depthImageView->compile(graphicsBinding->getVkDevice());
+        v.depthImageView->compile(graphicsBinding->getVsgDevice());
       }
 
-      int graphicsFamily = graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VK_QUEUE_GRAPHICS_BIT);
+      int graphicsFamily = graphicsBinding->getVsgPhysicalDevice()->getQueueFamily(VK_QUEUE_GRAPHICS_BIT);
 
       // set up framebuffer and associated resources
       const auto& imageViews = v.swapchain->getImageViews();
@@ -203,8 +213,8 @@ namespace vsgvr {
 
       {
         // ensure image attachments are setup on GPU.
-        vsg::ref_ptr<vsg::CommandPool> commandPool = vsg::CommandPool::create(graphicsBinding->getVkDevice(), graphicsFamily);
-        submitCommandsToQueue(commandPool, graphicsBinding->getVkDevice()->getQueue(graphicsFamily), [&](vsg::CommandBuffer& commandBuffer) {
+        vsg::ref_ptr<vsg::CommandPool> commandPool = vsg::CommandPool::create(graphicsBinding->getVsgDevice(), graphicsFamily);
+        submitCommandsToQueue(commandPool, graphicsBinding->getVsgDevice()->getQueue(graphicsFamily), [&](vsg::CommandBuffer& commandBuffer) {
           auto depthImageBarrier = vsg::ImageMemoryBarrier::create(
             0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -242,16 +252,14 @@ namespace vsgvr {
     _viewData.clear();
   }
 
-  vsg::CommandGraphs CompositionLayer::createCommandGraphsForView(vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
+  vsg::CommandGraphs CompositionLayer::createCommandGraphsForView(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::Node> vsg_scene, std::vector<vsg::ref_ptr<vsg::Camera>>& cameras, bool assignHeadlight) {
     // * vsg::CommandGraph::createCommandGraphForView
     // * vsg::RenderGraph::createRenderGraphForView
 
     // vsgvr-specific: Work out what views the composition layer requires
     // from OpenXR, and create swapchains as needed.
-    populateLayerSpecificData(_instance, _xrTraits);
-    auto swapchainImageRequirements = getSwapchainImageRequirements();
     auto graphicsBinding = session->getGraphicsBinding();
-    createSwapchains(session, graphicsBinding, swapchainImageRequirements);
+    createSwapchains(instance, session);
 
     std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
 
@@ -262,13 +270,13 @@ namespace vsgvr {
     {
       // TODO: Flexibility on render resolution - For now hardcoded to recommended throughout
       VkExtent2D hmdExtent{
-        swapchainImageRequirements[i].width,
-        swapchainImageRequirements[i].height,
+        _swapchainImageRequirements[i].width,
+        _swapchainImageRequirements[i].height,
       };
 
       // vsg::createCommandGraphForView
-      auto hmdCommandGraph = vsg::CommandGraph::create(graphicsBinding->getVkDevice(),
-        graphicsBinding->getVkPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
+      auto hmdCommandGraph = vsg::CommandGraph::create(graphicsBinding->getVsgDevice(),
+        graphicsBinding->getVsgPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
 
       if (cameras.empty())
       {
@@ -297,11 +305,41 @@ namespace vsgvr {
       renderGraph->renderArea.offset = { 0, 0 };
       renderGraph->renderArea.extent = getSwapchain(i)->getExtent();
 
-      // TODO: Will need to pass correct values, assume it comes from the window traits / equivalent?
-      renderGraph->setClearValues();
+      renderGraph->setClearValues(clearColor, clearDepthStencil);
       hmdCommandGraph->addChild(renderGraph);
       commandGraphs.push_back(std::move(hmdCommandGraph));
     }
+
+    return commandGraphs;
+  }
+
+  vsg::CommandGraphs CompositionLayer::createCommandGraphsForRenderGraph(vsg::ref_ptr<vsgvr::Instance> instance, vsg::ref_ptr<vsgvr::Session> session, vsg::ref_ptr<vsg::RenderGraph> renderGraph)
+  {
+    // vsgvr-specific: Work out what views the composition layer requires
+    // from OpenXR, and create swapchains as needed.
+    auto graphicsBinding = session->getGraphicsBinding();
+    createSwapchains(instance, session);
+
+    std::vector<vsg::ref_ptr<vsg::CommandGraph>> commandGraphs;
+
+    auto i = 0u;
+    // TODO: Flexibility on render resolution - For now hardcoded to recommended throughout
+    VkExtent2D hmdExtent{
+      _swapchainImageRequirements[i].width,
+      _swapchainImageRequirements[i].height,
+    };
+
+    auto commandGraph = vsg::CommandGraph::create(graphicsBinding->getVsgDevice(),
+      graphicsBinding->getVsgPhysicalDevice()->getQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT));
+
+    renderGraph->framebuffer = frames(i)[0].framebuffer;
+    renderGraph->previous_extent = getSwapchain(i)->getExtent();
+    renderGraph->renderArea.offset = { 0, 0 };
+    renderGraph->renderArea.extent = getSwapchain(i)->getExtent();
+
+    renderGraph->setClearValues(clearColor, clearDepthStencil);
+    commandGraph->addChild(renderGraph);
+    commandGraphs.push_back(std::move(commandGraph));
 
     return commandGraphs;
   }

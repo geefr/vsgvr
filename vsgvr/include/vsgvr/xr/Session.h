@@ -38,19 +38,18 @@ namespace vsgvr {
             Session() = delete;
             Session(vsg::ref_ptr<Instance> instance, vsg::ref_ptr<GraphicsBindingVulkan> graphicsBinding);
 
+            vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> getGraphicsBinding() { return _graphicsBinding; }
+
             XrSession getSession() const { return _session; }
             XrSessionState getSessionState() const { return _sessionState; }
             bool getSessionRunning() const { return _sessionRunning; }
+            /// The session's reference space
+            vsg::ref_ptr<vsgvr::ReferenceSpace> getSpace() const { return _space; }
 
             void onEventStateChanged(const XrEventDataSessionStateChanged& event);
 
             void beginSession(XrViewConfigurationType viewConfigurationType);
             void endSession();
-
-            /// The session's reference space
-            vsg::ref_ptr<vsgvr::ReferenceSpace> getSpace() const { return _space; }
-
-            vsg::ref_ptr<vsgvr::GraphicsBindingVulkan> getGraphicsBinding() { return _graphicsBinding; }
 
         protected:
             virtual ~Session();
@@ -67,6 +66,5 @@ namespace vsgvr {
             vsg::ref_ptr<vsgvr::ReferenceSpace> _space;
     };
 }
-
 
 EVSG_type_name(vsgvr::Session);
