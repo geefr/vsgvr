@@ -169,7 +169,7 @@ namespace vsgvr
 
     void Action::destroyAction()
     {
-        xr_check(xrDestroyAction(_action));
+        xrDestroyAction(_action);
     }
 }
 

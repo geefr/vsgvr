@@ -16,8 +16,9 @@ set(CMAKE_DEBUG_POSTFIX "")
 set(CMAKE_RELWITHDEBINFO_POSTFIX "")
 
 # find vsg
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../VulkanSceneGraph" vsg)
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../" vsgvr)
+set(VSG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../")
+add_subdirectory("${VSG_ROOT}/VulkanSceneGraph" vsg)
+add_subdirectory("${VSG_ROOT}/vsgvr" vsgvr)
 
 # Export ANativeActivity_onCreate(),
 # Refer to: https://github.com/android-ndk/ndk/issues/381.
@@ -25,7 +26,7 @@ set(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
 # add vsgnative target
-set( SAMP "${CMAKE_CURRENT_SOURCE_DIR}/../../../composition_layer_quad" )
+set( SAMP "${CMAKE_CURRENT_SOURCE_DIR}/../../../" )
 add_library(vsgvrquestnative SHARED
     ${SAMP}/game.h
     ${SAMP}/game.cpp

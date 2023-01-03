@@ -20,6 +20,12 @@ int exampleMain(int argc, char** argv) {
     auto xrTraits = vsgvr::Traits::create();
     xrTraits->applicationName = "VSGVR Generic OpenXR Example";
     xrTraits->setApplicationVersion(0, 0, 0);
+
+    for (auto& extension : Game::requiredInstanceExtensions())
+    {
+      xrTraits->xrExtensions.emplace_back(extension);
+    }
+
     // An application could check for an exception when creating the instance and retry with different form factor,
     // but OpenXR applications are typically built around a known platform / configuration.
     auto xrInstance = vsgvr::Instance::create(XrFormFactor::XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);

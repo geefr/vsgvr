@@ -1,8 +1,11 @@
 
 #include "game.h"
 
-#include <vsgvr/app/CompositionLayerProjection.h>
 #include <vsgvr/app/CompositionLayerQuad.h>
+#include <vsgvr/app/CompositionLayerProjection.h>
+#include <vsgvr/extensions/KHRCompositionLayerEquirect.h>
+#include <vsgvr/extensions/KHRCompositionLayerEquirect2.h>
+
 
 #include "../../models/controller/controller.cpp"
 #include "../../models/controller/controller2.cpp"
@@ -13,9 +16,19 @@
 
 std::vector<std::string> Game::requiredInstanceExtensions()
 {
-  return {
-    // vsgvr::KHRCompositionLayerEquirect2::instanceExtension(),
-  };
+  // See Game::initVR
+  std::vector<std::string> extensions;
+
+  // One of the Equirect layers for a skybox (These extensions are equivalent, with a marginally different API)
+  if (vsgvr::Instance::checkInstanceExtensionSupported(vsgvr::KHRCompositionLayerEquirect::instanceExtension()))
+  {
+    extensions.emplace_back(vsgvr::KHRCompositionLayerEquirect::instanceExtension());
+  }
+  else if (vsgvr::Instance::checkInstanceExtensionSupported(vsgvr::KHRCompositionLayerEquirect2::instanceExtension()))
+  {
+    extensions.emplace_back(vsgvr::KHRCompositionLayerEquirect2::instanceExtension());
+  }
+  return extensions;
 }
 
 Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow)
@@ -56,53 +69,61 @@ void Game::loadScene()
   _userOrigin->addChild(_ground);
 }
 
-void Game::initVR()
+void Game::createCompositionLayerEquirect()
 {
-/* Skybox
- * TODO: Only if extension is available from OpenXR runtime, with fallover to Equirect(1)
- * TODO: Render from fixed image - Something pretty
-  auto placeholderImage = vsg::Image::create();
-  auto skyboxSpace = vsgvr::ReferenceSpace::create(_vr->getSession()->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_STAGE);
-  _skyboxLayer = vsgvr::KHRCompositionLayerEquirect2::create(_vr->getInstance(), _vr->getSession(), _vr->getTraits(), skyboxSpace);
-  _skyboxLayer->widthPixels = 360;
-  _skyboxLayer->heightPixels = 180;
+  // Create an equirect layer, covering the full surface of a sphere (default values)
+  // The area covered on the sphere may be modified, though note that the 2 extensions
+  // use different parameters to achieve this.
+  if (vsgvr::Instance::checkInstanceExtensionSupported(vsgvr::KHRCompositionLayerEquirect::instanceExtension()))
+  {
+    auto layer = vsgvr::KHRCompositionLayerEquirect::create(_vr->referenceSpace);
+    layer->clearColor = {0.7f, 0.2f, 0.2f};
+    _skyboxLayer = layer;
+  }
+  else if (vsgvr::Instance::checkInstanceExtensionSupported(vsgvr::KHRCompositionLayerEquirect2::instanceExtension()))
+  {
+    auto layer = vsgvr::KHRCompositionLayerEquirect2::create(_vr->referenceSpace);
+    layer->clearColor = {0.2f, 0.7f, 0.2f};
+    _skyboxLayer = layer;
+  }
+  else
+  {
+    return;
+  }
 
-  _skyboxLayer->radius = 100.0f;
-  // _skyboxLayer->upperVerticalAngle = 0.0;
-  _skyboxLayer->lowerVerticalAngle = - vsg::radians(10.0f); // The world has a ground plane, lower is pointless
-  // _skyboxLayer->centralHorizontalAngle = 0.0;
-
-  _skyboxLayer->clearColor = {1.0f, 0.0f, 1.0f, 1.0f};
-
-  // auto skyboxCommandGraph = buildSkyboxCommandGraph();
-  // skyboxLayer->assignRecordAndSubmitTask({skyboxCommandGraph});
-  auto skyboxCommandGraphs = _skyboxLayer->createCommandGraphsForImage(_vr->getSession(), placeholderImage);
-  _skyboxLayer->assignRecordAndSubmitTask(skyboxCommandGraphs);
+  auto renderGraph = vsg::RenderGraph::create();
+  auto commandGraphs = _skyboxLayer->createCommandGraphsForRenderGraph(_vr->getInstance(), _vr->getSession(), renderGraph);
+  _skyboxLayer->assignRecordAndSubmitTask(commandGraphs);
   _skyboxLayer->compile();
   _vr->compositionLayers.push_back(_skyboxLayer);
-*/
+}
 
-  // Create CommandGraphs to render the scene to the HMD
-  // TODO: This only really exists because vsg::createCommandGraphForView requires
-  // a Window instance. Other than some possible improvements later, it could use the same code as vsg
-  // OpenXR rendering may use one or more command graphs, as decided by the viewer
-  // (TODO: At the moment only a single CommandGraph will be used, even if there's multiple XR views)
+void Game::createCompositionLayerProjection()
+{
+  // Create CommandGraphs to render the scene to a projection layer
+  // Projection layers do not represent geometry within the world - Rather they
+  // represent the view to a VR headset or other display, and will auto-assign
+  // views / cameras as required during createCommandGraphsForView
+  auto layer = vsgvr::CompositionLayerProjection::create(_vr->referenceSpace);
+
+  if( _skyboxLayer )
+  {
+    // By default the projection layer will not alpha-blend, and clear to the default vsg clearColour
+    // With the skybox layer present however, allow it to show through
+    layer->clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+    layer->flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT | XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT;
+  }
+
   // Note: assignHeadlight = false -> Scene lighting is required
-  auto headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(_vr->referenceSpace);
+  auto commandGraphs = layer->createCommandGraphsForView(_vr->getInstance(), _vr->getSession(), _sceneRoot, _xrCameras, false);
+  layer->assignRecordAndSubmitTask(commandGraphs);
+  layer->compile();
+  _vr->compositionLayers.push_back(layer);
+}
 
-  // TODO: Only if skybox present, otherwise regular clear colour
-  headsetCompositionLayer->clearColor = {0.0f, 0.0f, 0.0f, 0.0f};
-  headsetCompositionLayer->flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT | XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT;
-
-  auto xrCommandGraphs = headsetCompositionLayer->createCommandGraphsForView(_vr->getInstance(), _vr->getSession(), _sceneRoot, _xrCameras, false);
-  // TODO: This is almost identical to Viewer::assignRecordAndSubmitTaskAndPresentation - The only difference is
-  // that OpenXRViewer doesn't have presentation - If presentation was abstracted we could avoid awkward duplication here
-  headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
-  headsetCompositionLayer->compile();
-  _vr->compositionLayers.push_back(headsetCompositionLayer);
-
-  // TODO: Quick hack to render <something> to a CompositionLayerQuad - This should do something better
-
+void Game::createCompositionLayerQuadInWorld()
+{
+  /*
   auto lookAt = vsg::LookAt::create(vsg::dvec3(0.0, 0.0, 10.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, -1.0, 0.0));
   // Camera parameters as if it's rendering to a desktop display, appropriate size for the displayed quad
   auto perspective = vsg::Perspective::create(30.0, 1920.0 / 1080.0, 0.1, 100.0);
@@ -113,32 +134,90 @@ void Game::initVR()
   // - There is a runtime-specific limit to the number of composition layers. Only a few should be used, if more than one.
   auto overheadCamera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(0, 0, 1920, 1080));
 
+ 
+   // A quad positioned in the world (scene reference space)
+   auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getSession(), _vr->getTraits(), _vr->getSession()->getSpace(), 1920, 1080);
+   quadLayer->setPose(
+     {0.0, 4.0, 1.0},
+     vsg::dquat(vsg::radians(25.0), {1.0, 0.0, 0.0})
+   );
+   quadLayer->sizeMeters.width = 1.920;
+   quadLayer->sizeMeters.height = 1.080;
+
+   // Pass a RenderGraph to the composition layer
+   // This must _not_ have a window or view assigned - Windows are not relevant for OpenXR
+   // rendering, rather OpenXR swapchains are acquired/released for each frame
+   auto quadRenderGraph = vsg::RenderGraph::create();
+   auto renderImgui = vsgvr::RenderImGui::create(_vr->getGraphicsBinding(), VkExtent2D{1920, 1080}, true);
+   renderImgui->add(_ui);
+   quadRenderGraph->addChild(renderImgui);
+   auto quadCommandGraphs = quadLayer->createCommandGraphsForRenderGraph(_vr->getSession(), quadRenderGraph);
+   quadLayer->assignRecordAndSubmitTask({quadCommandGraphs});
+   quadLayer->compile();
+   _vr->compositionLayers.emplace_back(quadLayer);
+   */
+}
+
+void Game::createCompositionLayerQuadInView()
+{
   /*
-  // A quad positioned in the world (scene reference space)
-  auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getSession(), _vr->getTraits(), _vr->getSession()->getSpace(), 1920, 1080);
-  quadLayer->setPose(
-    {0.0, 4.0, 1.0},
-    vsg::dquat(vsg::radians(25.0), {1.0, 0.0, 0.0})
-  );
-  quadLayer->sizeMeters.width = 1.920;
-  quadLayer->sizeMeters.height = 1.080;
+   // A quad positioned in the world (scene reference space)
+   auto quadLayer = vsgvr::CompositionLayerQuad::create(_vr->getInstance(), _vr->getSession(), _vr->getTraits(), _vr->getSession()->getSpace(), 1920, 1080);
+   quadLayer->setPose(
+     {0.0, 4.0, 1.0},
+     vsg::dquat(vsg::radians(25.0), {1.0, 0.0, 0.0})
+   );
+   quadLayer->sizeMeters.width = 1.920;
+   quadLayer->sizeMeters.height = 1.080;
 
-  // Pass a RenderGraph to the composition layer
-  // This must _not_ have a window or view assigned - Windows are not relevant for OpenXR
-  // rendering, rather OpenXR swapchains are acquired/released for each frame
-  auto quadRenderGraph = vsg::RenderGraph::create();
-  auto renderImgui = vsgvr::RenderImGui::create(_vr->getGraphicsBinding(), VkExtent2D{1920, 1080}, true);
-  renderImgui->add(_ui);
-  quadRenderGraph->addChild(renderImgui);
-  auto quadCommandGraphs = quadLayer->createCommandGraphsForRenderGraph(_vr->getSession(), quadRenderGraph);
-  quadLayer->assignRecordAndSubmitTask({quadCommandGraphs});
-  quadLayer->compile();
-  _vr->compositionLayers.emplace_back(quadLayer);
-  */
+   // Pass a RenderGraph to the composition layer
+   // This must _not_ have a window or view assigned - Windows are not relevant for OpenXR
+   // rendering, rather OpenXR swapchains are acquired/released for each frame
+   auto quadRenderGraph = vsg::RenderGraph::create();
+   auto renderImgui = vsgvr::RenderImGui::create(_vr->getGraphicsBinding(), VkExtent2D{1920, 1080}, true);
+   renderImgui->add(_ui);
+   quadRenderGraph->addChild(renderImgui);
+   auto quadCommandGraphs = quadLayer->createCommandGraphsForRenderGraph(_vr->getSession(), quadRenderGraph);
+   quadLayer->assignRecordAndSubmitTask({quadCommandGraphs});
+   quadLayer->compile();
+   _vr->compositionLayers.emplace_back(quadLayer);
+   */
+}
 
+void Game::initVR()
+{
+  // The base OpenXR specification includes CompositionLayerProjection and CompositionLayerQuad
+  // Any further layers require extensions, which must be requested during instance creation (main.cpp)
+  // 
+  // Note that OpenXR layers are fairly vendor-specific, and a smaller subset are available across runtimes.
+  // Notably SteamVR does not support either KHRCompositionLayerEquirect layer referenced below, and both
+  // the Oculus desktop and mobile runtimes use a different versions of the equirect layer.
+  // 
+  // For elements such as a skybox within a real application - A decision is needed
+  // between using an OpenXR composition layer, or rendering the skybox within the scene, as a desktop application would
+  // See https://github.khronos.org/OpenXR-Inventory/extension_support.html#matrix
+  //
+  // Composition layers are rendered in the order provided to vsgvr::Viewer::compositionLayers,
+  // and are combined using vsgvr::Traits::environmentBlendMode.
+
+  // Equirect image -> inside of a sphere (skybox)
+  // Extension layer - May not be present on all runtimes
+  createCompositionLayerEquirect();
+
+  // Scene -> Headset views
+  createCompositionLayerProjection();
+
+  // Image -> A quad in world space (pause menu or similar)
+  createCompositionLayerQuadInWorld();
+
+  // Image -> A quad in view space (A hud)
+  createCompositionLayerQuadInView();
+
+  // Render a desktop window, mirroring the contents of the headset
+  // As this is a separate window rendered by vsg it only renders the scene - OpenXR composition layers are not present
+  // (But are present when viewing a desktop mirror window provided by the OpenXR runtime)
   if(_desktopWindowEnabled)
   {
-    // Create a CommandGraph to render the desktop window
     auto lookAt = vsg::LookAt::create(vsg::dvec3(-4.0, -15.0, 25.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
     auto desktopWindow = _desktopViewer->windows().front();
     auto perspective = vsg::Perspective::create(30.0,

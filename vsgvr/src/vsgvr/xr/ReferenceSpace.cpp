@@ -72,7 +72,7 @@ namespace vsgvr {
   {
     if (_space != XR_NULL_HANDLE)
     {
-      xr_check(xrDestroySpace(_space));
+      xrDestroySpace(_space);
       _space = XR_NULL_HANDLE;
     }
   }

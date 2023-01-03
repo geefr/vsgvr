@@ -142,7 +142,7 @@ namespace vsgvr {
 
   void Swapchain::destroySwapchain()
   {
-    xr_check(xrDestroySwapchain(_swapchain));
+    xrDestroySwapchain(_swapchain);
   }
 }
 
