@@ -20,6 +20,8 @@ public:
     vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow);
   ~Game();
 
+  static std::vector<std::string> requiredInstanceExtensions();
+
   bool shouldExit = false;
 
   void frame();

@@ -4,7 +4,7 @@ android {
     compileSdk 31
 
     defaultConfig {
-        applicationId = 'com.vsgvr.vsgvrcompositionlayerquad'
+        applicationId = 'com.vsgvr.vsgvrquestcompositionlayers'
         minSdkVersion 24
         targetSdkVersion 24
         externalNativeBuild {

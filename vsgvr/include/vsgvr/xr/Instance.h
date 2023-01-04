@@ -32,6 +32,14 @@ namespace vsgvr {
   class VSGVR_DECLSPEC Instance : public vsg::Inherit<vsg::Object, Instance>
   {
   public:
+    static std::vector<XrApiLayerProperties> getSupportedApiLayers();
+    static std::vector<XrExtensionProperties> getSupportedInstanceExtensions(const char* apiLayerName = nullptr);
+
+    // Check if a named OpenXR api layer is available
+    static bool checkApiLayerSupported(const char* apiLayerName);
+    // Check if a named OpenXR extension is supported
+    static bool checkInstanceExtensionSupported(const char* extensionName, const char* apiLayerName = nullptr);
+
     Instance() = delete;
     /// Create an OpenXR instance, and configure the overall XrSystem
     /// Once initialised applications should configure Instance::traits

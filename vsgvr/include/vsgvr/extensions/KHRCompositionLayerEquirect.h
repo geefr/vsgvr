@@ -52,7 +52,7 @@ namespace vsgvr {
         {0.0f, 0.0f, 0.0f, 1.0f},
         {0.0f, 0.0f, 0.0f}
       };
-      float radius = 100.0f;
+      float radius = 0.0f;
       XrVector2f scale = { 1.0f, 1.0f };
       XrVector2f bias = { 0.0f, 0.0f };
 

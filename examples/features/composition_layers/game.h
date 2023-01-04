@@ -8,7 +8,7 @@
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <vsgvr/actions/SpaceBinding.h>
 
-#include <vsgvr/extensions/KHRCompositionLayerEquirect2.h>
+#include <vsgvr/app/CompositionLayer.h>
 
 #include "interaction.h"
 
@@ -31,6 +31,11 @@ private:
   void loadScene();
   void initVR();
   void initActions();
+
+  void createCompositionLayerEquirect();
+  void createCompositionLayerProjection();
+  void createCompositionLayerQuadInWorld();
+  void createCompositionLayerQuadInView();
 
   vsg::ref_ptr<vsgvr::Instance> _xrInstance;
   vsg::ref_ptr<vsgvr::Viewer> _vr;
@@ -60,5 +65,5 @@ private:
 
   vsg::time_point _lastFrameTime;
 
-  vsg::ref_ptr<vsgvr::KHRCompositionLayerEquirect2> _skyboxLayer;
+  vsg::ref_ptr<vsgvr::CompositionLayer> _skyboxLayer;
 };

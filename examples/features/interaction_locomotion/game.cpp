@@ -11,6 +11,11 @@
 #include "interactions/interaction_teleport.h"
 #include "interactions/interaction_slide.h"
 
+std::vector<std::string> Game::requiredInstanceExtensions()
+{
+  return {};
+}
+
 Game::Game(vsg::ref_ptr<vsgvr::Instance> xrInstance, vsg::ref_ptr<vsgvr::Viewer> vr, vsg::ref_ptr<vsg::Viewer> desktopViewer, bool displayDesktopWindow)
   : _xrInstance(xrInstance)
   , _vr(vr)

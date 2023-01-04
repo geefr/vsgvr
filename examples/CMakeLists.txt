@@ -8,6 +8,5 @@ if(ANDROID)
 else()
   add_subdirectory( platform/generic )
   add_subdirectory( features/interaction_locomotion )
-  add_subdirectory( features/composition_layer_quad )
+  add_subdirectory( features/composition_layers )
 endif()
-

@@ -29,6 +29,58 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace vsgvr
 {
+  std::vector<XrApiLayerProperties> Instance::getSupportedApiLayers()
+  {
+    uint32_t count = 0;
+    xr_check(xrEnumerateApiLayerProperties(count, &count, nullptr));
+    std::vector<XrApiLayerProperties> layers(count);
+    for (auto& layer : layers)
+    {
+      layer.type = XR_TYPE_API_LAYER_PROPERTIES;
+      layer.next = nullptr;
+    }
+    xr_check(xrEnumerateApiLayerProperties(static_cast<uint32_t>(layers.size()), &count, layers.data()));
+    return layers;
+  }
+
+  std::vector<XrExtensionProperties> Instance::getSupportedInstanceExtensions(const char* apiLayerName)
+  {
+    uint32_t count = 0;
+    xr_check(xrEnumerateInstanceExtensionProperties(apiLayerName, count, &count, nullptr));
+    std::vector<XrExtensionProperties> extensions(count);
+    for(auto& extension : extensions)
+    {
+      extension.type = XR_TYPE_EXTENSION_PROPERTIES;
+      extension.next = nullptr;
+    }
+    xr_check(xrEnumerateInstanceExtensionProperties(apiLayerName, static_cast<uint32_t>(extensions.size()), &count, extensions.data()));
+    return extensions;
+  }
+
+  bool Instance::checkApiLayerSupported(const char* apiLayerName)
+  {
+    if( apiLayerName == nullptr ) return false;
+    auto layers = Instance::getSupportedApiLayers();
+    std::string name(apiLayerName);
+    auto it = std::find_if(layers.begin(), layers.end(), [&name](const XrApiLayerProperties& x) {
+      return name == std::string(x.layerName);
+    });
+    if( it == layers.end() ) return false;
+    return true;
+  }
+
+  bool Instance::checkInstanceExtensionSupported(const char* extensionName, const char* apiLayerName)
+  {
+    if( extensionName == nullptr ) return false;
+    auto exts = Instance::getSupportedInstanceExtensions(apiLayerName);
+    std::string name(extensionName);
+    auto it = std::find_if(exts.begin(), exts.end(), [&name](const XrExtensionProperties& x) {
+      return name == x.extensionName;
+    });
+    if( it == exts.end()) return false;
+    return true;
+  }
+
   Instance::Instance(XrFormFactor formFactor, vsg::ref_ptr<vsgvr::Traits> xrTraits)
     : traits(xrTraits)
     , _formFactor(formFactor)
@@ -44,20 +96,18 @@ namespace vsgvr
 
   std::vector<XrViewConfigurationType> Instance::getSupportedViewConfigurationTypes()
   {
-    std::vector<XrViewConfigurationType> types;
     uint32_t count = 0;
     xr_check(xrEnumerateViewConfigurations(_instance, _system, 0, &count, nullptr));
-    types.resize(count);
+    std::vector<XrViewConfigurationType> types(count);
     xr_check(xrEnumerateViewConfigurations(_instance, _system, static_cast<uint32_t>(types.size()), &count, types.data()));
     return types;
   }
 
   std::vector<XrEnvironmentBlendMode> Instance::getSupportedEnvironmentBlendModes(XrViewConfigurationType viewConfiguration)
   {
-    std::vector<XrEnvironmentBlendMode> modes;
     uint32_t count = 0;
     xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, viewConfiguration, 0, &count, nullptr));
-    modes.resize(count);
+    std::vector<XrEnvironmentBlendMode> modes(count);
     xr_check(xrEnumerateEnvironmentBlendModes(_instance, _system, viewConfiguration, static_cast<uint32_t>(modes.size()), &count, modes.data()));
     return modes;
   }
