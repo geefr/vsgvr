@@ -19,7 +19,7 @@
 #include <vsgvr/actions/ActionPoseBinding.h>
 #include <openxr/openxr_platform.h>
 
-#include <game.h>
+#include "../../../game.h"
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "vsgnative", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "vsgnative", __VA_ARGS__))
@@ -42,27 +42,12 @@ struct AppData
 static int vsg_init(struct AppData* appData)
 {
     // Initialise OpenXR
-    // TODO: At the moment traits must be configured up front, exceptions will be thrown if these can't be satisfied
-    //       This should be improved in the future, at least to query what form factors are available.
-    // TODO: Some parameters on xrTraits are non-functional at the moment
     auto xrTraits = vsgvr::AndroidTraits::create();
-    xrTraits->formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     xrTraits->viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     xrTraits->vm = appData->app->activity->vm;
     xrTraits->activity = appData->app->activity->clazz;
-
-    auto gameExtensionsNeeded = Game::requiredInstanceExtensions();
-    for (auto& ext : gameExtensionsNeeded)
-    {
-        xrTraits->xrExtensions.push_back(ext);
-    }
-
-    // Initialise OpenXR, and retrieve vulkan requirements
-    // OpenXR will require certain vulkan versions, along with a specific physical device
-    // Use a desktop window to create the instance, and select the correct device
-    auto xrInstance = vsgvr::Instance::create(xrTraits);
+    auto xrInstance = vsgvr::Instance::create(XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);
     auto xrVulkanReqs = vsgvr::GraphicsBindingVulkan::getVulkanRequirements(xrInstance);
-
 
     appData->viewer = vsg::Viewer::create();
     // setup VSG traits, to provide a compatible Vulkan instance
@@ -106,14 +91,13 @@ static int vsg_init(struct AppData* appData)
     }
     // cast the window to an android window so we can pass it events
     appData->window = window.cast<vsgAndroid::Android_Window>();
-
     // Attach the window to the viewer
     // Android: The window is present, but will not be rendered by the Game class
     appData->viewer->addWindow(window);
 
     // Ensure the correct physical device is selected
     // Technically the desktop window and HMD could use different devices, but for simplicity OpenXR is configured to use the same device as the desktop
-    auto vkInstance = appData->window ->getOrCreateInstance();
+    auto vkInstance = appData->window->getOrCreateInstance();
     VkPhysicalDevice xrRequiredDevice = vsgvr::GraphicsBindingVulkan::getVulkanDeviceRequirements(xrInstance, vkInstance, xrVulkanReqs);
     vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice;
     for (auto& dev : vkInstance->getPhysicalDevices())
@@ -131,12 +115,16 @@ static int vsg_init(struct AppData* appData)
     appData->window ->setPhysicalDevice(physicalDevice);
 
     // Bind OpenXR to the Device
-    appData->window ->getOrCreateSurface();
-    auto vkDevice = appData->window ->getOrCreateDevice();
+    appData->window->getOrCreateSurface();
+    auto vkDevice = appData->window->getOrCreateDevice();
     auto graphicsBinding = vsgvr::GraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
 
     // Set up a renderer to OpenXR, similar to a vsg::Viewer
-    appData->vr = vsgvr::Viewer::create(xrInstance, xrTraits, graphicsBinding);
+    appData->vr = vsgvr::Viewer::create(xrInstance, graphicsBinding);
+    appData->vr->referenceSpace = vsgvr::ReferenceSpace::create(
+            appData->vr->getSession(),
+            XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_STAGE
+    );
 
     appData->game.reset(new Game(xrInstance, appData->vr, appData->viewer, false));
 
