@@ -31,9 +31,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/app/View.h>
 #include <vsg/app/RenderGraph.h>
+#include <vsg/commands/PipelineBarrier.h>
 #include <vsg/ui/FrameStamp.h>
 #include <vsg/vk/SubmitCommands.h>
-#include <vsg/commands/PipelineBarrier.h>
 
 #include "../xr/Macros.cpp"
 
