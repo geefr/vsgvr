@@ -106,8 +106,15 @@ namespace vsgvr {
             /// **must** call releaseFrame() once after rendering, even if this method returns false.
             ///
             /// @return Whether the application should render.
-            bool advanceToNextFrame();
 
+#if VSG_VERSION_MAJOR >= 1 && VSG_VERSION_MINOR >= 1
+            /// hint for setting the FrameStamp::simulationTime to time since start_point()
+            static constexpr double UseTimeSinceStartPoint = std::numeric_limits<double>::max();
+
+            bool advanceToNextFrame(double simulationTime = UseTimeSinceStartPoint);
+#else
+            bool advanceToNextFrame();
+#endif
             /// Submit rendering tasks to Vulkan
             void recordAndSubmit();
 
@@ -167,6 +174,7 @@ namespace vsgvr {
             XrFrameState _frameState;
             vsg::ref_ptr<vsg::FrameStamp> _frameStamp;
             std::vector<XrCompositionLayerBaseHeader*> _layers;
+            vsg::clock::time_point _start_time_point;
     };
 }
 
