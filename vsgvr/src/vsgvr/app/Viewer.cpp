@@ -107,7 +107,11 @@ namespace vsgvr
     return PollEventsResult::RunningDontRender;
   }
 
+#if VSG_VERSION_MAJOR >= 1 && VSG_VERSION_MINOR >= 1
+  bool Viewer::advanceToNextFrame(double simulationTime)
+#else
   bool Viewer::advanceToNextFrame()
+#endif
   {
     // Viewer::acquireNextFrame
     _frameState = XrFrameState();
@@ -128,12 +132,28 @@ namespace vsgvr
     if (!_frameStamp)
     {
       // first frame, initialize to frame count and indices to 0
+#if VSG_VERSION_MAJOR >= 1 && VSG_VERSION_MINOR >= 1
+
+      _start_time_point = t;
+
+      if (simulationTime == UseTimeSinceStartPoint) simulationTime = 0.0;
+      _frameStamp = vsg::FrameStamp::create(t, 0, simulationTime);
+#else
       _frameStamp = vsg::FrameStamp::create(t, 0);
+#endif
     }
     else
     {
       // after first frame so increment frame count and indices
+#if VSG_VERSION_MAJOR >= 1 && VSG_VERSION_MINOR >= 1
+      if (simulationTime == UseTimeSinceStartPoint)
+      {
+          simulationTime = std::chrono::duration<double, std::chrono::seconds::period>(t - _start_time_point).count();
+      }
+      _frameStamp = vsg::FrameStamp::create(t, _frameStamp->frameCount + 1, simulationTime);
+#else
       _frameStamp = vsg::FrameStamp::create(t, _frameStamp->frameCount + 1);
+#endif
     }
 
     for (auto& layer : compositionLayers)
